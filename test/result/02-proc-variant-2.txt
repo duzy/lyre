@@ -1,0 +1,10 @@
+foo1:void: 1
+foo2:<int>: 1
+foo2: 2
+foo3:<int>: 1
+foo3:<int>: 1
+foo3:<int>: 1
+foo3: 2
+foo3: 2
+foo3: 2
+foo3: 100

@@ -1,0 +1,6 @@
+*~
+*.bc
+*.o
+*.out
+*.mbc
+/lyre
