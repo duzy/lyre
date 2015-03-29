@@ -602,7 +602,7 @@ namespace lyre
             nullptr
         );
 
-        auto m = make_unique<Module>("a", context);
+        std::unique_ptr<Module> m(new Module("a", context));
 
         // Keep the reference to the module
         module = m.get();
@@ -611,7 +611,7 @@ namespace lyre
         auto jit = EngineBuilder(std::move(m))
             .setErrorStr(&error)
 #if LYRE_USING_MCJIT
-            .setMCJITMemoryManager(make_unique<SectionMemoryManager>())
+            .setMCJITMemoryManager(std::unique_ptr<SectionMemoryManager>(new SectionMemoryManager))
 #endif
             .create();
 
@@ -621,7 +621,7 @@ namespace lyre
 
         jit->InstallLazyFunctionCreator(LyreLazyFunctionCreator);
 
-        module->setDataLayout(jit->getDataLayout());
+        module->setDataLayout(*jit->getDataLayout());
 
         if (1) {
             std::vector<Type *> params = { Type::getInt8PtrTy(context) };
@@ -801,7 +801,7 @@ namespace lyre
         start->setGC("lygc");
 
         auto entry = BasicBlock::Create(context, "entry", start);
-        builder = make_unique<IRBuilder<>>(entry);
+        builder = std::unique_ptr<IRBuilder<>>(new IRBuilder<>(entry));
 
         if (stmts.empty()) {
             builder->CreateRet(builder->getInt32(0));
