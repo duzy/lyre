@@ -621,7 +621,8 @@ namespace lyre
 
         jit->InstallLazyFunctionCreator(LyreLazyFunctionCreator);
 
-        module->setDataLayout(*jit->getDataLayout());
+        auto dataLayout = jit->getDataLayout();
+        module->setDataLayout(*dataLayout);
 
         if (1) {
             std::vector<Type *> params = { Type::getInt8PtrTy(context) };

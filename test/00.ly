@@ -1,4 +1,3 @@
-#decl v = { name:123 };
-#v = { name:123 };
+decl v = { name:123 };
 
-{ name:"123" };
+#v = { name:123 };
