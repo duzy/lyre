@@ -1,3 +1,4 @@
+// -*- c++ -*-
 #ifndef __LYRE_GRAMMAR_H____DUZY__
 #define __LYRE_GRAMMAR_H____DUZY__ 1
 #include <boost/config/warning_disable.hpp>

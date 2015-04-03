@@ -1,3 +1,4 @@
+// -*- c++ -*-
 #ifndef __LYRE_AST_H____DUZY__
 #define __LYRE_AST_H____DUZY__ 1
 #include <boost/variant/recursive_variant.hpp>

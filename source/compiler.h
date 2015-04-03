@@ -1,3 +1,4 @@
+// -*- c++ -*-
 #ifndef __LYRE_COMPILER_H____DUZY__
 #define __LYRE_COMPILER_H____DUZY__ 1
 #include <llvm/ExecutionEngine/GenericValue.h>
