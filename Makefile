@@ -18,9 +18,10 @@ LLI := $(LLVM)/Debug+Asserts/bin/lli
 CXXFLAGS := \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
   $(shell $(LLVM_CONFIG) --cxxflags)
+# -ltinfo
 LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
-  -lpthread -ltinfo -ldl -lm -lz
+  -lpthread -ldl -lm -lz
 LOADLIBS := 
 
 lyre: source/main.o source/compiler.o source/parse.o source/gc/lygc.o
