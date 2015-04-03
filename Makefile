@@ -10,7 +10,7 @@ endif
 $(info LLVMLIBS: $(LLVMLIBS))
 $(info ---------------------------)
 
-LLVM := $(or $(wildcard /open/llvm),$(wildcard ~/tools/ll/llvm))
+LLVM := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
 LLI := $(LLVM)/Debug+Asserts/bin/lli
