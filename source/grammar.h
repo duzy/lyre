@@ -336,7 +336,7 @@ namespace lyre
         rule< ast::identifier() > identifier ;
         rule< char() > idchar ;
 
-        rule< ast::nodector > nodector;
+        rule< ast::nodector() > nodector;
         rule< std::list<ast::expr>() > arglist;
         rule<> prop;
 

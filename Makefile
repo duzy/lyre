@@ -7,8 +7,8 @@ else
   LLVMLIBS := interpreter nativecodegen
 endif
 
-$(info LLVMLIBS: $(LLVMLIBS))
-$(info ---------------------------)
+#$(info LLVMLIBS: $(LLVMLIBS))
+#$(info ---------------------------)
 
 LLVM := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config

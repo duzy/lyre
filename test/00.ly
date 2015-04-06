@@ -1,2 +1,1 @@
-decl v = { name:123 };
-
+decl node1 = { name:123 };

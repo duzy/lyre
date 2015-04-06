@@ -40,6 +40,7 @@ namespace lyre
         compiler *comp;
 
         Value *compile(const ast::expr & v);
+
         Value *operator()(const ast::expr & v);
         Value *operator()(const ast::none & v);
         Value *operator()(const ast::identifier & v);
@@ -48,7 +49,6 @@ namespace lyre
         Value *operator()(ast::cv v);
         Value *operator()(int v);
         Value *operator()(unsigned int v);
-        Value *operator()(float v);
         Value *operator()(double v);
 
     private:
@@ -150,7 +150,7 @@ namespace lyre
 
     Value *expr_compiler::operator()(const ast::none & v)
     {
-        // D(__FUNCTION__ << ": none");
+        D(__FUNCTION__ << ": none");
         return nullptr;
     }
 
@@ -174,21 +174,21 @@ namespace lyre
 
     Value *expr_compiler::operator()(const ast::nodector & nodector)
     {
-        D("nodector");
-        return comp->builder->CreateGlobalString("node", ".str");
+        auto alloca = comp->create_alloca(comp->nodetype, nullptr, ".node");
+        D(__FUNCTION__ << ": nodector");
+        return alloca;
     }
 
     Value *expr_compiler::operator()(const std::string & v)
     {
-        //std::clog << __FUNCTION__ << ": string = " << v << std::endl;
         return comp->builder->CreateGlobalString(v, ".str");
     }
 
     Value *expr_compiler::operator()(ast::cv cv)
     {
-        //std::clog << __FUNCTION__ << ": int = " << v << std::endl;
         switch (cv) {
         case ast::cv::null:
+            D(__FUNCTION__ << ": ast::cv::null");
             break;
         case ast::cv::true_:
             return comp->builder->getInt1(1);
@@ -200,19 +200,12 @@ namespace lyre
 
     Value *expr_compiler::operator()(int v)
     {
-        //std::clog << __FUNCTION__ << ": int = " << v << std::endl;
         return comp->builder->getInt32(v);
     }
 
     Value *expr_compiler::operator()(unsigned int v)
     {
         return comp->builder->getInt32(v);
-    }
-
-    Value *expr_compiler::operator()(float v)
-    {
-        D(__FUNCTION__ << ": float = " << v);
-        return nullptr;
     }
 
     Value *expr_compiler::operator()(double v)
@@ -872,7 +865,7 @@ namespace lyre
     Value* compiler::operator()(const ast::decl & decl)
     {
         auto & entry = builder->GetInsertBlock()->getParent()->getEntryBlock();
-        auto allocaBuilder = IRBuilder<>{ &entry, entry.begin() };
+        IRBuilder<> allocaBuilder{ &entry, entry.begin() };
         Value* lastAlloca = nullptr;
         for (auto & sym : decl) {
             if (sym.id.string == "_") {
@@ -902,6 +895,8 @@ namespace lyre
                      *  Use the value type if no explicit type specified.
                      */
                     if (!sym.type) type = value->getType();
+                } else {
+                    D("decl: invalid expr for '"<<sym.id.string<<"'");
                 }
             }
 

@@ -115,20 +115,9 @@ namespace lyre
 
         typedef boost::variant<
             none
-        /*
-            , int8_t
-            , int16_t
-            , int32_t
-            , int64_t
-            , uint8_t
-            , uint16_t
-            , uint32_t
-            , uint64_t
-        */
             , cv
             , int
             , unsigned int
-            , float
             , double
             , std::string
             , identifier
@@ -153,7 +142,11 @@ namespace lyre
             explicit expr(const op & o) : operand(), operators({ o }) {}
         };
 
-        typedef std::pair<identifier, expr> nodefield;
+        struct nodefield
+        {
+            identifier name;
+            ast::expr expr;
+        };
 
         struct nodector
         {
@@ -305,6 +298,12 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::ast::nodector,
     (std::list<lyre::ast::nodefield>, list)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::ast::nodefield,
+    (lyre::ast::identifier, name)
+    (lyre::ast::expr, expr)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
