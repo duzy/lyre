@@ -7,7 +7,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
 #include <unordered_map>
-#include "ast.h"
+#include "metast.h"
 
 namespace lyre
 {
@@ -20,25 +20,25 @@ namespace lyre
 
         compiler();
 
-        llvm::GenericValue eval(const ast::stmts & stmts);
+        llvm::GenericValue eval(const metast::stmts & stmts);
 
-        llvm::Value* compile(const ast::stmts & stmts);
+        llvm::Value* compile(const metast::stmts & stmts);
 
-        llvm::Value* operator()(const ast::expr & s);
-        llvm::Value* operator()(const ast::none &);
-        llvm::Value* operator()(const ast::decl & s);
-        llvm::Value* operator()(const ast::proc & s);
-        llvm::Value* operator()(const ast::type & s);
-        llvm::Value* operator()(const ast::see & s);
-        llvm::Value* operator()(const ast::with & s);
-        llvm::Value* operator()(const ast::speak & s);
-        llvm::Value* operator()(const ast::per & s);
-        llvm::Value* operator()(const ast::ret & s);
+        llvm::Value* operator()(const metast::expr & s);
+        llvm::Value* operator()(const metast::none &);
+        llvm::Value* operator()(const metast::decl & s);
+        llvm::Value* operator()(const metast::proc & s);
+        llvm::Value* operator()(const metast::type & s);
+        llvm::Value* operator()(const metast::see & s);
+        llvm::Value* operator()(const metast::with & s);
+        llvm::Value* operator()(const metast::speak & s);
+        llvm::Value* operator()(const metast::per & s);
+        llvm::Value* operator()(const metast::ret & s);
 
     private:
-        llvm::Value* compile_expr(const ast::expr &);
-        llvm::Value* compile_expr(const boost::optional<ast::expr> & e) { return compile_expr(boost::get<ast::expr>(e)); }
-        llvm::Value* compile_body(llvm::Function * fun, const ast::stmts &);
+        llvm::Value* compile_expr(const metast::expr &);
+        llvm::Value* compile_expr(const boost::optional<metast::expr> & e) { return compile_expr(boost::get<metast::expr>(e)); }
+        llvm::Value* compile_body(llvm::Function * fun, const metast::stmts &);
 
         llvm::Value* create_alloca(llvm::Type *Ty, llvm::Value *ArraySize = nullptr, const std::string &Name = "");
 

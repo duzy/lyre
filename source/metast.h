@@ -1,6 +1,6 @@
 // -*- c++ -*-
-#ifndef __LYRE_AST_H____DUZY__
-#define __LYRE_AST_H____DUZY__ 1
+#ifndef __LYRE_METAST_H____DUZY__
+#define __LYRE_METAST_H____DUZY__ 1
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/optional.hpp>
@@ -8,7 +8,7 @@
 
 namespace lyre
 {
-    namespace ast
+    namespace metast
     {
         struct none {};
         struct decl;
@@ -42,7 +42,7 @@ namespace lyre
         struct block
         {
             std::string name;
-            ast::stmts stmts;
+            metast::stmts stmts;
         };
 
         enum class cv : int
@@ -128,24 +128,24 @@ namespace lyre
 
         struct op
         {
-            ast::opcode opcode;
-            ast::operand operand;
+            metast::opcode opcode;
+            metast::operand operand;
         };
 
         struct expr
         {
-            ast::operand operand;
+            metast::operand operand;
             std::list<op> operators;
 
             expr() : operand(), operators() {}
-            explicit expr(const ast::operand & o) : operand(o), operators() {}
+            explicit expr(const metast::operand & o) : operand(o), operators() {}
             explicit expr(const op & o) : operand(), operators({ o }) {}
         };
 
         struct nodefield
         {
             identifier name;
-            ast::expr expr;
+            metast::expr expr;
         };
 
         struct nodector
@@ -157,7 +157,7 @@ namespace lyre
         {
             identifier id;
             boost::optional<identifier> type;
-            boost::optional<ast::expr> expr;
+            boost::optional<metast::expr> expr;
         };
 
         struct decl : std::list<declsym> {};
@@ -173,31 +173,31 @@ namespace lyre
             identifier name;
             std::list<param> params;
             boost::optional<identifier> type;
-            ast::block block;
+            metast::block block;
         };
 
         struct type
         {
             identifier name;
             boost::optional<std::list<param>> params;
-            ast::block block;
+            metast::block block;
         };
 
         struct with
         {
-            ast::expr expr;
-            boost::optional<ast::block> block;
+            metast::expr expr;
+            boost::optional<metast::block> block;
         };
 
         struct xblock
         {
-            boost::optional<ast::expr> expr;
-            ast::stmts stmts;
+            boost::optional<metast::expr> expr;
+            metast::stmts stmts;
         };
 
         struct see
         {
-            ast::expr expr;
+            metast::expr expr;
             xblock block0;
             std::list<xblock> blocks;
         };
@@ -215,101 +215,101 @@ namespace lyre
 
         struct ret
         {
-            boost::optional<ast::expr> expr;
+            boost::optional<metast::expr> expr;
         };
     }
 }
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::declsym,
-    (lyre::ast::identifier, id)
-    (boost::optional<lyre::ast::identifier>, type)
-    (boost::optional<lyre::ast::expr>, expr)
+    lyre::metast::declsym,
+    (lyre::metast::identifier, id)
+    (boost::optional<lyre::metast::identifier>, type)
+    (boost::optional<lyre::metast::expr>, expr)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::speak,
-    (std::list<lyre::ast::identifier>, langs)
+    lyre::metast::speak,
+    (std::list<lyre::metast::identifier>, langs)
     (std::string, source)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::param,
-    (lyre::ast::identifier, name)
-    (boost::optional<lyre::ast::identifier>, type)
+    lyre::metast::param,
+    (lyre::metast::identifier, name)
+    (boost::optional<lyre::metast::identifier>, type)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::proc,
-    (lyre::ast::identifier, name)
-    (std::list<lyre::ast::param>, params)
-    (boost::optional<lyre::ast::identifier>, type)
-    (lyre::ast::block, block)
+    lyre::metast::proc,
+    (lyre::metast::identifier, name)
+    (std::list<lyre::metast::param>, params)
+    (boost::optional<lyre::metast::identifier>, type)
+    (lyre::metast::block, block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::type,
-    (lyre::ast::identifier, name)
-    (boost::optional<std::list<lyre::ast::param>>, params)
-    (lyre::ast::block, block)
+    lyre::metast::type,
+    (lyre::metast::identifier, name)
+    (boost::optional<std::list<lyre::metast::param>>, params)
+    (lyre::metast::block, block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::with,
-    (lyre::ast::expr, expr)
-    (boost::optional<lyre::ast::block>, block)
+    lyre::metast::with,
+    (lyre::metast::expr, expr)
+    (boost::optional<lyre::metast::block>, block)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::see,
-    (lyre::ast::expr, expr)
-    (lyre::ast::xblock, block0)
-    (std::list<lyre::ast::xblock>, blocks)
+    lyre::metast::see,
+    (lyre::metast::expr, expr)
+    (lyre::metast::xblock, block0)
+    (std::list<lyre::metast::xblock>, blocks)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::ret,
-    (boost::optional<lyre::ast::expr>, expr)
+    lyre::metast::ret,
+    (boost::optional<lyre::metast::expr>, expr)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::block,
+    lyre::metast::block,
     (std::string, name)
-    (lyre::ast::stmts, stmts)
+    (lyre::metast::stmts, stmts)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::xblock,
-    (boost::optional<lyre::ast::expr>, expr)
-    (lyre::ast::stmts, stmts)
+    lyre::metast::xblock,
+    (boost::optional<lyre::metast::expr>, expr)
+    (lyre::metast::stmts, stmts)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::identifier,
+    lyre::metast::identifier,
     (std::string, string)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::expr,
-    (lyre::ast::operand, operand)
-    (std::list<lyre::ast::op>, operators)
+    lyre::metast::expr,
+    (lyre::metast::operand, operand)
+    (std::list<lyre::metast::op>, operators)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::nodector,
-    (std::list<lyre::ast::nodefield>, list)
+    lyre::metast::nodector,
+    (std::list<lyre::metast::nodefield>, list)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::nodefield,
-    (lyre::ast::identifier, name)
-    (lyre::ast::expr, expr)
+    lyre::metast::nodefield,
+    (lyre::metast::identifier, name)
+    (lyre::metast::expr, expr)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::ast::op,
-    (lyre::ast::opcode, opcode)
-    (lyre::ast::operand, operand)
+    lyre::metast::op,
+    (lyre::metast::opcode, opcode)
+    (lyre::metast::operand, operand)
 )
 
-#endif//__LYRE_AST_H____DUZY__
+#endif//__LYRE_METAST_H____DUZY__

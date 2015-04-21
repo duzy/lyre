@@ -39,58 +39,58 @@ namespace lyre
 
         compiler *comp;
 
-        Value *compile(const ast::expr & v);
+        Value *compile(const metast::expr & v);
 
-        Value *operator()(const ast::expr & v);
-        Value *operator()(const ast::none & v);
-        Value *operator()(const ast::identifier & v);
-        Value *operator()(const ast::nodector & v);
+        Value *operator()(const metast::expr & v);
+        Value *operator()(const metast::none & v);
+        Value *operator()(const metast::identifier & v);
+        Value *operator()(const metast::nodector & v);
         Value *operator()(const std::string & v);
-        Value *operator()(ast::cv v);
+        Value *operator()(metast::cv v);
         Value *operator()(int v);
         Value *operator()(unsigned int v);
         Value *operator()(double v);
 
     private:
-        Value *op_nil   (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_attr  (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_select(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_call  (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_unary_plus (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_unary_minus(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_unary_not  (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_unary_dot  (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_unary_arrow(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_mul(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_div(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_add(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_sub(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_lt (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_le (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_gt (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_ge (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_eq (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_ne (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_and(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_or (const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_xor(const ast::op & op, Value *operand1, Value *operand2);
-        Value *op_set(const ast::op & op, Value *operand1, Value *operand2);
+        Value *op_nil   (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_attr  (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_select(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_call  (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_unary_plus (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_unary_minus(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_unary_not  (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_unary_dot  (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_unary_arrow(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_mul(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_div(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_add(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_sub(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_lt (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_le (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_gt (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_ge (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_eq (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_ne (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_and(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_or (const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_xor(const metast::op & op, Value *operand1, Value *operand2);
+        Value *op_set(const metast::op & op, Value *operand1, Value *operand2);
 
         Value *binary(Instruction::BinaryOps, Value *operand1, Value *operand2);
         Value *compare(CmpInst::Predicate, Value *operand1, Value *operand2);
     };
 
-    Value *expr_compiler::compile(const ast::expr & expr)
+    Value *expr_compiler::compile(const metast::expr & expr)
     {
         auto operand1 = boost::apply_visitor(*this, expr.operand);
         if (expr.operators.empty()) {
             return operand1;
         }
 
-        if (expr.operators.front().opcode == ast::opcode::comma) {
+        if (expr.operators.front().opcode == metast::opcode::comma) {
             std::vector<Metadata*> a{ ValueAsMetadata::get(operand1) };
             for (auto & op : expr.operators) {
-                assert(op.opcode == ast::opcode::comma && "mixed comma with other operators");
+                assert(op.opcode == metast::opcode::comma && "mixed comma with other operators");
                 auto value = boost::apply_visitor(*this, op.operand);
                 a.push_back( ValueAsMetadata::get(value) );
             }
@@ -100,36 +100,36 @@ namespace lyre
         for (auto & op : expr.operators) {
             auto operand2 = boost::apply_visitor(*this, op.operand);
             switch (op.opcode) {
-            case ast::opcode::nil:      operand1 = op_nil(op, operand1, operand2);   break;
+            case metast::opcode::nil:      operand1 = op_nil(op, operand1, operand2);   break;
 
-            case ast::opcode::attr:     operand1 = op_attr(op, operand1, operand2);   break;
-            case ast::opcode::select:   operand1 = op_select(op, operand1, operand2); break;
-            case ast::opcode::call:     operand1 = op_call(op, operand1, operand2);   break;
+            case metast::opcode::attr:     operand1 = op_attr(op, operand1, operand2);   break;
+            case metast::opcode::select:   operand1 = op_select(op, operand1, operand2); break;
+            case metast::opcode::call:     operand1 = op_call(op, operand1, operand2);   break;
 
-            case ast::opcode::unary_plus:  operand1 = op_unary_plus(op, operand1, operand2);  break;
-            case ast::opcode::unary_minus: operand1 = op_unary_minus(op, operand1, operand2); break;
-            case ast::opcode::unary_not:   operand1 = op_unary_not(op, operand1, operand2);   break;
-            case ast::opcode::unary_dot:   operand1 = op_unary_dot(op, operand1, operand2);   break;
-            case ast::opcode::unary_arrow: operand1 = op_unary_arrow(op, operand1, operand2); break;
+            case metast::opcode::unary_plus:  operand1 = op_unary_plus(op, operand1, operand2);  break;
+            case metast::opcode::unary_minus: operand1 = op_unary_minus(op, operand1, operand2); break;
+            case metast::opcode::unary_not:   operand1 = op_unary_not(op, operand1, operand2);   break;
+            case metast::opcode::unary_dot:   operand1 = op_unary_dot(op, operand1, operand2);   break;
+            case metast::opcode::unary_arrow: operand1 = op_unary_arrow(op, operand1, operand2); break;
 
-            case ast::opcode::mul:      operand1 = op_mul(op, operand1, operand2); break;
-            case ast::opcode::div:      operand1 = op_div(op, operand1, operand2); break;
-            case ast::opcode::add:      operand1 = op_add(op, operand1, operand2); break;
-            case ast::opcode::sub:      operand1 = op_sub(op, operand1, operand2); break;
+            case metast::opcode::mul:      operand1 = op_mul(op, operand1, operand2); break;
+            case metast::opcode::div:      operand1 = op_div(op, operand1, operand2); break;
+            case metast::opcode::add:      operand1 = op_add(op, operand1, operand2); break;
+            case metast::opcode::sub:      operand1 = op_sub(op, operand1, operand2); break;
 
-            case ast::opcode::lt:       operand1 = op_lt(op, operand1, operand2); break;
-            case ast::opcode::le:       operand1 = op_le(op, operand1, operand2); break;
-            case ast::opcode::gt:       operand1 = op_gt(op, operand1, operand2); break;
-            case ast::opcode::ge:       operand1 = op_ge(op, operand1, operand2); break;
+            case metast::opcode::lt:       operand1 = op_lt(op, operand1, operand2); break;
+            case metast::opcode::le:       operand1 = op_le(op, operand1, operand2); break;
+            case metast::opcode::gt:       operand1 = op_gt(op, operand1, operand2); break;
+            case metast::opcode::ge:       operand1 = op_ge(op, operand1, operand2); break;
 
-            case ast::opcode::eq:       operand1 = op_eq(op, operand1, operand2); break;
-            case ast::opcode::ne:       operand1 = op_ne(op, operand1, operand2); break;
+            case metast::opcode::eq:       operand1 = op_eq(op, operand1, operand2); break;
+            case metast::opcode::ne:       operand1 = op_ne(op, operand1, operand2); break;
 
-            case ast::opcode::a:        operand1 = op_and(op, operand1, operand2); break;
-            case ast::opcode::o:        operand1 = op_or (op, operand1, operand2); break;
-            case ast::opcode::xo:       operand1 = op_xor(op, operand1, operand2); break;
+            case metast::opcode::a:        operand1 = op_and(op, operand1, operand2); break;
+            case metast::opcode::o:        operand1 = op_or (op, operand1, operand2); break;
+            case metast::opcode::xo:       operand1 = op_xor(op, operand1, operand2); break;
 
-            case ast::opcode::set:      operand1 = op_set(op, operand1, operand2); break;
+            case metast::opcode::set:      operand1 = op_set(op, operand1, operand2); break;
 
             default:
                 D(__FUNCTION__
@@ -143,18 +143,18 @@ namespace lyre
         return operand1;
     }
 
-    Value *expr_compiler::operator()(const ast::expr & expr)
+    Value *expr_compiler::operator()(const metast::expr & expr)
     {
         return compile(expr);
     }
 
-    Value *expr_compiler::operator()(const ast::none & v)
+    Value *expr_compiler::operator()(const metast::none & v)
     {
         D(__FUNCTION__ << ": none");
         return nullptr;
     }
 
-    Value *expr_compiler::operator()(const ast::identifier & id)
+    Value *expr_compiler::operator()(const metast::identifier & id)
     {
         auto & name = id.string;
 
@@ -172,7 +172,7 @@ namespace lyre
         return nullptr;
     }
 
-    Value *expr_compiler::operator()(const ast::nodector & nodector)
+    Value *expr_compiler::operator()(const metast::nodector & nodector)
     {
         auto alloca = comp->create_alloca(comp->nodetype, nullptr, ".node");
         D(__FUNCTION__ << ": nodector");
@@ -184,15 +184,15 @@ namespace lyre
         return comp->builder->CreateGlobalString(v, ".str");
     }
 
-    Value *expr_compiler::operator()(ast::cv cv)
+    Value *expr_compiler::operator()(metast::cv cv)
     {
         switch (cv) {
-        case ast::cv::null:
-            D(__FUNCTION__ << ": ast::cv::null");
+        case metast::cv::null:
+            D(__FUNCTION__ << ": metast::cv::null");
             break;
-        case ast::cv::true_:
+        case metast::cv::true_:
             return comp->builder->getInt1(1);
-        case ast::cv::false_:
+        case metast::cv::false_:
             return comp->builder->getInt1(0);
         }
         return nullptr;
@@ -214,24 +214,24 @@ namespace lyre
         return ConstantFP::get(comp->context, APFloat(v));
     }
 
-    Value *expr_compiler::op_nil(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_nil(const metast::op & op, Value *operand1, Value *operand2)
     {
         return nullptr;
     }
 
-    Value *expr_compiler::op_attr(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_attr(const metast::op & op, Value *operand1, Value *operand2)
     {
         D(__FUNCTION__);
         return operand1;
     }
 
-    Value *expr_compiler::op_select(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_select(const metast::op & op, Value *operand1, Value *operand2)
     {
         D(__FUNCTION__);
         return operand1;
     }
 
-    Value *expr_compiler::op_call(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_call(const metast::op & op, Value *operand1, Value *operand2)
     {
         if (!isa<Function>(operand1)) {
             errs()
@@ -290,7 +290,7 @@ namespace lyre
         return comp->builder->CreateCall(fun, args, name);
     }
 
-    Value *expr_compiler::op_set(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_set(const metast::op & op, Value *operand1, Value *operand2)
     {
         auto var = operand1;
         if (isa<Argument>(var)) {
@@ -354,97 +354,97 @@ namespace lyre
         return operand1;
     }
 
-    Value *expr_compiler::op_unary_plus(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_unary_plus(const metast::op & op, Value *operand1, Value *operand2)
     {
         D(__FUNCTION__);
         return operand1;
     }
 
-    Value *expr_compiler::op_unary_minus(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_unary_minus(const metast::op & op, Value *operand1, Value *operand2)
     {
         D(__FUNCTION__);
         return operand1;
     }
 
-    Value *expr_compiler::op_unary_not(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_unary_not(const metast::op & op, Value *operand1, Value *operand2)
     {
         D(__FUNCTION__);
         return operand1;
     }
 
-    Value *expr_compiler::op_unary_dot(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_unary_dot(const metast::op & op, Value *operand1, Value *operand2)
     {
         D(__FUNCTION__);
         return operand1;
     }
 
-    Value *expr_compiler::op_unary_arrow(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_unary_arrow(const metast::op & op, Value *operand1, Value *operand2)
     {
         D(__FUNCTION__);
         return operand1;
     }
 
-    Value *expr_compiler::op_mul(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_mul(const metast::op & op, Value *operand1, Value *operand2)
     {
         return binary(Instruction::Mul,  operand1, operand2);
     }
 
-    Value *expr_compiler::op_div(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_div(const metast::op & op, Value *operand1, Value *operand2)
     {
         return binary(Instruction::UDiv,  operand1, operand2);
     }
 
-    Value *expr_compiler::op_add(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_add(const metast::op & op, Value *operand1, Value *operand2)
     {
         return binary(Instruction::Add,  operand1, operand2); // comp->builder->CreateAdd(operand1, operand2, "tmp");
     }
 
-    Value *expr_compiler::op_sub(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_sub(const metast::op & op, Value *operand1, Value *operand2)
     {
         return binary(Instruction::Sub,  operand1, operand2);
     }
 
-    Value *expr_compiler::op_lt(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_lt(const metast::op & op, Value *operand1, Value *operand2)
     {
         return compare(CmpInst::ICMP_SLT, operand1, operand2);
     }
 
-    Value *expr_compiler::op_le(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_le(const metast::op & op, Value *operand1, Value *operand2)
     {
         return compare(CmpInst::ICMP_SLE, operand1, operand2);
     }
 
-    Value *expr_compiler::op_gt(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_gt(const metast::op & op, Value *operand1, Value *operand2)
     {
         return compare(CmpInst::ICMP_SGT, operand1, operand2);
     }
 
-    Value *expr_compiler::op_ge(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_ge(const metast::op & op, Value *operand1, Value *operand2)
     {
         return compare(CmpInst::ICMP_SGE, operand1, operand2);
     }
 
-    Value *expr_compiler::op_eq(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_eq(const metast::op & op, Value *operand1, Value *operand2)
     {
         return compare(CmpInst::ICMP_EQ, operand1, operand2);
     }
 
-    Value *expr_compiler::op_ne(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_ne(const metast::op & op, Value *operand1, Value *operand2)
     {
         return compare(CmpInst::ICMP_NE, operand1, operand2);
     }
 
-    Value *expr_compiler::op_and(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_and(const metast::op & op, Value *operand1, Value *operand2)
     {
         return binary(Instruction::And,  operand1, operand2);
     }
 
-    Value *expr_compiler::op_or(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_or(const metast::op & op, Value *operand1, Value *operand2)
     {
         return binary(Instruction::Or,  operand1, operand2);
     }
 
-    Value *expr_compiler::op_xor(const ast::op & op, Value *operand1, Value *operand2)
+    Value *expr_compiler::op_xor(const metast::op & op, Value *operand1, Value *operand2)
     {
         return binary(Instruction::Xor,  operand1, operand2);
     }
@@ -629,7 +629,7 @@ namespace lyre
         engine.reset(jit);
     }
 
-    GenericValue compiler::eval(const ast::stmts & stmts)
+    GenericValue compiler::eval(const metast::stmts & stmts)
     {
         GenericValue gv;
 
@@ -774,7 +774,7 @@ namespace lyre
         return t->second;
     }
 
-    Value* compiler::compile(const ast::stmts & stmts)
+    Value* compiler::compile(const metast::stmts & stmts)
     {
         // Create the ~start function entry and insert this entry into module M.
         // The '0' terminates the list of argument types.
@@ -843,26 +843,26 @@ namespace lyre
         return allocaBuilder.CreateAlloca(Ty, ArraySize, Name.c_str());
     }
 
-    Value* compiler::compile_expr(const ast::expr & expr)
+    Value* compiler::compile_expr(const metast::expr & expr)
     {
         expr_compiler excomp{ this };
         auto value = excomp.compile(expr);
         return value;
     }
 
-    Value* compiler::operator()(const ast::expr & expr)
+    Value* compiler::operator()(const metast::expr & expr)
     {
         // TODO: accepts invocation only...
         return compile_expr(expr);
     }
 
-    Value* compiler::operator()(const ast::none &)
+    Value* compiler::operator()(const metast::none &)
     {
         D("none: ");
         return nullptr;
     }
 
-    Value* compiler::operator()(const ast::decl & decl)
+    Value* compiler::operator()(const metast::decl & decl)
     {
         auto & entry = builder->GetInsertBlock()->getParent()->getEntryBlock();
         IRBuilder<> allocaBuilder{ &entry, entry.begin() };
@@ -879,7 +879,7 @@ namespace lyre
             auto type = variant; ///< The default type is 'variant'.
 
             if (sym.type) {
-                auto typeName = boost::get<ast::identifier>(sym.type).string;
+                auto typeName = boost::get<metast::identifier>(sym.type).string;
                 if ((type = find_type(typeName)) == nullptr) {
                     errs()
                         << "lyre: decl " << sym.id.string << " as unknown type '" << typeName << "'"
@@ -911,11 +911,11 @@ namespace lyre
         return lastAlloca;
     }
 
-    Value* compiler::operator()(const ast::proc & proc)
+    Value* compiler::operator()(const metast::proc & proc)
     {
         auto rty = Type::getVoidTy(context);
         if (proc.type) {
-            auto id = boost::get<ast::identifier>(proc.type);
+            auto id = boost::get<metast::identifier>(proc.type);
             if ((rty = find_type(id.string)) == nullptr) {
                 errs()
                     << "lyre: " << proc.name.string << ": unknown return type '" << id.string << "'"
@@ -928,7 +928,7 @@ namespace lyre
         for (auto & param : proc.params) {
             auto type = variant;
             if (param.type) {
-                auto & id = boost::get<ast::identifier>(param.type);
+                auto & id = boost::get<metast::identifier>(param.type);
                 if ((type = find_type(id.string)) == nullptr) {
                     errs()
                         << "lyre: " << proc.name.string << "used an unknown parameter type '"
@@ -969,7 +969,7 @@ namespace lyre
         return fun;
     }
 
-    Value* compiler::compile_body(Function * fun, const ast::stmts & stmts)
+    Value* compiler::compile_body(Function * fun, const metast::stmts & stmts)
     {
         auto rty = fun->getReturnType();
 
@@ -1015,13 +1015,13 @@ namespace lyre
         return builder->CreateRetVoid();
     }
 
-    Value* compiler::operator()(const ast::type & s)
+    Value* compiler::operator()(const metast::type & s)
     {
         std::clog << "type: " << std::endl;
         return nullptr;
     }
 
-    Value* compiler::operator()(const ast::see & s)
+    Value* compiler::operator()(const metast::see & s)
     {
         auto seeValue = compile_expr(s.expr);
         if (seeValue == nullptr) {
@@ -1035,7 +1035,7 @@ namespace lyre
         auto fun = bbOuter->getParent();
 
         ///< Put all blocks in a list
-        auto astBlocks = std::vector<const ast::xblock*>{ &s.block0 };
+        auto astBlocks = std::vector<const metast::xblock*>{ &s.block0 };
         for (auto & b : s.blocks) { astBlocks.push_back(&b); }
 
         auto bbMerge = BasicBlock::Create(context, "saw.stop");
@@ -1051,7 +1051,7 @@ namespace lyre
 
             Value *caseValue = nullptr;
             if (astBlock->expr) {
-                auto & expr = boost::get<ast::expr>(astBlock->expr);
+                auto & expr = boost::get<metast::expr>(astBlock->expr);
                 if ((caseValue = compile_expr(expr)) == nullptr && 0 < expr.operators.size()) {
                     errs()
                         << "lyre: invalid expression "
@@ -1132,24 +1132,24 @@ namespace lyre
         return blocks[0];
     }
 
-    Value* compiler::operator()(const ast::with & s)
+    Value* compiler::operator()(const metast::with & s)
     {
         std::clog << "with: " << std::endl;
         return nullptr;
     }
 
-    Value* compiler::operator()(const ast::speak & s)
+    Value* compiler::operator()(const metast::speak & s)
     {
         std::clog << "speak: " << std::endl;
         return nullptr;
     }
 
-    Value* compiler::operator()(const ast::per & s)
+    Value* compiler::operator()(const metast::per & s)
     {
         return nullptr;
     }
 
-    Value* compiler::operator()(const ast::ret & ret)
+    Value* compiler::operator()(const metast::ret & ret)
     {
         auto fun = builder->GetInsertBlock()->getParent();
         auto rty = fun->getReturnType();
