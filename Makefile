@@ -15,32 +15,63 @@ LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
 LLI := $(LLVM)/Debug+Asserts/bin/lli
 
-CXXFLAGS := \
+CXXFLAGS := -Isource \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
   $(shell $(LLVM_CONFIG) --cxxflags)
+
 # -ltinfo
 LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
   -lpthread -ldl -lm -lz
+
 LOADLIBS := 
 
-lyre: source/main.o source/compiler.o source/parse.o source/gc/lygc.o
+COMBINE = $(LD) -r -o $@ $^
+
+OBJECTS = $(OBJECTS.lyre) $(OBJECTS.parse) $(OBJECTS.gc)
+
+OBJECTS.lyre := \
+  source/frontend.o \
+  source/ast.o \
+  source/parse.o \
+  source/gc.o \
+
+OBJECTS.frontend := \
+  source/frontend/Compiler.o \
+  source/frontend/main.o \
+
+OBJECTS.ast := \
+  source/ast/Stmt.o \
+  source/ast/StmtList.o \
+  source/ast/Expr.o \
+
+OBJECTS.parse := \
+  source/parse/parse.o \
+  source/parse/metast.o \
+
+OBJECTS.gc := \
+  source/gc/lygc.o \
+
+lyre: $(OBJECTS.lyre)
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
 
-source/main.o: source/main.cpp source/parse.h source/metast.h source/compiler.h
-source/compiler.o: source/compiler.cpp source/metast.h source/compiler.h
-source/parse.o: source/parse.cpp source/parse.h source/grammar.h source/metast.h
-source/gc/lygc.o: source/gc/lygc.cpp
+source/frontend.o: $(OBJECTS.frontend) ; $(COMBINE)
+source/ast.o: $(OBJECTS.ast) ; $(COMBINE)
+source/parse.o: $(OBJECTS.parse) ; $(COMBINE)
+source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 
-source/compiler.cpp: source/cc.ipp
-
-source/parse.o:
-	$(CXX) -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
+source/parse/parse.o: source/parse/parse.cpp
+	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
 
 %.o: %.cpp
 	$(COMPILE.cc) $< -o $@
 
-test: lyre ; @./lyre test/00.ly
-lab: lab.ll ; @$(LLI) lab.ll
+%.d: %.cpp
+	$(CXX) -MM -MF $@ -MT $(@:%.d=%.o) $(CXXFLAGS) $<
 
 .PHONY: test lab
+
+-include $(OBJECTS:%.o=%.d)
+
+test: lyre ; @./lyre test/00.ly
+lab: lab.ll ; @$(LLI) lab.ll

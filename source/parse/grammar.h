@@ -14,7 +14,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "ast.h"
+#include "metast.h"
 
 namespace lyre
 {

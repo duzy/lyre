@@ -7,7 +7,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
 #include <unordered_map>
-#include "metast.h"
+#include "parse/metast.h"
 
 namespace lyre
 {
