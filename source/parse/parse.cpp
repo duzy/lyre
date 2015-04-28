@@ -23,11 +23,13 @@ namespace lyre
         return prog;
     }
 
-    metast::stmts parse_file(const std::string & filename)
+    ast::StmtList convert_ast(const metast::stmts & metaStmts);
+
+    ast::StmtList parse_file(const std::string & filename)
     {
         std::ifstream in(filename.c_str(), std::ios_base::in);
         in.unsetf(std::ios::skipws); // No white space skipping!
         std::istream_iterator<char> beg(in), end;
-        return parse(beg, end);
+        return convert_ast(parse(beg, end));
     }
 }

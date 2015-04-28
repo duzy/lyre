@@ -46,8 +46,9 @@ OBJECTS.ast := \
   source/ast/Expr.o \
 
 OBJECTS.parse := \
-  source/parse/parse.o \
   source/parse/metast.o \
+  source/parse/convert.o \
+  source/parse/parse.o \
 
 OBJECTS.gc := \
   source/gc/lygc.o \

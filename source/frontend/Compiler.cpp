@@ -1,4 +1,6 @@
 #include "Compiler.h"
+#include "ast/AST.h"
+#include "parse/parse.h"
 
 namespace lyre
 {
@@ -12,6 +14,7 @@ namespace lyre
 
     void Compiler::evalFile(const std::string & filename)
     {
+        auto stmts = parse_file(filename);
         
     }
 }
