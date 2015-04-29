@@ -11,5 +11,10 @@ namespace lyre
         Stmt::~Stmt()
         {
         }
+
+        void* Stmt::operator new(size_t bytes, const Context& ctx, unsigned alignment)
+        {
+            return ::operator new(bytes, ctx, alignment);
+        }
     }
 }

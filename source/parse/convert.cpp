@@ -3,32 +3,34 @@
 
 namespace lyre
 {
+    using ast::StmtResult;
+    
     struct converter
     {
-        typedef void result_type;
+        typedef StmtResult result_type;
 
         ast::StmtList statements;
 
         explicit converter(const metast::stmts & metaStmts) : statements()
         {
-            boost::apply_visitor(*this, metaStmts);
+            //boost::apply_visitor(*this, metaStmts);
         }
 
-        void operator()(const metast::expr & s);
-        void operator()(const metast::none &);
-        void operator()(const metast::decl & s);
-        void operator()(const metast::proc & s);
-        void operator()(const metast::type & s);
-        void operator()(const metast::see & s);
-        void operator()(const metast::with & s);
-        void operator()(const metast::speak & s);
-        void operator()(const metast::per & s);
-        void operator()(const metast::ret & s);
+        StmtResult operator()(const metast::expr & s);
+        StmtResult operator()(const metast::none &);
+        StmtResult operator()(const metast::decl & s);
+        StmtResult operator()(const metast::proc & s);
+        StmtResult operator()(const metast::type & s);
+        StmtResult operator()(const metast::see & s);
+        StmtResult operator()(const metast::with & s);
+        StmtResult operator()(const metast::speak & s);
+        StmtResult operator()(const metast::per & s);
+        StmtResult operator()(const metast::ret & s);
     };
     
     ast::StmtList convert_ast(const metast::stmts & metaStmts)
     {
         converter cvt(metaStmts);
-        return cvt.stmts;
+        return cvt.statements;
     }
 }
