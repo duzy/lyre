@@ -1,35 +1,159 @@
 #include "parse.h"
-#include "grammar.h"
+#include "metast.h"
 
 namespace lyre
 {
-    template <class Iterator>
-    metast::stmts parse(Iterator in_beg, Iterator in_end)
+    namespace metast
     {
-        std::string source; // We will read the contents here.
-        std::copy(in_beg, in_end, std::back_inserter(source));
-
-        metast::stmts prog;
-        grammar<std::string::const_iterator> gmr;
-        skipper<std::string::const_iterator> space;
-        std::string::const_iterator iter = source.begin(), end = source.end();
-        auto status = boost::spirit::qi::phrase_parse(iter, end, gmr, space, prog);
-
-        if (status && iter == end) {
-            // okay
-        } else {
-            // not okay
-        }
-        return prog;
+        stmts parse_file(const std::string & filename);
     }
 
-    ast::StmtList convert_ast(const metast::stmts & metaStmts);
-
-    ast::StmtList parse_file(const std::string & filename)
+    using ast::StmtResult;
+    
+    struct converter
     {
-        std::ifstream in(filename.c_str(), std::ios_base::in);
-        in.unsetf(std::ios::skipws); // No white space skipping!
-        std::istream_iterator<char> beg(in), end;
-        return convert_ast(parse(beg, end));
+        typedef StmtResult result_type;
+
+        StmtResult root;
+
+        explicit converter(const metast::stmts & metaStmts) : root()
+        {
+            for (auto stmt : metaStmts) boost::apply_visitor(*this, stmt);
+        }
+
+        StmtResult operator()(const metast::expr & s);
+        StmtResult operator()(const metast::none &);
+        StmtResult operator()(const metast::decl & s);
+        StmtResult operator()(const metast::proc & s);
+        StmtResult operator()(const metast::type & s);
+        StmtResult operator()(const metast::see & s);
+        StmtResult operator()(const metast::with & s);
+        StmtResult operator()(const metast::speak & s);
+        StmtResult operator()(const metast::per & s);
+        StmtResult operator()(const metast::ret & s);
+    };
+
+    StmtResult parse_file(const std::string & filename)
+    {
+        converter cvt(metast::parse_file(filename));
+        return cvt.root;
+    }
+
+    StmtResult converter::operator()(const metast::expr & s)
+    {
+        std::clog<<"expr"<<std::endl;
+    }
+    
+    StmtResult converter::operator()(const metast::none &)
+    {
+        std::clog<<"none"<<std::endl;
+    }
+
+    StmtResult converter::operator()(const metast::decl & s)
+    {
+        std::clog<<"decl"<<std::endl;
+    }
+    
+    StmtResult converter::operator()(const metast::proc & s)
+    {
+        std::clog<<"proc"<<std::endl;
+    }
+    
+    StmtResult converter::operator()(const metast::type & s)
+    {
+        std::clog<<"type"<<std::endl;
+    }
+    
+    StmtResult converter::operator()(const metast::see & s)
+    {
+        std::clog<<"see"<<std::endl;
+    }
+    
+    StmtResult converter::operator()(const metast::with & s)
+    {
+        std::clog<<"with"<<std::endl;
+    }
+    
+    StmtResult converter::operator()(const metast::speak & s)
+    {
+        std::clog<<"speak"<<std::endl;
+    }
+    
+    StmtResult converter::operator()(const metast::per & s)
+    {
+        std::clog<<"per"<<std::endl;
+    }
+
+    StmtResult converter::operator()(const metast::ret & s)
+    {
+        std::clog<<"ret"<<std::endl;
     }
 }
+
+/**
+ *  AllocaInst - an instruction to allocate memory on the stack
+ *  LoadInst - an instruction for reading from memory
+ *  StoreInst - an instruction for storing to memory
+ *  FenceInst - an instruction for ordering other memory operations
+ *
+ *  AtomicCmpXchgInst - an instruction that atomically checks whether a
+ *      specified value is in a memory location, and, if it is, stores a new value
+ *      there
+ *  AtomicRMWInst - an instruction that atomically reads a memory location,
+ *      combines it with another value, and then stores the result back
+ *
+ *  GetElementPtrInst - an instruction for type-safe pointer arithmetic to
+ *      access elements of arrays and structs
+ *
+ *  ICmpInst - Represent an integer comparison operator.
+ *  FCmpInst - Represents a floating point comparison operator.
+ *
+ *  CallInst - This class represents a function call, abstracting a target
+ *      machine's calling convention
+ *
+ *  SelectInst - This class represents the LLVM 'select' instruction.
+ *
+ *  VAArgInst - This class represents the va_arg llvm instruction
+ *
+ *  ExtractElementInst - This instruction extracts a single (scalar)
+ *      element from a VectorType value
+ *  InsertElementInst - This instruction inserts a single (scalar)
+ *      element into a VectorType value
+ *
+ *  ShuffleVectorInst - This instruction constructs a fixed permutation of two
+ *      input vectors
+ *
+ *  ExtractValueInst - This instruction extracts a struct member or array
+ *      element value from an aggregate value
+ *  InsertValueInst - This instruction inserts a struct field of array element
+ *      value into an aggregate value
+ *
+ *  PHINode - The PHINode class is used to represent the magical mystical PHI node
+ *
+ *  LandingPadInst - The landingpad instruction holds all of the information
+ *      necessary to generate correct exception handling
+ *
+ *  ReturnInst - Return a value (possibly void), from a function
+ *  BranchInst - Conditional or Unconditional Branch instruction
+ *  SwitchInst - Multiway switch
+ *  IndirectBrInst - Indirect Branch Instruction
+ *
+ *  InvokeInst - Invoke instruction
+ *  ResumeInst - Resume the propagation of an exception
+ *  UnreachableInst - This function has undefined behavior
+ *
+ *  TruncInst - represents a truncation of integer types
+ *  ZExtInst - represents zero extension of integer types
+ *  SExtInst - represents a sign extension of integer types
+ *  FPTruncInst - represents a truncation of floating point types
+ *  FPExtInst - represents an extension of floating point types
+ *  UIToFPInst - represents a cast unsigned integer to floating point
+ *  SIToFPInst - represents a cast from signed integer to floating point
+ *  FPToUIInst - represents a cast from floating point to unsigned integer
+ *  FPToSIInst - represents a cast from floating point to signed integer
+ *  IntToPtrInst - represents a cast from an integer to a pointer
+ *  PtrToIntInst - represents a cast from a pointer to an integer
+ *  BitCastInst - represents a no-op cast from one type to another
+ *  AddrSpaceCastInst - represents a conversion between pointers
+ *      from one address space to another
+ */

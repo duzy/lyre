@@ -33,11 +33,16 @@ namespace lyre
             void operator delete(void*, void*) throw() { }
         };
 
+        class NullStmt : public Stmt
+        {
+        public:
+            NullStmt() {}
+        };
+
         class DeclStmt : public Stmt
         {
         public:
-            DeclStmt();
-            virtual ~DeclStmt();
+            DeclStmt() {}
         };
     }
 }

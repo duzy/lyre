@@ -15,6 +15,6 @@ namespace lyre
     void Compiler::evalFile(const std::string & filename)
     {
         auto stmts = parse_file(filename);
-        
+        stmts.isInvalid();
     }
 }

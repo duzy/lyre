@@ -47,7 +47,6 @@ OBJECTS.ast := \
 
 OBJECTS.parse := \
   source/parse/metast.o \
-  source/parse/convert.o \
   source/parse/parse.o \
 
 OBJECTS.gc := \
@@ -61,7 +60,7 @@ source/ast.o: $(OBJECTS.ast) ; $(COMBINE)
 source/parse.o: $(OBJECTS.parse) ; $(COMBINE)
 source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 
-source/parse/parse.o: source/parse/parse.cpp
+source/parse/metast.o: source/parse/metast.cpp
 	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
 
 %.o: %.cpp
