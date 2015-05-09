@@ -14,9 +14,11 @@ namespace lyre
     {
         typedef StmtResult result_type;
 
+        ast::Context & context;
         StmtResult root;
 
-        explicit converter(const metast::stmts & metaStmts) : root()
+        explicit converter(ast::Context & ctx, const metast::stmts & metaStmts)
+            : context(ctx), root(new (ctx) ast::CompoundStmt())
         {
             for (auto stmt : metaStmts) boost::apply_visitor(*this, stmt);
         }
@@ -33,9 +35,10 @@ namespace lyre
         StmtResult operator()(const metast::ret & s);
     };
 
-    StmtResult parse_file(const std::string & filename)
+    StmtResult parse_file(ast::Context & context, const std::string & filename)
     {
-        converter cvt(metast::parse_file(filename));
+        converter cvt(context, metast::parse_file(filename));
+        
         return cvt.root;
     }
 
@@ -43,7 +46,7 @@ namespace lyre
     {
         std::clog<<"expr"<<std::endl;
     }
-    
+
     StmtResult converter::operator()(const metast::none &)
     {
         std::clog<<"none"<<std::endl;
@@ -51,34 +54,38 @@ namespace lyre
 
     StmtResult converter::operator()(const metast::decl & s)
     {
-        std::clog<<"decl"<<std::endl;
+        StmtResult res(new (context) ast::DeclStmt);
+        
+        
+        
+        return res;
     }
-    
+
     StmtResult converter::operator()(const metast::proc & s)
     {
         std::clog<<"proc"<<std::endl;
     }
-    
+
     StmtResult converter::operator()(const metast::type & s)
     {
         std::clog<<"type"<<std::endl;
     }
-    
+
     StmtResult converter::operator()(const metast::see & s)
     {
         std::clog<<"see"<<std::endl;
     }
-    
+
     StmtResult converter::operator()(const metast::with & s)
     {
         std::clog<<"with"<<std::endl;
     }
-    
+
     StmtResult converter::operator()(const metast::speak & s)
     {
         std::clog<<"speak"<<std::endl;
     }
-    
+
     StmtResult converter::operator()(const metast::per & s)
     {
         std::clog<<"per"<<std::endl;

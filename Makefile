@@ -28,7 +28,12 @@ LOADLIBS :=
 
 COMBINE = $(LD) -r -o $@ $^
 
-OBJECTS = $(OBJECTS.lyre) $(OBJECTS.parse) $(OBJECTS.gc)
+OBJECTS = \
+  $(OBJECTS.lyre) \
+  $(OBJECTS.frontend) \
+  $(OBJECTS.parse) \
+  $(OBJECTS.ast) \
+  $(OBJECTS.gc) \
 
 OBJECTS.lyre := \
   source/frontend.o \
@@ -41,8 +46,8 @@ OBJECTS.frontend := \
   source/frontend/main.o \
 
 OBJECTS.ast := \
+  source/ast/Context.o \
   source/ast/Stmt.o \
-  source/ast/StmtList.o \
   source/ast/Expr.o \
 
 OBJECTS.parse := \
@@ -56,8 +61,8 @@ lyre: $(OBJECTS.lyre)
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
 
 source/frontend.o: $(OBJECTS.frontend) ; $(COMBINE)
-source/ast.o: $(OBJECTS.ast) ; $(COMBINE)
 source/parse.o: $(OBJECTS.parse) ; $(COMBINE)
+source/ast.o: $(OBJECTS.ast) ; $(COMBINE)
 source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 
 source/parse/metast.o: source/parse/metast.cpp

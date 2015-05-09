@@ -17,5 +17,17 @@ namespace lyre
         {
         }
 
+        NullStmt::NullStmt()
+        {
+        }
+
+        DeclStmt::DeclStmt()
+        {
+        }
+
+        CompoundStmt::CompoundStmt()
+        {
+        }
+
     }
 }

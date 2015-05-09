@@ -11,17 +11,78 @@ namespace lyre
     {
         class Stmt
         {
-            // source location
+        public:
+            enum StmtClass
+            {
+                NoStmtClass = 0,
+                NullStmtClass,
+                DeclStmtClass,
+                CompoundStmtClass,
+            };
 
         protected:
             // Make vanilla 'new' and 'delete' illegal for Stmts. (Same as clang::Stmt)
             void* operator new(size_t bytes) throw() { llvm_unreachable("Stmts cannot be allocated with regular 'new'."); }
             void operator delete(void* data) throw() { llvm_unreachable("Stmts cannot be released with regular 'delete'."); }
             
-        public:
-            Stmt();
-            virtual ~Stmt();
+            class StmtBitfields
+            {
+                friend class Stmt;
+                unsigned Class : 8;
+            };
+            enum { NumStmtBits = 8 };
 
+            class CompoundStmtBitfields
+            {
+                friend class CompoundStmt;
+                unsigned : NumStmtBits;
+                unsigned NumStmts : 32 - NumStmtBits;
+            };
+
+            class ExprBitfields
+            {
+                friend class Expr;
+                unsigned : NumStmtBits;
+            };
+            enum { NumExprBits = NumStmtBits + 0 };
+
+            class CharacterLiteralBitfields
+            {
+                friend class CharacterLiteral;
+                unsigned : NumExprBits;
+                unsigned Kind : 2;
+            };
+
+            enum FloatingLiteralSemantics 
+            {
+                IEEEhalf,
+                IEEEsingle,
+                IEEEdouble,
+                x87DoubleExtended,
+                IEEEquad,
+                PPCDoubleDouble
+            };
+            class FloatingLiteralBitfields
+            {
+                friend class FloatingLiteral;
+                unsigned : NumExprBits;
+                unsigned Semantics : 3; // Provides semantics for APFloat construction
+                unsigned IsExact : 1;
+            };
+            
+            union
+            {
+                StmtBitfields StmtBits;
+                CompoundStmtBitfields CompoundStmtBits;
+                ExprBitfields ExprBits;
+                CharacterLiteralBitfields CharacterLiteralBits;
+                FloatingLiteralBitfields FloatingLiteralBits;
+            };
+            
+        public:           
+            explicit Stmt(StmtClass sc);
+            virtual ~Stmt();
+            
             // Only allow allocation of Stmts using the allocator in Context
             // or by doing a placement new. (Similar to clang::Stmt)
             void* operator new(size_t bytes, const Context& c, unsigned alignment = 8);
@@ -43,6 +104,12 @@ namespace lyre
         {
         public:
             DeclStmt() {}
+        };
+
+        class CompoundStmt : public Stmt
+        {
+        public:
+            CompoundStmt() {}
         };
     }
 }

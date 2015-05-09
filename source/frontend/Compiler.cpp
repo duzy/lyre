@@ -5,6 +5,7 @@
 namespace lyre
 {
     Compiler::Compiler()
+        : context()
     {
     }
     
@@ -14,7 +15,7 @@ namespace lyre
 
     void Compiler::evalFile(const std::string & filename)
     {
-        auto stmts = parse_file(filename);
+        auto stmts = parse_file(context, filename);
         stmts.isInvalid();
     }
 }

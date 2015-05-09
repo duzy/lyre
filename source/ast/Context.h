@@ -23,6 +23,10 @@ namespace lyre
             mutable llvm::BumpPtrAllocator BumpAlloc;
 
         public:
+            Context();
+
+            ~Context();
+            
             void *Allocate(size_t Size, unsigned Align = 8) const { return BumpAlloc.Allocate(Size, Align); }
             void Deallocate(void *Ptr) const { }
         };

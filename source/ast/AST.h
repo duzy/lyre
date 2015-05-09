@@ -3,7 +3,7 @@
 #define __LYRE_AST_H____DUZY__ 1
 #include "Context.h"
 #include "Expr.h"
-#include "StmtList.h"
+#include "Stmt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 

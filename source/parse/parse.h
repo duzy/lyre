@@ -5,7 +5,7 @@
 
 namespace lyre
 {   
-    ast::StmtResult parse_file(const std::string & filename);
+    ast::StmtResult parse_file(ast::Context & context, const std::string & filename);
 }
 
 #endif//__LYRE_PARSE_H____DUZY__

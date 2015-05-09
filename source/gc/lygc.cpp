@@ -15,6 +15,6 @@ namespace lyre
     LyGC::LyGC()
     {
     }
-    
+
     static GCRegistry::Add<LyGC> x("lygc", "The Lyre language garbage collector.");
 }
