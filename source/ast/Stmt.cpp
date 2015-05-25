@@ -4,28 +4,45 @@ namespace lyre
 {
     namespace ast
     {
+        struct StmtClassInfo
+        {
+            const char *Name;
+            unsigned Size, Counter;
+        } StmtClassNames[Stmt::lastStmtConstant+1];
+        
+        static StmtClassInfo & getStmtClassInfo(Stmt::StmtClass sc)
+        {
+            static bool Initialized = false;
+            if (!Initialized) {
+#define STMT(CLASS, PARENT)                                             \
+                StmtClassNames[(unsigned)Stmt::CLASS##Class].Name = #CLASS; \
+                StmtClassNames[(unsigned)Stmt::CLASS##Class].Size = sizeof(CLASS);
+#include "StmtNodes.inc"
+                
+                Initialized = true;
+            }
+            return StmtClassNames[sc];
+        }
+        
         void* Stmt::operator new(size_t bytes, const Context& ctx, unsigned alignment)
         {
             return ::operator new(bytes, ctx, alignment); 
         }
 
-        Stmt::Stmt()
+        const char *Stmt::getStmtClassName() const
         {
+            return getStmtClassInfo(getStmtClass()).Name;
         }
-        
-        Stmt::~Stmt()
+
+        NullStmt::NullStmt() : Stmt(NullStmtClass)
         {
         }
 
-        NullStmt::NullStmt()
+        DeclStmt::DeclStmt() : Stmt(DeclStmtClass)
         {
         }
 
-        DeclStmt::DeclStmt()
-        {
-        }
-
-        CompoundStmt::CompoundStmt()
+        CompoundStmt::CompoundStmt() : Stmt(CompoundStmtClass)
         {
         }
 

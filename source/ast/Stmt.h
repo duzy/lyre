@@ -15,9 +15,14 @@ namespace lyre
             enum StmtClass
             {
                 NoStmtClass = 0,
-                NullStmtClass,
-                DeclStmtClass,
-                CompoundStmtClass,
+#define STMT(CLASS, PARENT) CLASS##Class,
+#define STMT_RANGE(BASE, FIRST, LAST)                   \
+                first##BASE##Constant=FIRST##Class,     \
+                last##BASE##Constant=LAST##Class,
+#define STMT_RANGE_FINAL(BASE, FIRST, LAST)             \
+                first##BASE##Constant=FIRST##Class,     \
+                last##BASE##Constant=LAST##Class,
+#include "StmtNodes.inc"
             };
 
         protected:
@@ -78,11 +83,8 @@ namespace lyre
                 CharacterLiteralBitfields CharacterLiteralBits;
                 FloatingLiteralBitfields FloatingLiteralBits;
             };
-            
+
         public:           
-            explicit Stmt(StmtClass sc);
-            virtual ~Stmt();
-            
             // Only allow allocation of Stmts using the allocator in Context
             // or by doing a placement new. (Similar to clang::Stmt)
             void* operator new(size_t bytes, const Context& c, unsigned alignment = 8);
@@ -92,24 +94,35 @@ namespace lyre
             void operator delete(void*, const Context*, unsigned) throw() { }
             void operator delete(void*, size_t) throw() { }
             void operator delete(void*, void*) throw() { }
+
+            explicit Stmt(StmtClass sc)
+            {
+                static_assert(sizeof(*this) % llvm::AlignOf<void *>::Alignment == 0, "Insufficient alignment!");
+                StmtBits.Class = sc;
+            }
+            
+            virtual ~Stmt() {}
+            
+            StmtClass getStmtClass() const { return static_cast<StmtClass>(StmtBits.Class); }
+            const char *getStmtClassName() const;
         };
 
         class NullStmt : public Stmt
         {
         public:
-            NullStmt() {}
+            NullStmt();
         };
 
         class DeclStmt : public Stmt
         {
         public:
-            DeclStmt() {}
+            DeclStmt();
         };
 
         class CompoundStmt : public Stmt
         {
         public:
-            CompoundStmt() {}
+            CompoundStmt();
         };
     }
 }
