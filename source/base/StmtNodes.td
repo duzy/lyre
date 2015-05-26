@@ -1,16 +1,16 @@
-class AttrSubject;
-
-class Stmt<bit abstract = 0> : AttrSubject {
+class Stmt<bit abstract = 0> {
   bit Abstract = abstract;
 }
 
-class DStmt<Stmt base, bit abstract = 0> : Stmt<abstract> {
+class DerivedStmt<Stmt base, bit abstract = 0> : Stmt<abstract> {
   Stmt Base = base;
 }
 
 // Statements
 def NullStmt : Stmt;
 def CompoundStmt : Stmt;
+def DeclStmt  : Stmt;
+/*
 def LabelStmt : Stmt;
 def AttributedStmt : Stmt;
 def IfStmt : Stmt;
@@ -25,6 +25,7 @@ def BreakStmt : Stmt;
 def ReturnStmt : Stmt;
 def DeclStmt  : Stmt;
 def SwitchCase : Stmt<1>;
-def CaseStmt : DStmt<SwitchCase>;
-def DefaultStmt : DStmt<SwitchCase>;
+def CaseStmt : DerivedStmt<SwitchCase>;
+def DefaultStmt : DerivedStmt<SwitchCase>;
 def CapturedStmt : Stmt;
+*/

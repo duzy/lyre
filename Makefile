@@ -68,11 +68,11 @@ source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 source/parse/metast.o: source/parse/metast.cpp
 	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
 
-source/ast/StmtNodes.inc: source/base/StmtNodes.td | utils/TableGen/TableGen
+source/ast/StmtNodes.inc: source/base/StmtNodes.td utils/TableGen/TableGen
 	utils/TableGen/TableGen -gen-lyre-stmt-nodes -o=$@ $<
 
 utils/TableGen/TableGen: utils/TableGen/TableGen.cpp \
-    utils/TableGen/TableGenEmitters.h \
+    utils/TableGen/TableGenBackends.h \
     utils/TableGen/LyreASTNodesEmitter.cpp \
     utils/TableGen/Makefile
 	cd $(@D) && $(MAKE) && test $(@F)
