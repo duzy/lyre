@@ -9,23 +9,16 @@ class DerivedStmt<Stmt base, bit abstract = 0> : Stmt<abstract> {
 // Statements
 def NullStmt : Stmt;
 def CompoundStmt : Stmt;
-def DeclStmt  : Stmt;
-/*
-def LabelStmt : Stmt;
-def AttributedStmt : Stmt;
-def IfStmt : Stmt;
-def SwitchStmt : Stmt;
-def WhileStmt : Stmt;
-def DoStmt : Stmt;
-def ForStmt : Stmt;
-def GotoStmt : Stmt;
-def IndirectGotoStmt : Stmt;
-def ContinueStmt : Stmt;
-def BreakStmt : Stmt;
+def DeclStmt : Stmt; // var, proc, type, etc
+def SeeStmt : Stmt;
+def WithStmt : Stmt;
+def SpeakStmt : Stmt;
+def PerStmt : Stmt;
 def ReturnStmt : Stmt;
-def DeclStmt  : Stmt;
-def SwitchCase : Stmt<1>;
-def CaseStmt : DerivedStmt<SwitchCase>;
-def DefaultStmt : DerivedStmt<SwitchCase>;
-def CapturedStmt : Stmt;
-*/
+
+// Expressions
+def Expr : Stmt<1>;
+def IntegerLiteral : DerivedStmt<Expr>;
+def FloatingLiteral : DerivedStmt<Expr>;
+def StringLiteral : DerivedStmt<Expr>;
+def CharacterLiteral : DerivedStmt<Expr>;

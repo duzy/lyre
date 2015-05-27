@@ -9,7 +9,47 @@ namespace lyre
     {
         class Expr : public Stmt
         {
-            
+        protected:
+            Expr(StmtClass SC)
+                : Stmt(SC)
+            {
+            }
+        };
+
+        class IntegerLiteral : public Expr
+        {
+        public:
+            IntegerLiteral()
+                : Expr(IntegerLiteralClass)
+            {
+            }
+        };
+
+        class FloatingLiteral : public Expr
+        {
+        public:
+            FloatingLiteral()
+                : Expr(FloatingLiteralClass)
+            {
+            }
+        };
+
+        class StringLiteral : public Expr 
+        {
+        public:
+            StringLiteral()
+                : Expr(StringLiteralClass)
+            {
+            }
+        };
+
+        class CharacterLiteral : public Expr 
+        {
+        public:
+            CharacterLiteral()
+                : Expr(CharacterLiteralClass)
+            {
+            }
         };
     }
 }

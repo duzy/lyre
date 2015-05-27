@@ -78,7 +78,7 @@ std::pair<Record *, Record *> LyreASTNodesEmitter::EmitNode(const ChildMap &Tree
         }
 
         if (Tree.find(R) != Tree.end()) {
-            const std::pair<Record *, Record *> &Result = EmitNode(Tree, OS, R);
+            const auto Result = EmitNode(Tree, OS, R);
             if (!First && Result.first) First = Result.first;
             if (Result.second) Last = Result.second;
         } else {

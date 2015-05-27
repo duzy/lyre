@@ -124,6 +124,36 @@ namespace lyre
         public:
             CompoundStmt();
         };
+
+        class SeeStmt : public Stmt
+        {
+        public:
+            SeeStmt();
+        };
+
+        class WithStmt : public Stmt
+        {
+        public:
+            WithStmt();
+        };
+
+        class SpeakStmt : public Stmt
+        {
+        public:
+            SpeakStmt();
+        };
+
+        class PerStmt : public Stmt
+        {
+        public:
+            PerStmt();
+        };
+
+        class ReturnStmt : public Stmt
+        {
+        public:
+            ReturnStmt();
+        };
     }
 }
 

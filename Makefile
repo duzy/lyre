@@ -15,7 +15,7 @@ LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
 LLI := $(LLVM)/Debug+Asserts/bin/lli
 
-CXXFLAGS := -Isource \
+CXXFLAGS := -Iinclude -Isource \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
   $(shell $(LLVM_CONFIG) --cxxflags)
 

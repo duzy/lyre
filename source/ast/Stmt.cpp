@@ -1,4 +1,5 @@
 #include "Stmt.h"
+#include "Expr.h"
 
 namespace lyre
 {
@@ -43,6 +44,26 @@ namespace lyre
         }
 
         CompoundStmt::CompoundStmt() : Stmt(CompoundStmtClass)
+        {
+        }
+
+        SeeStmt::SeeStmt() : Stmt(SeeStmtClass)
+        {
+        }
+
+        WithStmt::WithStmt() : Stmt(WithStmtClass)
+        {
+        }
+
+        SpeakStmt::SpeakStmt() : Stmt(SpeakStmtClass)
+        {
+        }
+
+        PerStmt::PerStmt() : Stmt(PerStmtClass)
+        {
+        }
+
+        ReturnStmt::ReturnStmt() : Stmt(ReturnStmtClass)
         {
         }
 
