@@ -118,6 +118,10 @@ namespace lyre
         };
 
         typedef ActionResult<ast::Stmt*> StmtResult;
+        typedef ActionResult<ast::Expr*> ExprResult;
+
+        inline StmtResult StmtError() { return StmtResult(true); }
+        inline ExprResult ExprError() { return ExprResult(true); }
     }
 }
 

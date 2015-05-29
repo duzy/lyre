@@ -1,5 +1,6 @@
 #include "Stmt.h"
 #include "Expr.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace lyre
 {
@@ -25,14 +26,19 @@ namespace lyre
             return StmtClassNames[sc];
         }
         
-        void* Stmt::operator new(size_t bytes, const Context& ctx, unsigned alignment)
+        void* Stmt::operator new(size_t bytes, const Context& context, unsigned alignment)
         {
-            return ::operator new(bytes, ctx, alignment); 
+            return ::operator new(bytes, context, alignment);
         }
 
         const char *Stmt::getStmtClassName() const
         {
             return getStmtClassInfo(getStmtClass()).Name;
+        }
+
+        void Stmt::debugStmtCtor()
+        {
+            llvm::errs() << "*** " << getStmtClassName() << " ("  << this << ")" << "\n";
         }
 
         NullStmt::NullStmt() : Stmt(NullStmtClass)
@@ -43,8 +49,24 @@ namespace lyre
         {
         }
 
-        CompoundStmt::CompoundStmt() : Stmt(CompoundStmtClass)
+        CompoundStmt::CompoundStmt() : Stmt(CompoundStmtClass), Body(nullptr)
         {
+            CompoundStmtBits.NumStmts = 0;
+        }
+
+        CompoundStmt::CompoundStmt(const Context &C, llvm::ArrayRef<Stmt*> Stmts)
+            : Stmt(CompoundStmtClass)
+        {
+            CompoundStmtBits.NumStmts = Stmts.size();
+            assert(CompoundStmtBits.NumStmts == Stmts.size() &&
+                "NumStmts doesn't fit in bits of CompoundStmtBits.NumStmts!");
+            
+            if (0 < Stmts.size()) {
+                Body = new (C) Stmt*[Stmts.size()];
+                std::copy(Stmts.begin(), Stmts.end(), Body);
+            } else {
+                Body = nullptr;
+            }
         }
 
         SeeStmt::SeeStmt() : Stmt(SeeStmtClass)

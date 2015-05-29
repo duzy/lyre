@@ -51,6 +51,23 @@ namespace lyre
             {
             }
         };
+
+        class NodeConstructionExpr : public Expr
+        {
+        public:
+            NodeConstructionExpr()
+                : Expr(NodeConstructionExprClass)
+            {
+            }
+        };
+
+        class ListExpr : public Expr
+        {
+        public:
+            ListExpr() : Expr(ListExprClass)
+            {
+            }
+        };
     }
 }
 

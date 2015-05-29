@@ -3,6 +3,7 @@
 #define __LYRE_AST_STMT_H____DUZY__ 1
 #include "Context.h"
 #include "Decl.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <string>
 
 namespace lyre
@@ -84,21 +85,26 @@ namespace lyre
                 FloatingLiteralBitfields FloatingLiteralBits;
             };
 
+            void debugStmtCtor();
+            
         public:           
             // Only allow allocation of Stmts using the allocator in Context
             // or by doing a placement new. (Similar to clang::Stmt)
-            void* operator new(size_t bytes, const Context& c, unsigned alignment = 8);
-            void* operator new(size_t bytes, const Context* c, unsigned alignment = 8) { return operator new(bytes, *c, alignment); }
+            void* operator new(size_t bytes, const Context& context, unsigned alignment = 8);
+            void* operator new(size_t bytes, const Context* context, unsigned alignment = 8) { return operator new(bytes, *context, alignment); }
             void* operator new(size_t bytes, void* mem) throw() { return mem; }
             void operator delete(void*, const Context&, unsigned) throw() { }
             void operator delete(void*, const Context*, unsigned) throw() { }
             void operator delete(void*, size_t) throw() { }
             void operator delete(void*, void*) throw() { }
 
-            explicit Stmt(StmtClass sc)
+            explicit Stmt(StmtClass SC)
             {
                 static_assert(sizeof(*this) % llvm::AlignOf<void *>::Alignment == 0, "Insufficient alignment!");
-                StmtBits.Class = sc;
+                
+                StmtBits.Class = SC;
+                
+                debugStmtCtor();
             }
             
             virtual ~Stmt() {}
@@ -111,48 +117,141 @@ namespace lyre
         {
         public:
             NullStmt();
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == NullStmtClass;
+            }
         };
 
         class DeclStmt : public Stmt
         {
         public:
             DeclStmt();
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == DeclStmtClass;
+            }
         };
 
         class CompoundStmt : public Stmt
         {
+            Stmt **Body;
+            
         public:
+            CompoundStmt(const Context &C, llvm::ArrayRef<Stmt*> Stmts);
             CompoundStmt();
+
+            unsigned size() const { return CompoundStmtBits.NumStmts; }
+            
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == CompoundStmtClass;
+            }
         };
 
         class SeeStmt : public Stmt
         {
         public:
             SeeStmt();
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == SeeStmtClass;
+            }
         };
 
         class WithStmt : public Stmt
         {
         public:
             WithStmt();
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == WithStmtClass;
+            }
         };
 
         class SpeakStmt : public Stmt
         {
         public:
             SpeakStmt();
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == SpeakStmtClass;
+            }
         };
 
         class PerStmt : public Stmt
         {
         public:
             PerStmt();
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == PerStmtClass;
+            }
         };
 
         class ReturnStmt : public Stmt
         {
         public:
             ReturnStmt();
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == ReturnStmtClass;
+            }
+        };
+
+        // SeeForkStmt is the base class for BareForkStmt and ValueForkStmt.
+        class SeeForkStmt : public Stmt
+        {
+        protected:
+            SeeForkStmt *NextFork;
+            
+            SeeForkStmt(StmtClass SC) : Stmt(SC), NextFork(nullptr)
+            {
+            }
+            
+        public:
+            const SeeForkStmt *getNextFork() const { return NextFork; }
+            SeeForkStmt *getNextFork() { return NextFork; }
+
+            void setNextFork(SeeForkStmt *Fork) { NextFork = Fork; }
+
+            static bool classof(const Stmt *S) 
+            {
+                const auto C = S->getStmtClass();
+                return C == BareForkStmtClass || C == ValueForkStmtClass;
+            }
+        };
+
+        class ValueForkStmt : public SeeForkStmt
+        {
+        public:
+            ValueForkStmt() : SeeForkStmt(ValueForkStmtClass) {}
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == ValueForkStmtClass;
+            }
+        };
+
+        class BareForkStmt : public SeeForkStmt
+        {
+        protected:
+            BareForkStmt(StmtClass SC) : SeeForkStmt(SC) {}
+            
+        public:
+            BareForkStmt() : SeeForkStmt(BareForkStmtClass) {}
+
+            static bool classof(const Stmt *S)
+            {
+                return S->getStmtClass() == BareForkStmtClass;
+            }
         };
     }
 }

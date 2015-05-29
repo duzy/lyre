@@ -52,6 +52,18 @@ FLOATINGLITERAL(FloatingLiteral, Expr)
 INTEGERLITERAL(IntegerLiteral, Expr)
 #undef INTEGERLITERAL
 
+#ifndef LISTEXPR
+#  define LISTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+LISTEXPR(ListExpr, Expr)
+#undef LISTEXPR
+
+#ifndef NODECONSTRUCTIONEXPR
+#  define NODECONSTRUCTIONEXPR(Type, Base) EXPR(Type, Base)
+#endif
+NODECONSTRUCTIONEXPR(NodeConstructionExpr, Expr)
+#undef NODECONSTRUCTIONEXPR
+
 #ifndef STRINGLITERAL
 #  define STRINGLITERAL(Type, Base) EXPR(Type, Base)
 #endif
@@ -79,6 +91,26 @@ PERSTMT(PerStmt, Stmt)
 #endif
 RETURNSTMT(ReturnStmt, Stmt)
 #undef RETURNSTMT
+
+#ifndef SEEFORKSTMT
+#  define SEEFORKSTMT(Type, Base) STMT(Type, Base)
+#endif
+ABSTRACT_STMT(SEEFORKSTMT(SeeForkStmt, Stmt))
+#ifndef BAREFORKSTMT
+#  define BAREFORKSTMT(Type, Base) SEEFORKSTMT(Type, Base)
+#endif
+BAREFORKSTMT(BareForkStmt, SeeForkStmt)
+#undef BAREFORKSTMT
+
+#ifndef VALUEFORKSTMT
+#  define VALUEFORKSTMT(Type, Base) SEEFORKSTMT(Type, Base)
+#endif
+VALUEFORKSTMT(ValueForkStmt, SeeForkStmt)
+#undef VALUEFORKSTMT
+
+STMT_RANGE(SeeForkStmt, BareForkStmt, ValueForkStmt)
+
+#undef SEEFORKSTMT
 
 #ifndef SEESTMT
 #  define SEESTMT(Type, Base) STMT(Type, Base)

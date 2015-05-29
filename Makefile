@@ -71,7 +71,8 @@ source/parse/metast.o: source/parse/metast.cpp
 source/ast/StmtNodes.inc: source/base/StmtNodes.td utils/TableGen/TableGen
 	utils/TableGen/TableGen -gen-lyre-stmt-nodes -o=$@ $<
 
-utils/TableGen/TableGen: utils/TableGen/TableGen.cpp \
+utils/TableGen/TableGen: \
+    utils/TableGen/TableGen.cpp \
     utils/TableGen/TableGenBackends.h \
     utils/TableGen/LyreASTNodesEmitter.cpp \
     utils/TableGen/Makefile

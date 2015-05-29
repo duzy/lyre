@@ -1,5 +1,6 @@
 #include "parse.h"
 #include "metast.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace lyre
 {
@@ -9,22 +10,34 @@ namespace lyre
     }
 
     using ast::StmtResult;
+    using ast::StmtError;
     
     struct converter
     {
         typedef StmtResult result_type;
 
-        ast::Context & context;
-        StmtResult root;
+        ast::Context & Context;
+        StmtResult Root;
 
-        explicit converter(ast::Context & ctx, const metast::stmts & metaStmts)
-            : context(ctx), root(new (ctx) ast::CompoundStmt())
+        explicit converter(ast::Context & C, const metast::stmts & metaStmts)
+            : Context(C), Root(true)
         {
-            for (auto stmt : metaStmts) boost::apply_visitor(*this, stmt);
+            std::vector<ast::Stmt*> Stmts;
+            
+            for (auto metaStmt : metaStmts) {
+                auto Stmt = boost::apply_visitor(*this, metaStmt);
+                if (Stmt.isInvalid()) {
+                    llvm::errs() << "Invalid statement!\n";
+                    //break;
+                }
+                Stmts.push_back(Stmt.get());
+            }
+            
+            Root = new (C) ast::CompoundStmt(C, Stmts);
         }
 
-        StmtResult operator()(const metast::expr & s);
         StmtResult operator()(const metast::none &);
+        StmtResult operator()(const metast::expr & s);
         StmtResult operator()(const metast::decl & s);
         StmtResult operator()(const metast::proc & s);
         StmtResult operator()(const metast::type & s);
@@ -37,63 +50,68 @@ namespace lyre
 
     StmtResult parse_file(ast::Context & context, const std::string & filename)
     {
-        converter cvt(context, metast::parse_file(filename));
-        
-        return cvt.root;
-    }
-
-    StmtResult converter::operator()(const metast::expr & s)
-    {
-        std::clog<<"expr"<<std::endl;
+        return converter(context, metast::parse_file(filename)).Root;
     }
 
     StmtResult converter::operator()(const metast::none &)
     {
-        std::clog<<"none"<<std::endl;
+        llvm::errs()<<"none\n";
     }
 
-    StmtResult converter::operator()(const metast::decl & s)
+    StmtResult converter::operator()(const metast::expr & s)
     {
-        StmtResult res(new (context) ast::DeclStmt);
+        llvm::errs()<<"expr\n";
+    }
+
+    StmtResult converter::operator()(const metast::decl & decl)
+    {
+        auto DeclStmt(new (Context) ast::DeclStmt);
         
+        for (auto & sym : decl) {
+            if (sym.id.string == "_") {
+                llvm::errs() << "Using '_' as a symbol name!\n" ;
+                return StmtError();
+            }
+            
+            
+        }
         
-        
-        return res;
+        return StmtResult(DeclStmt);
     }
 
     StmtResult converter::operator()(const metast::proc & s)
     {
-        std::clog<<"proc"<<std::endl;
+        llvm::errs()<<"proc\n";
     }
 
     StmtResult converter::operator()(const metast::type & s)
     {
-        std::clog<<"type"<<std::endl;
+        llvm::errs()<<"type\n";
     }
 
     StmtResult converter::operator()(const metast::see & s)
     {
-        std::clog<<"see"<<std::endl;
+        llvm::errs()<<"see\n";
     }
 
     StmtResult converter::operator()(const metast::with & s)
     {
-        std::clog<<"with"<<std::endl;
+        llvm::errs()<<"with\n";
     }
 
     StmtResult converter::operator()(const metast::speak & s)
     {
-        std::clog<<"speak"<<std::endl;
+        llvm::errs()<<"speak\n";
     }
 
     StmtResult converter::operator()(const metast::per & s)
     {
-        std::clog<<"per"<<std::endl;
+        llvm::errs()<<"per\n";
     }
 
     StmtResult converter::operator()(const metast::ret & s)
     {
-        std::clog<<"ret"<<std::endl;
+        llvm::errs()<<"ret\n";
     }
 }
 
