@@ -30,16 +30,16 @@ COMBINE = $(LD) -r -o $@ $^
 
 OBJECTS = \
   $(OBJECTS.lyre) \
-  $(OBJECTS.frontend) \
-  $(OBJECTS.parse) \
   $(OBJECTS.ast) \
+  $(OBJECTS.parse) \
   $(OBJECTS.gc) \
+  $(OBJECTS.frontend) \
 
 OBJECTS.lyre := \
-  source/frontend.o \
   source/ast.o \
   source/parse.o \
   source/gc.o \
+  source/frontend.o \
 
 OBJECTS.frontend := \
   source/frontend/Compiler.o \
