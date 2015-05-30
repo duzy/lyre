@@ -55,7 +55,7 @@ namespace lyre
 
     StmtResult converter::operator()(const metast::none &)
     {
-        llvm::errs()<<"none\n";
+        return StmtResult(new (Context) ast::NullStmt);
     }
 
     StmtResult converter::operator()(const metast::expr & s)
@@ -73,6 +73,8 @@ namespace lyre
                 return StmtError();
             }
             
+            llvm::errs() << sym.id.string << "\n";
+
             
         }
         

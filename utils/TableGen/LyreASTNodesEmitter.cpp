@@ -136,6 +136,7 @@ void LyreASTNodesEmitter::run(raw_ostream &OS)
 
     EmitNode(Tree, OS, &Root);
     
+    OS << "#undef ABSTRACT_" << MacroName(Root.getName()) << "\n";
     OS << "#undef " << MacroName(Root.getName()) << "\n";
     OS << "#undef " << MacroName(Root.getName()) << "_RANGE\n";
     OS << "#undef " << MacroName(Root.getName()) << "_RANGE_FINAL\n";
@@ -153,7 +154,57 @@ namespace lyre
         EmitLyreASTNodes(Records, OS, "Stmt");
     }
 
+    void EmitLyreDeclContext(RecordKeeper &Records, raw_ostream &OS) 
+    {
+        /*
+        // FIXME: Find a .td file format to allow for this to be represented better.
+        emitSourceFileHeader("List of AST Decl nodes", OS);
+        */
+        OS << "\n//==================================================\n\n";
+
+        OS << "#ifndef DECL_CONTEXT\n";
+        OS << "#  define DECL_CONTEXT(DECL)\n";
+        OS << "#endif\n";
+  
+        OS << "#ifndef DECL_CONTEXT_BASE\n";
+        OS << "#  define DECL_CONTEXT_BASE(DECL) DECL_CONTEXT(DECL)\n";
+        OS << "#endif\n";
+  
+        typedef std::set<Record*> RecordSet;
+        typedef std::vector<Record*> RecordVector;
+  
+        RecordVector DeclContextsVector
+            = Records.getAllDerivedDefinitions("DeclContext");
+        RecordVector Decls = Records.getAllDerivedDefinitions("Decl");
+        RecordSet DeclContexts (DeclContextsVector.begin(), DeclContextsVector.end());
+   
+        for (RecordVector::iterator i = Decls.begin(), e = Decls.end(); i != e; ++i) {
+            Record *R = *i;
+
+            if (R->getValue("Base")) {
+                Record *B = R->getValueAsDef("Base");
+                if (DeclContexts.find(B) != DeclContexts.end()) {
+                    OS << "DECL_CONTEXT_BASE(" << B->getName() << ")\n";
+                    DeclContexts.erase(B);
+                }
+            }
+        }
+
+        // To keep identical order, RecordVector may be used
+        // instead of RecordSet.
+        for (RecordVector::iterator
+                 i = DeclContextsVector.begin(), e = DeclContextsVector.end();
+             i != e; ++i)
+            if (DeclContexts.find(*i) != DeclContexts.end())
+                OS << "DECL_CONTEXT(" << (*i)->getName() << ")\n";
+
+        OS << "#undef DECL_CONTEXT\n";
+        OS << "#undef DECL_CONTEXT_BASE\n";
+    }
+    
     void EmitLyreDeclNodes(RecordKeeper &Records, raw_ostream &OS)
     {
+        EmitLyreASTNodes(Records, OS, "Decl");
+        EmitLyreDeclContext(Records, OS);
     }
 } // end namespace lyre

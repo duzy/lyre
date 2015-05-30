@@ -47,6 +47,7 @@ OBJECTS.frontend := \
 
 OBJECTS.ast := \
   source/ast/Context.o \
+  source/ast/Decl.o \
   source/ast/Stmt.o \
   source/ast/Expr.o \
 
@@ -67,6 +68,9 @@ source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 
 source/parse/metast.o: source/parse/metast.cpp
 	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
+
+source/ast/DeclNodes.inc: source/base/DeclNodes.td utils/TableGen/TableGen
+	utils/TableGen/TableGen -gen-lyre-decl-nodes -o=$@ $<
 
 source/ast/StmtNodes.inc: source/base/StmtNodes.td utils/TableGen/TableGen
 	utils/TableGen/TableGen -gen-lyre-stmt-nodes -o=$@ $<

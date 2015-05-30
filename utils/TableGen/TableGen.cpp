@@ -36,6 +36,8 @@ namespace
     cl::opt<ActionName> Action(
         cl::desc("Actions to perform:"),
         cl::values(
+            clEnumValN(GenLyreDeclNodes, "gen-lyre-decl-nodes",
+                "Generate Lyre AST declaration nodes"),
             clEnumValN(GenLyreStmtNodes, "gen-lyre-stmt-nodes",
                 "Generate Lyre AST statement nodes"),
             clEnumValEnd));
