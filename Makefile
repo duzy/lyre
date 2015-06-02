@@ -48,6 +48,7 @@ OBJECTS.frontend := \
 OBJECTS.ast := \
   source/ast/Context.o \
   source/ast/Decl.o \
+  source/ast/DeclKinds.o \
   source/ast/Stmt.o \
   source/ast/Expr.o \
 

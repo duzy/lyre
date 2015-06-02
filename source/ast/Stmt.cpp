@@ -1,6 +1,7 @@
 #include "Stmt.h"
 #include "Expr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace lyre
 {
@@ -23,7 +24,12 @@ namespace lyre
                 
                 Initialized = true;
             }
-            return StmtClassNames[sc];
+            
+            if (sc < 0 || Stmt::lastStmtConstant < sc) {
+                llvm_unreachable("Statement not in StmtNodes.inc!");
+            } else {
+                return StmtClassNames[sc];
+            }
         }
         
         void* Stmt::operator new(size_t bytes, const Context& context, unsigned alignment)

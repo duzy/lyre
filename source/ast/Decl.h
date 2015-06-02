@@ -1,11 +1,18 @@
 // -*- c++ -*-
 #ifndef __LYRE_AST_DECL_H____DUZY__
 #define __LYRE_AST_DECL_H____DUZY__ 1
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 
 namespace lyre
 {
     namespace ast
     {
+        class Context;
+        class DeclContext;
+        
         class Decl
         {
         public:
@@ -97,10 +104,32 @@ namespace lyre
             /// The extra two bits are used for the TopLevelDeclFlag and
             /// ModulePrivate bits.
             llvm::PointerIntPair<Decl *, 2, unsigned> NextInContextAndBits;
-              
-        private:
+           
+            struct MultipleDC 
+            {
+                DeclContext *SemanticDC;
+                DeclContext *LexicalDC;
+            };
+            /// DeclCtx - Holds either a DeclContext* or a MultipleDC*.
+            /// 
+            /// For declarations that don't contain C++ scope specifiers, it contains
+            /// the DeclContext where the Decl was declared.
+            /// 
+            /// For declarations with C++ scope specifiers, it contains a MultipleDC*
+            /// with the context where it semantically belongs (SemanticDC) and the
+            /// context where it was lexically declared (LexicalDC).
+            /// e.g.:
+            ///
+            ///   namespace A {
+            ///      void f(); // SemanticDC == LexicalDC == 'namespace A'
+            ///   }
+            ///   void A::f(); // SemanticDC == namespace 'A'
+            ///                // LexicalDC == global namespace
+            llvm::PointerUnion<DeclContext*, MultipleDC*> DeclCtx;
+
             friend class DeclContext;
             
+        private:
             /// DeclKind - This indicates which class this is.
             unsigned DeclKind : 8;
 
@@ -154,30 +183,39 @@ namespace lyre
             /// \param Ctx The context in which we will allocate memory.
             /// \param ID The global ID of the deserialized declaration.
             /// \param Extra The amount of extra space to allocate after the object.
-            void *operator new(std::size_t Size, const Context &Ctx, unsigned ID, 
+            void *operator new(std::size_t Size, const ast::Context &Ctx, unsigned ID, 
                 std::size_t Extra = 0);
 
             /// \brief Allocate memory for a non-deserialized declaration.
-            void *operator new(std::size_t Size, const Context &Ctx, DeclContext *Parent, 
+            void *operator new(std::size_t Size, const ast::Context &Ctx, DeclContext *Parent, 
                 std::size_t Extra = 0);
+
+            Decl(Kind DK, DeclContext *DC)
+                : NextInContextAndBits(), DeclKind(DK), DeclCtx(DC)
+            {
+            }
+
+        public:
+            Kind getKind() const { return static_cast<Kind>(DeclKind); }
+            const char *getDeclKindName() const;
         };
 
         /// DeclContext - This is used only as base class of specific decl types that
         /// can act as declaration contexts. These decls are (only the top classes
         /// that directly derive from DeclContext are mentioned, not their subclasses):
         ///
-        ///   TranslationUnitDecl
-        ///   NamespaceDecl
-        ///   FunctionDecl
         ///   TagDecl
-        ///   ObjCMethodDecl
-        ///   ObjCContainerDecl
-        ///   LinkageSpecDecl
-        ///   BlockDecl
+        ///   ProcDecl
         ///
         class DeclContext
         {
+            /// DeclKind - This indicates which class this is.
+            unsigned DeclKind : 8;
             
+        protected:
+            DeclContext(Decl::Kind K)
+                : DeclKind(K)
+            {}
         };
     }
 }
