@@ -10,6 +10,7 @@ class DeclContext {}
 
 def TranslationUnit : Decl, DeclContext;
 def Named : Decl<1>;
+    def Namespace : DerivedDecl<Named, 1>, DeclContext;
     def Type : DerivedDecl<Named, 1>;
         def Tag : DerivedDecl<Type, 1>, DeclContext; // struct, class, etc.
             def Class : DerivedDecl<Tag>;

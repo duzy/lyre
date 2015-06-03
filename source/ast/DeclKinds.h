@@ -8,7 +8,7 @@ namespace lyre
     namespace ast
     {
         
-        /// TranslationUnitDecl - The top declaration context.
+        /// The top declaration context.
         class TranslationUnitDecl : public Decl, public DeclContext
         {
             Context &Ctx;
@@ -27,6 +27,7 @@ namespace lyre
             static bool classofKind(Kind K) { return K == TranslationUnit; }
         };
         
+        /// Declarations with a name.
         class NamedDecl : public Decl 
         {
         protected:
@@ -38,6 +39,19 @@ namespace lyre
         public:
             static bool classof(const Decl *D) { return classofKind(D->getKind()); }
             static bool classofKind(Kind K) { return K >= firstNamed && K <= lastNamed; }
+        };
+
+        /// Presents a namespace declaration.
+        class NamespaceDecl : public NamedDecl, public DeclContext
+        {
+        protected:
+            NamespaceDecl(Context &C, DeclContext *DC)
+                : NamedDecl(Namespace, DC), DeclContext(Namespace)
+            {
+            }
+            
+        public:
+            static NamespaceDecl *Create(Context &C, DeclContext *DC);
         };
         
     } // end namespace ast
