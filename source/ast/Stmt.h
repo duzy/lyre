@@ -3,6 +3,8 @@
 #define __LYRE_AST_STMT_H____DUZY__ 1
 #include "Context.h"
 #include "Decl.h"
+#include "DeclKinds.h"
+#include "DeclGroup.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <string>
 
@@ -12,6 +14,8 @@ namespace lyre
     {
         class Stmt
         {
+            void debugStmtCtor();
+            
         public:
             enum StmtClass
             {
@@ -85,8 +89,6 @@ namespace lyre
                 FloatingLiteralBitfields FloatingLiteralBits;
             };
 
-            void debugStmtCtor();
-            
         public:           
             // Only allow allocation of Stmts using the allocator in Context
             // or by doing a placement new. (Similar to clang::Stmt)
@@ -118,21 +120,22 @@ namespace lyre
         public:
             NullStmt();
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == NullStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == NullStmtClass; }
         };
 
         class DeclStmt : public Stmt
         {
+            DeclGroupRef DG;
+            //SourceLocation StartLoc, EndLoc;
+            
         public:
-            DeclStmt();
+            explicit DeclStmt(DeclGroupRef dg) : Stmt(DeclStmtClass), DG(dg) {}
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == DeclStmtClass;
-            }
+            const DeclGroupRef getDeclGroup() const { return DG; }
+            DeclGroupRef getDeclGroup() { return DG; }
+            void setDeclGroup(DeclGroupRef dg) { DG = dg; }
+            
+            static bool classof(const Stmt *S) { return S->getStmtClass() == DeclStmtClass; }
         };
 
         class CompoundStmt : public Stmt
@@ -145,10 +148,7 @@ namespace lyre
 
             unsigned size() const { return CompoundStmtBits.NumStmts; }
             
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == CompoundStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == CompoundStmtClass; }
         };
 
         class SeeStmt : public Stmt
@@ -156,10 +156,7 @@ namespace lyre
         public:
             SeeStmt();
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == SeeStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == SeeStmtClass; }
         };
 
         class WithStmt : public Stmt
@@ -167,10 +164,7 @@ namespace lyre
         public:
             WithStmt();
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == WithStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == WithStmtClass; }
         };
 
         class SpeakStmt : public Stmt
@@ -178,10 +172,7 @@ namespace lyre
         public:
             SpeakStmt();
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == SpeakStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == SpeakStmtClass; }
         };
 
         class PerStmt : public Stmt
@@ -189,10 +180,7 @@ namespace lyre
         public:
             PerStmt();
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == PerStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == PerStmtClass; }
         };
 
         class ReturnStmt : public Stmt
@@ -200,10 +188,7 @@ namespace lyre
         public:
             ReturnStmt();
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == ReturnStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == ReturnStmtClass; }
         };
 
         // SeeForkStmt is the base class for BareForkStmt and ValueForkStmt.
@@ -234,10 +219,7 @@ namespace lyre
         public:
             ValueForkStmt() : SeeForkStmt(ValueForkStmtClass) {}
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == ValueForkStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == ValueForkStmtClass; }
         };
 
         class BareForkStmt : public SeeForkStmt
@@ -248,10 +230,7 @@ namespace lyre
         public:
             BareForkStmt() : SeeForkStmt(BareForkStmtClass) {}
 
-            static bool classof(const Stmt *S)
-            {
-                return S->getStmtClass() == BareForkStmtClass;
-            }
+            static bool classof(const Stmt *S) { return S->getStmtClass() == BareForkStmtClass; }
         };
     }
 }

@@ -12,9 +12,12 @@ namespace lyre
     {
         class Context;
         class DeclContext;
+        class DeclGroup;
         
         class Decl
         {
+            void debugDeclCtor();
+            
         public:
             enum Kind
             {
@@ -183,27 +186,31 @@ namespace lyre
             /// \param Ctx The context in which we will allocate memory.
             /// \param ID The global ID of the deserialized declaration.
             /// \param Extra The amount of extra space to allocate after the object.
-            void *operator new(std::size_t Size, const ast::Context &Ctx, unsigned ID, 
-                std::size_t Extra = 0);
+            void *operator new(std::size_t Size, const Context &Ctx, unsigned ID, std::size_t Extra = 0);
 
             /// \brief Allocate memory for a non-deserialized declaration.
-            void *operator new(std::size_t Size, const ast::Context &Ctx, DeclContext *Parent, 
-                std::size_t Extra = 0);
+            void *operator new(std::size_t Size, const Context &Ctx, DeclContext *Parent, std::size_t Extra = 0);
 
             Decl(Kind DK, DeclContext *DC)
                 : NextInContextAndBits(), DeclKind(DK), DeclCtx(DC)
             {
+                debugDeclCtor();
             }
 
         public:
             Kind getKind() const { return static_cast<Kind>(DeclKind); }
-            const char *getDeclKindName() const;
+            const char *getKindName() const;
+
+            Decl *getNextDeclInContext() { return NextInContextAndBits.getPointer(); }
+            const Decl *getNextDeclInContext() const {return NextInContextAndBits.getPointer();}
         };
 
         /// DeclContext - This is used only as base class of specific decl types that
         /// can act as declaration contexts. These decls are (only the top classes
         /// that directly derive from DeclContext are mentioned, not their subclasses):
         ///
+        ///   TranslationUnitDecl
+        ///   NamespaceDecl
         ///   TagDecl
         ///   ProcDecl
         ///
@@ -211,13 +218,30 @@ namespace lyre
         {
             /// DeclKind - This indicates which class this is.
             unsigned DeclKind : 8;
-            
+
+            /// \brief Pointer to the data structure used to lookup declarations
+            /// within this context (or a DependentStoredDeclsMap if this is a
+            /// dependent context). We maintain the invariant that, if the map
+            /// contains an entry for a DeclarationName (and we haven't lazily
+            /// omitted anything), then it contains all relevant entries for that
+            /// name (modulo the hasExternalDecls() flag).
+            //mutable StoredDeclsMap *LookupPtr;
+
         protected:
-            DeclContext(Decl::Kind K)
-                : DeclKind(K)
-            {}
+            /// FirstDecl - The first declaration stored within this declaration
+            /// context.
+            mutable Decl *FirstDecl;
+
+            DeclContext(Decl::Kind K) : DeclKind(K) {}
+
+        public:
+            Decl::Kind getKind() const { return static_cast<Decl::Kind>(DeclKind); }
+            const char *getKindName() const;
+            
+            
         };
-    }
-}
+        
+    } // end namespace ast
+} // end namespace lyre
 
 #endif//__LYRE_AST_DECL_H____DUZY__

@@ -51,10 +51,6 @@ namespace lyre
         {
         }
 
-        DeclStmt::DeclStmt() : Stmt(DeclStmtClass)
-        {
-        }
-
         CompoundStmt::CompoundStmt() : Stmt(CompoundStmtClass), Body(nullptr)
         {
             CompoundStmtBits.NumStmts = 0;

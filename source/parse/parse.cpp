@@ -17,10 +17,11 @@ namespace lyre
         typedef StmtResult result_type;
 
         ast::Context & Context;
+        ast::DeclContext *CurrentDeclContext;
         StmtResult Root;
 
         explicit converter(ast::Context & C, const metast::stmts & metaStmts)
-            : Context(C), Root(true)
+            : Context(C), Root(true), CurrentDeclContext(nullptr)
         {
             std::vector<ast::Stmt*> Stmts;
             
@@ -65,7 +66,7 @@ namespace lyre
 
     StmtResult converter::operator()(const metast::decl & decl)
     {
-        auto DeclStmt(new (Context) ast::DeclStmt);
+        std::vector<ast::Decl*> Decls;
         
         for (auto & sym : decl) {
             if (sym.id.string == "_") {
@@ -73,10 +74,17 @@ namespace lyre
                 return StmtError();
             }
             
-            llvm::errs() << sym.id.string << "\n";
+            ast::VarDecl *VD = ast::VarDecl::Create(Context, CurrentDeclContext);
 
+            llvm::errs() << "TODO: decl " << sym.id.string << "\n";
             
+            Decls.push_back(VD);
         }
+
+        auto DGRef = ast::DeclGroupRef::Create(Context, &Decls[0], Decls.size());
+        auto DeclStmt(new (Context) ast::DeclStmt(DGRef));
+        
+        llvm::errs() << DeclStmt->getDeclGroup().getSingleDecl() <<"\n";
         
         return StmtResult(DeclStmt);
     }
