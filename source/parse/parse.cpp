@@ -73,7 +73,7 @@ namespace lyre
                 llvm::errs() << "Using '_' as a symbol name!\n" ;
                 return StmtError();
             }
-            
+
             ast::VarDecl *VD = ast::VarDecl::Create(Context, CurrentDeclContext);
 
             llvm::errs() << "TODO: decl " << sym.id.string << "\n";
