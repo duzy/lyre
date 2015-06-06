@@ -10,7 +10,7 @@ endif
 #$(info LLVMLIBS: $(LLVMLIBS))
 #$(info ---------------------------)
 
-LLVM := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
+LLVM := $(or $(wildcard /open/llvm/build),$(wildcard ~/Tools/llvm/build))
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
 LLI := $(LLVM)/Debug+Asserts/bin/lli
@@ -92,7 +92,9 @@ utils/TableGen/TableGen: \
 
 -include $(OBJECTS:%.o=%.d)
 
+clean: ; @rm -vf lyre $(OBJECTS) $(OBJECTS:%.o=%.d)
+
 test: lyre ; @./lyre test/00.ly
 lab: lab.ll ; @$(LLI) lab.ll
 
-.PHONY: test lab
+.PHONY: test lab clean
