@@ -36,14 +36,14 @@ OBJECTS = \
   $(OBJECTS.frontend) \
 
 OBJECTS.lyre := \
+  source/gc.o \
   source/ast.o \
   source/parse.o \
-  source/gc.o \
   source/frontend.o \
 
 OBJECTS.frontend := \
   source/frontend/Compiler.o \
-  source/frontend/main.o \
+  source/frontend/CompilerInvocation.o \
 
 OBJECTS.ast := \
   source/ast/Context.o \
@@ -60,8 +60,10 @@ OBJECTS.parse := \
 OBJECTS.gc := \
   source/gc/lygc.o \
 
-lyre: $(OBJECTS.lyre)
-	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
+lyre: source/main.o | liblyre.a
+	$(LINK.cc) -o $@ $^ liblyre.a $(LOADLIBS) $(LIBS)
+
+liblyre.a: $(OBJECTS.lyre) ; $(AR) crs $@ $^
 
 source/frontend.o: $(OBJECTS.frontend) ; $(COMBINE)
 source/parse.o: $(OBJECTS.parse) ; $(COMBINE)

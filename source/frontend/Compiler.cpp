@@ -1,11 +1,11 @@
 #include "Compiler.h"
+#include "CompilerInvocation.h"
 #include "ast/AST.h"
 #include "parse/parse.h"
 
 namespace lyre
 {
-    Compiler::Compiler()
-        : context()
+    Compiler::Compiler() : Invocation(nullptr), context()
     {
     }
     
@@ -13,9 +13,13 @@ namespace lyre
     {
     }
 
-    void Compiler::evalFile(const std::string & filename)
+    //void Compiler::evalFile(const std::string & filename)
+    bool Compiler::ExecuteAction(FrontendAction & Act)
     {
+        /*
         auto stmts = parse_file(context, filename);
         stmts.isInvalid();
+        */
+        return false;
     }
 }
