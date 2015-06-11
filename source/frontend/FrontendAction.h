@@ -10,6 +10,8 @@ namespace lyre
     /// Abstract base class for actions which can be performed by the frontend.
     class FrontendAction
     {
+        virtual void anchor(); /// http://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers
+
     protected:
         virtual void ExecuteAction() = 0;
         
@@ -50,6 +52,8 @@ namespace lyre
     /// \brief Abstract base class to use for AST consumer-based frontend actions.
     class ASTAction : public FrontendAction
     {
+        virtual void anchor();
+        
     protected:
         /// \brief Implement the ExecuteAction interface by running Sema on
         /// the already-initialized AST consumer.
