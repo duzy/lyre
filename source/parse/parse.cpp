@@ -123,6 +123,12 @@ namespace lyre
     {
         llvm::errs()<<"ret\n";
     }
+
+    //////////////////////////////////////////////////////////////////////
+    void parseAST(Sema & S, bool PrintStats, bool SkipFunctionBodies)
+    {
+        
+    }
 }
 
 /**

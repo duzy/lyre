@@ -4,8 +4,11 @@
 #include "ast/AST.h"
 
 namespace lyre
-{   
-    ast::StmtResult parse_file(ast::Context & context, const std::string & filename);
+{
+    class Sema;
+    
+    // Corresponding to llvm::parseIR in llvm/IRReader/IRReader.h.
+    void parseAST(Sema & S, bool PrintStats = false, bool SkipFunctionBodies = false);
 }
 
 #endif//__LYRE_PARSE_H____DUZY__

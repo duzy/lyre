@@ -2,6 +2,7 @@
 
 #ifndef __LYRE_CODEGEN_BACKEND_H____DUZY__
 #define __LYRE_CODEGEN_BACKEND_H____DUZY__ 1
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm 
 {
@@ -11,6 +12,10 @@ namespace llvm
 
 namespace lyre
 {
+    class CodeGenOptions;
+    class TargetOptions;
+    class LangOptions;
+    class DiagnosticsEngine;
     
     enum CodeGenBackendAction
     {
@@ -24,8 +29,8 @@ namespace lyre
 
     void EmitBackendOutput(DiagnosticsEngine &Diags, 
         const CodeGenOptions &CGOpts, const TargetOptions &TOpts, const LangOptions &LOpts,
-        StringRef TDesc, llvm::Module *M, CodeGenBackendAction Action,
-        raw_pwrite_stream *OS);
+        llvm::StringRef TDesc, llvm::Module *M, CodeGenBackendAction Action,
+        llvm::raw_pwrite_stream *OS);
 
 } // end namespace lyre
 

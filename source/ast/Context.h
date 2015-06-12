@@ -3,7 +3,7 @@
 #define __LYRE_AST_CONTEXT_H____DUZY__ 1
 //#include "llvm/ADT/DenseMap.h"
 //#include "llvm/ADT/FoldingSet.h"
-//#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 //#include "llvm/ADT/SmallPtrSet.h"
 //#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Allocator.h"
@@ -14,7 +14,7 @@ namespace lyre
 {
     namespace ast
     {
-        class Context
+        class Context : public llvm::RefCountedBase<Context>
         {
             /// \brief The allocator used to create AST objects.
             ///

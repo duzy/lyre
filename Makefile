@@ -46,6 +46,7 @@ OBJECTS.lyre := \
 OBJECTS.frontend := \
   source/frontend/Compiler.o \
   source/frontend/CompilerInvocation.o \
+  source/frontend/FrontendAction.o \
 
 OBJECTS.ast := \
   source/ast/Context.o \

@@ -1,21 +1,26 @@
 // -*- c++ -*-
-
 #ifndef __LYRE_FRONTEND_ACTION_H____DUZY__
 #define __LYRE_FRONTEND_ACTION_H____DUZY__ 1
+#include "frontend/FrontendInputFile.h"
+#include <memory>
 
 namespace lyre
 {
     class Compiler;
+    class FrontendInputFile;
     
     /// Abstract base class for actions which can be performed by the frontend.
     class FrontendAction
     {
-        virtual void anchor(); /// http://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers
-
+        Compiler *TheCompiler;
+        FrontendInputFile CurrentInput;
+        
     protected:
         virtual void ExecuteAction() = 0;
         
     public:
+        virtual ~FrontendAction();
+        
         /// @name Public Action Interface
         /// @{
 
@@ -52,7 +57,7 @@ namespace lyre
     /// \brief Abstract base class to use for AST consumer-based frontend actions.
     class ASTAction : public FrontendAction
     {
-        virtual void anchor();
+        virtual void anchor(); /// http://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers
         
     protected:
         /// \brief Implement the ExecuteAction interface by running Sema on
