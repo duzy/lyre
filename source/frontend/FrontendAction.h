@@ -20,6 +20,14 @@ namespace lyre
         
     public:
         virtual ~FrontendAction();
+
+        void setCompiler(Compiler *Value) { TheCompiler = Value; }
+        
+        Compiler &getCompiler() const 
+        {
+            assert(TheCompiler && "Compiler not registered!");
+            return *TheCompiler;
+        }
         
         /// @name Public Action Interface
         /// @{

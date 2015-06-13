@@ -8,7 +8,10 @@
 int main(int argc, char**argv, char * const *envp)
 {
     std::unique_ptr<lyre::CompilerInvocation> Invocation(new lyre::CompilerInvocation);
-    Invocation->LoadFromArgs(argv, argv+argc);
+    if (!Invocation->LoadFromArgs(argv, argv+argc)) {
+        llvm::errs() << "lyre: Failed parsing command line arguments!\n";
+        return 1;
+    }
 
     lyre::Compiler Lyre;
     Lyre.setInvocation(Invocation.release());

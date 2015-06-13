@@ -1,3 +1,5 @@
+#include "frontend/Compiler.h"
+#include "frontend/CompilerInvocation.h"
 #include "frontend/FrontendAction.h"
 #include "parse/parse.h"
 
@@ -29,7 +31,11 @@ namespace lyre
     
     void ASTAction::ExecuteAction()
     {
-        parseAST();
+        Compiler &C = getCompiler();
+        
+        assert(C.hasSema() && "Compiler has no Sema object!");
+        
+        parseAST(C.getSema(), false, false);
     }
     
 } // end namespace lyre

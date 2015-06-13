@@ -1,6 +1,7 @@
 #include "parse.h"
 #include "metast.h"
 #include "llvm/Support/raw_ostream.h"
+#include "ast/AST.h"
 
 namespace lyre
 {
@@ -125,7 +126,7 @@ namespace lyre
     }
 
     //////////////////////////////////////////////////////////////////////
-    void parseAST(Sema & S, bool PrintStats, bool SkipFunctionBodies)
+    void parseAST(sema::Sema & S, bool PrintStats, bool SkipFunctionBodies)
     {
         
     }

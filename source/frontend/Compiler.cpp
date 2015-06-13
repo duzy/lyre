@@ -5,7 +5,8 @@
 
 namespace lyre
 {
-    Compiler::Compiler() : Invocation(nullptr), context()
+    Compiler::Compiler()
+        : Invocation(nullptr), Context(), Sema()
     {
     }
     

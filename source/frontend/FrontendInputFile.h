@@ -1,6 +1,7 @@
 // -*- c++ -*-
 #ifndef __LYRE_FRONTEND_INPUT_FILE_H____DUZY__
 #define __LYRE_FRONTEND_INPUT_FILE_H____DUZY__ 1
+#include "llvm/ADT/StringRef.h"
 #include <string>
 
 namespace llvm 

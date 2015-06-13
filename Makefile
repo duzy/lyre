@@ -13,6 +13,7 @@ endif
 LLVM := $(or $(wildcard /open/llvm/build),$(wildcard ~/Tools/llvm/build))
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
+LLVMTableGen := $(LLVM)/Debug+Asserts/bin/llvm-tblgen
 LLI := $(LLVM)/Debug+Asserts/bin/lli
 
 CXXFLAGS := -Iinclude -Isource \
@@ -86,6 +87,10 @@ source/ast/DeclNodes.inc: source/base/DeclNodes.td utils/TableGen/TableGen
 
 source/ast/StmtNodes.inc: source/base/StmtNodes.td utils/TableGen/TableGen
 	utils/TableGen/TableGen -gen-lyre-stmt-nodes -o=$@ $<
+
+source/frontend/CompilerInvocation.cpp: source/frontend/Options.inc
+source/frontend/Options.inc: source/frontend/Options.td
+	$(LLVMTableGen) -gen-opt-parser-defs -o $@ $<
 
 utils/TableGen/TableGen: \
     utils/TableGen/TableGen.cpp \
