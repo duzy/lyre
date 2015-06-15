@@ -2,18 +2,19 @@ LYRE_USING_MCJIT := true
 
 ifeq ($(LYRE_USING_MCJIT),true)
   #LLVMLIBS := core jit mcjit native irreader
-  LLVMLIBS := core mcjit native
+  LLVMLIBS := core mcjit native option
 else
-  LLVMLIBS := interpreter nativecodegen
+  LLVMLIBS := interpreter nativecodegen option
 endif
 
 #$(info LLVMLIBS: $(LLVMLIBS))
 #$(info ---------------------------)
 
-LLVM := $(or $(wildcard /open/llvm/build),$(wildcard ~/Tools/llvm/build))
+LLVM_ROOT := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
+LLVM := $(LLVM_ROOT)/build
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
-LLVMTableGen := $(LLVM)/Debug+Asserts/bin/llvm-tblgen
+LLVMTableGen := $(LLVM)/Debug+Asserts/bin/llvm-tblgen -I$(LLVM_ROOT)/include
 LLI := $(LLVM)/Debug+Asserts/bin/lli
 
 CXXFLAGS := -Iinclude -Isource \
