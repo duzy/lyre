@@ -49,6 +49,7 @@ OBJECTS.frontend := \
   source/frontend/Compiler.o \
   source/frontend/CompilerInvocation.o \
   source/frontend/FrontendAction.o \
+  source/frontend/Options.o \
 
 OBJECTS.ast := \
   source/ast/Context.o \

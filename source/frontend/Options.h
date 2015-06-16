@@ -2,6 +2,14 @@
 #ifndef __LYRE_FRONTEND_OPTIONS_H____DUZY__
 #define __LYRE_FRONTEND_OPTIONS_H____DUZY__ 1
 
+namespace llvm
+{
+    namespace opt
+    {
+        class OptTable;
+    }
+}
+
 namespace lyre
 {    
     namespace options 
@@ -28,6 +36,13 @@ namespace lyre
 #undef OPTION
         };
 
+        // This creates a Lyre compiler OptTable. The pointer returned musted be deleted after used.
+        // Best usage could be like this:
+        // \code
+        //      std::unique_ptr<OptTable> Opts(createLyreCompilerOptions());
+        // \endcode
+        llvm::opt::OptTable *createLyreCompilerOptions();
+       
     } // end namespace options
 } // end namespace lyre
 

@@ -5,6 +5,7 @@
 #include "Decl.h"
 #include "DeclKinds.h"
 #include "DeclGroup.h"
+#include "base/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <string>
 
@@ -126,7 +127,7 @@ namespace lyre
         class DeclStmt : public Stmt
         {
             DeclGroupRef DG;
-            //SourceLocation StartLoc, EndLoc;
+            SourceLocation StartLoc, EndLoc;
             
         public:
             explicit DeclStmt(DeclGroupRef dg) : Stmt(DeclStmtClass), DG(dg) {}
