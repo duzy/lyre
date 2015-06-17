@@ -1,12 +1,16 @@
-#include "frontend/Compiler.h"
-#include "frontend/CompilerInvocation.h"
-#include "codegen/CodeGenAction.h"
+#include "lyre/frontend/Compiler.h"
+#include "lyre/frontend/CompilerInvocation.h"
+#include "lyre/frontend/TextDiagnosticPrinter.h"
+#include "lyre/codegen/CodeGenAction.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/ManagedStatic.h"         /// llvm_shutdown()
 
 int main(int argc, char**argv, char * const *envp)
 {
+    llvm::IntrusiveRefCntPtr<lyre::DiagnosticIDs> DiagID(new lyre::DiagnosticIDs());
+    lyre::DiagnosticsEngine Diags(DiagID, &*DiagOpts, new lyre::TextDiagnosticPrinter(llvm::errs(), &*DiagOpts));
+    
     std::unique_ptr<lyre::CompilerInvocation> Invocation(new lyre::CompilerInvocation);
     if (!Invocation->LoadFromArgs(argv, argv+argc)) {
         llvm::errs() << "lyre: Failed parsing command line arguments!\n";

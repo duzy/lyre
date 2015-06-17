@@ -1,7 +1,6 @@
 // -*- c++ -*-
 #ifndef __LYRE_BASE_DIAGNOSTIC_H____DUZY__
 #define __LYRE_BASE_DIAGNOSTIC_H____DUZY__ 1
-#include "lyre/base/DiagnosticOptions.h"
 #include "lyre/base/SourceLocation.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -23,8 +22,11 @@ namespace lyre
     {
         class DeclContext;
     } // end namespace ast
-    
+
+    class DiagnosticIDs;
     class DiagnosticBuilder;
+    class DiagnosticConsumer;
+    class DiagnosticOptions;
     class IdentifierInfo;
     class StoredDiagnostic;
     
@@ -125,6 +127,10 @@ namespace lyre
         DiagnosticsEngine(const DiagnosticsEngine &) = delete;
         const DiagnosticsEngine &operator=(const DiagnosticsEngine &) = delete;
 
+        llvm::IntrusiveRefCntPtr<DiagnosticIDs> Diags;
+        llvm::IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+        DiagnosticConsumer *Client;
+        
         // This is private state used by DiagnosticBuilder.  We put it here instead of
         // in DiagnosticBuilder in order to keep DiagnosticBuilder a small lightweight
         // object.  This implementation choice means that we can only have one
@@ -219,6 +225,17 @@ namespace lyre
             ak_attr             ///< Attr *
         };
 
+        
+        explicit DiagnosticsEngine(
+            const llvm::IntrusiveRefCntPtr<DiagnosticIDs> &Diags,
+            DiagnosticOptions *DiagOpts,
+            DiagnosticConsumer *client = nullptr,
+            bool ShouldOwnClient = true);
+        
+        ~DiagnosticsEngine();
+
+        const llvm::IntrusiveRefCntPtr<DiagnosticIDs> &getDiagnosticIDs() const { return Diags; }
+
         /// \brief Issue the message to the client.
         ///
         /// This actually returns an instance of DiagnosticBuilder which emits the
@@ -236,7 +253,7 @@ namespace lyre
         ///
         /// \param Force Emit the diagnostic regardless of suppression settings.
         bool EmitCurrentDiagnostic(bool Force = false);
-    }; // end class DiagnosticsEngine    
+    }; // end class DiagnosticsEngine
     
     /// \brief A little helper class used to produce diagnostics.
     ///
@@ -518,6 +535,7 @@ namespace lyre
     {
         const DiagnosticsEngine *DiagObj;
         llvm::StringRef StoredDiagMessage;
+        
     public:
         explicit Diagnostic(const DiagnosticsEngine *DO) : DiagObj(DO) {}
         Diagnostic(const DiagnosticsEngine *DO, llvm::StringRef storedDiagMessage)
@@ -696,6 +714,62 @@ namespace lyre
         {
             return llvm::makeArrayRef(FixIts);
         }
+    };
+
+    /// \brief Abstract interface, implemented by clients of the front-end, which
+    /// formats and prints fully processed diagnostics.
+    class DiagnosticConsumer 
+    {
+    protected:
+        unsigned NumWarnings;       ///< Number of warnings reported
+        unsigned NumErrors;         ///< Number of errors reported
+  
+    public:
+        DiagnosticConsumer() : NumWarnings(0), NumErrors(0) { }
+
+        unsigned getNumErrors() const { return NumErrors; }
+        unsigned getNumWarnings() const { return NumWarnings; }
+        virtual void clear() { NumWarnings = NumErrors = 0; }
+
+        virtual ~DiagnosticConsumer();
+
+        /// \brief Callback to inform the diagnostic client that processing
+        /// of a source file is beginning.
+        ///
+        /// Note that diagnostics may be emitted outside the processing of a source
+        /// file, for example during the parsing of command line options. However,
+        /// diagnostics with source range information are required to only be emitted
+        /// in between BeginSourceFile() and EndSourceFile().
+        ///
+        /// \param LangOpts The language options for the source file being processed.
+        /// \param PP The preprocessor object being used for the source; this is 
+        /// optional, e.g., it may not be present when processing AST source files.
+        virtual void BeginSourceFile(const LangOptions &LangOpts/*, const Preprocessor *PP = nullptr*/) {}
+
+        /// \brief Callback to inform the diagnostic client that processing
+        /// of a source file has ended.
+        ///
+        /// The diagnostic client should assume that any objects made available via
+        /// BeginSourceFile() are inaccessible.
+        virtual void EndSourceFile() {}
+
+        /// \brief Callback to inform the diagnostic client that processing of all
+        /// source files has ended.
+        virtual void finish() {}
+
+        /// \brief Indicates whether the diagnostics handled by this
+        /// DiagnosticConsumer should be included in the number of diagnostics
+        /// reported by DiagnosticsEngine.
+        ///
+        /// The default implementation returns true.
+        virtual bool IncludeInDiagnosticCounts() const;
+
+        /// \brief Handle this diagnostic, reporting it to the user or
+        /// capturing it to a log as needed.
+        ///
+        /// The default implementation just keeps track of the total number of
+        /// warnings and errors.
+        virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info);
     };
     
 } // end namespace lyre

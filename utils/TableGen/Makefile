@@ -1,13 +1,12 @@
 LLVMLIBS := TableGen Support
 
-LLVM := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
+LLVM_ROOT := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
+LLVM := $(LLVM_ROOT)/build
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
 LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
 LLI := $(LLVM)/Debug+Asserts/bin/lli
 
-CXXFLAGS := -Isource \
-  -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
-  $(shell $(LLVM_CONFIG) --cxxflags)
+CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
 
 # -ltinfo
 LIBS := \

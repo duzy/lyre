@@ -24,11 +24,15 @@ namespace
 
     enum ActionName
     {
+        GenLyreDiagDefs,
+        GenLyreDiagGroups,
         GenLyreDeclNodes,
         GenLyreStmtNodes,
     };
 
     static EmitterFn Emitters[] = {
+        EmitLyreDiagDefs,
+        EmitLyreDiagGroups,
         EmitLyreDeclNodes,
         EmitLyreStmtNodes,
     };
@@ -36,6 +40,10 @@ namespace
     cl::opt<ActionName> Action(
         cl::desc("Actions to perform:"),
         cl::values(
+            clEnumValN(GenLyreDiagDefs, "gen-lyre-diag-defs",
+                "Generate Lyre diagnostic definitions"),
+            clEnumValN(GenLyreDiagGroups, "gen-lyre-diag-groups",
+                "Generate Lyre diagnostic groups"),
             clEnumValN(GenLyreDeclNodes, "gen-lyre-decl-nodes",
                 "Generate Lyre AST declaration nodes"),
             clEnumValN(GenLyreStmtNodes, "gen-lyre-stmt-nodes",
