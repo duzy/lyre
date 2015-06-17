@@ -1,4 +1,5 @@
-#include "CompilerInvocation.h"
+#include "frontend/CompilerInvocation.h"
+#include "base/Diagnostic.h"
 #include "llvm/Option/Arg.h"            // 
 #include "llvm/Option/ArgList.h"        // llvm::opt::InputArgList
 #include "Options.h"
@@ -30,9 +31,10 @@ namespace lyre
         }
         
         // Issue errors on unknown arguments.
-        for (arg_iterator it = Args->filtered_begin(OPT_UNKNOWN),
+        for (auto it = Args->filtered_begin(options::OPT_UNKNOWN),
                  ie = Args->filtered_end(); it != ie; ++it) {
-            Diags.Report(diag::err_drv_unknown_argument) << (*it)->getAsString(*Args);
+            Diags.Report(diag::err_drv_unknown_argument)
+                << (*it)->getAsString(*Args);
             Success = false;
         }
         

@@ -32,6 +32,7 @@ COMBINE = $(LD) -r -o $@ $^
 
 OBJECTS = \
   $(OBJECTS.lyre) \
+  $(OBJECTS.base) \
   $(OBJECTS.ast) \
   $(OBJECTS.codegen) \
   $(OBJECTS.parse) \
@@ -39,11 +40,15 @@ OBJECTS = \
   $(OBJECTS.frontend) \
 
 OBJECTS.lyre := \
+  source/base.o \
   source/gc.o \
   source/ast.o \
   source/parse.o \
   source/codegen.o \
   source/frontend.o \
+
+OBJECTS.base := \
+  source/base/SourceLocation.o \
 
 OBJECTS.frontend := \
   source/frontend/Compiler.o \
@@ -78,6 +83,7 @@ liblyre.a: $(OBJECTS.lyre) ; $(AR) crs $@ $^
 source/frontend.o: $(OBJECTS.frontend) ; $(COMBINE)
 source/codegen.o: $(OBJECTS.codegen) ; $(COMBINE)
 source/parse.o: $(OBJECTS.parse) ; $(COMBINE)
+source/base.o: $(OBJECTS.base) ; $(COMBINE)
 source/ast.o: $(OBJECTS.ast) ; $(COMBINE)
 source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 
