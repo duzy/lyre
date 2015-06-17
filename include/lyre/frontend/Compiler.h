@@ -6,8 +6,8 @@
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TargetSelect.h"
-#include "ast/AST.h"
-#include "sema/Sema.h"
+#include "lyre/ast/AST.h"
+#include "lyre/sema/Sema.h"
 #include <string>
 
 static llvm::ExecutionEngine * createExecutionEngine(std::unique_ptr<llvm::Module> M, std::string *ErrorStr)

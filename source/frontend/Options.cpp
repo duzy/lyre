@@ -1,4 +1,4 @@
-#include "Options.h"
+#include "lyre/frontend/Options.h"
 #include "llvm/ADT/STLExtras.h" // for llvm::array_lengthof
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -10,7 +10,7 @@ namespace lyre
     namespace options
     {
 #define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
-#include "Options.inc"
+#include "lyre/frontend/Options.inc"
 #undef PREFIX
         
         using llvm::opt::Option;
@@ -20,7 +20,7 @@ namespace lyre
         static const OptTable::Info OptionInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM, HELPTEXT, METAVAR) \
             { PREFIX, NAME, HELPTEXT, METAVAR, OPT_##ID, Option::KIND##Class, PARAM, FLAGS, OPT_##GROUP, OPT_##ALIAS, ALIASARGS },
-#include "Options.inc"
+#include "lyre/frontend/Options.inc"
 #undef OPTION
         };
 

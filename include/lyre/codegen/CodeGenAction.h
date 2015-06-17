@@ -2,7 +2,7 @@
 
 #ifndef __LYRE_CODEGEN_ACTION_H____DUZY__
 #define __LYRE_CODEGEN_ACTION_H____DUZY__ 1
-#include "frontend/FrontendAction.h"
+#include "lyre/frontend/FrontendAction.h"
 
 namespace llvm 
 {

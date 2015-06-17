@@ -1,11 +1,11 @@
 // -*- c++ -*-
 #ifndef __LYRE_AST_STMT_H____DUZY__
 #define __LYRE_AST_STMT_H____DUZY__ 1
-#include "Context.h"
-#include "Decl.h"
-#include "DeclKinds.h"
-#include "DeclGroup.h"
-#include "base/SourceLocation.h"
+#include "lyre/ast/Context.h"
+#include "lyre/ast/Decl.h"
+#include "lyre/ast/DeclKinds.h"
+#include "lyre/ast/DeclGroup.h"
+#include "lyre/base/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <string>
 
@@ -28,7 +28,7 @@ namespace lyre
 #define STMT_RANGE_FINAL(BASE, FIRST, LAST)             \
                 first##BASE##Constant=FIRST##Class,     \
                 last##BASE##Constant=LAST##Class,
-#include "StmtNodes.inc"
+#include "lyre/ast/StmtNodes.inc"
             };
 
         protected:

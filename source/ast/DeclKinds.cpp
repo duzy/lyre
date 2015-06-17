@@ -1,4 +1,4 @@
-#include "DeclKinds.h"
+#include "lyre/ast/DeclKinds.h"
 
 namespace lyre
 {

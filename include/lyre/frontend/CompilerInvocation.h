@@ -2,8 +2,8 @@
 #ifndef __LYRE_FRONTEND_COMPILER_INVOCATION_H____DUZY__
 #define __LYRE_FRONTEND_COMPILER_INVOCATION_H____DUZY__ 1
 #include <string>
-#include "base/Diagnostic.h"
-#include "ast/AST.h"
+#include "lyre/base/Diagnostic.h"
+#include "lyre/ast/AST.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace lyre

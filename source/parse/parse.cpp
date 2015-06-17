@@ -1,7 +1,7 @@
-#include "parse.h"
+#include "lyre/parse/parse.h"
+#include "lyre/ast/AST.h"
 #include "metast.h"
 #include "llvm/Support/raw_ostream.h"
-#include "ast/AST.h"
 
 namespace lyre
 {

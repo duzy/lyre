@@ -1,5 +1,5 @@
-#include "Decl.h"
-#include "Context.h"
+#include "lyre/ast/Decl.h"
+#include "lyre/ast/Context.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -11,7 +11,7 @@ namespace lyre
         {
             static const char * DeclKindNames[Decl::lastDecl+1] = {
 #define DECL(DERIVED, BASE) #DERIVED,
-#include "DeclNodes.inc"
+#include "lyre/ast/DeclNodes.inc"
             };
             
             if (K < 0 || Decl::lastDecl < K) {

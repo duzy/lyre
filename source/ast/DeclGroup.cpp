@@ -1,6 +1,6 @@
-#include "DeclGroup.h"
-#include "Decl.h"
-#include "Context.h"
+#include "lyre/ast/DeclGroup.h"
+#include "lyre/ast/Decl.h"
+#include "lyre/ast/Context.h"
 #include "llvm/Support/Allocator.h"
 
 namespace lyre

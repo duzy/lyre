@@ -24,7 +24,7 @@ namespace lyre
 #define DECL(DERIVED, BASE) DERIVED,
 #define DECL_RANGE(BASE, FIRST, LAST) first##BASE=FIRST, last##BASE=LAST,
 #define DECL_RANGE_FINAL(BASE, FIRST, LAST) first##BASE=FIRST, last##BASE=LAST,
-#include "DeclNodes.inc"
+#include "lyre/ast/DeclNodes.inc"
             };
 
             /// IdentifierNamespace - The different namespaces in which

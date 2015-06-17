@@ -31,7 +31,7 @@ namespace lyre
         {
             OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM, HELPTEXT, METAVAR) OPT_##ID,
-#include "Options.inc"
+#include "lyre/frontend/Options.inc"
             LastOption
 #undef OPTION
         };

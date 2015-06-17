@@ -1,7 +1,7 @@
-#include "frontend/Compiler.h"
-#include "frontend/CompilerInvocation.h"
-#include "frontend/FrontendAction.h"
-#include "parse/parse.h"
+#include "lyre/frontend/Compiler.h"
+#include "lyre/frontend/CompilerInvocation.h"
+#include "lyre/frontend/FrontendAction.h"
+#include "lyre/parse/parse.h"
 
 namespace lyre
 {

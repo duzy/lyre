@@ -1,8 +1,8 @@
-#include "frontend/CompilerInvocation.h"
-#include "base/Diagnostic.h"
+#include "lyre/frontend/CompilerInvocation.h"
+#include "lyre/frontend/Options.h"
+#include "lyre/base/Diagnostic.h"
 #include "llvm/Option/Arg.h"            // 
 #include "llvm/Option/ArgList.h"        // llvm::opt::InputArgList
-#include "Options.h"
 
 namespace lyre
 {

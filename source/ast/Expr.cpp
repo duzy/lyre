@@ -1,4 +1,4 @@
-#include "Expr.h"
+#include "lyre/ast/Expr.h"
 
 namespace lyre
 {

@@ -1,5 +1,5 @@
-#include "Stmt.h"
-#include "Expr.h"
+#include "lyre/ast/Stmt.h"
+#include "lyre/ast/Expr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -20,7 +20,7 @@ namespace lyre
 #define STMT(CLASS, PARENT)                                             \
                 StmtClassNames[(unsigned)Stmt::CLASS##Class].Name = #CLASS; \
                 StmtClassNames[(unsigned)Stmt::CLASS##Class].Size = sizeof(CLASS);
-#include "StmtNodes.inc"
+#include "lyre/ast/StmtNodes.inc"
                 
                 Initialized = true;
             }

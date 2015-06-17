@@ -6,5 +6,6 @@
 *.mbc
 /lyre
 /liblyre.a
-/source/ast/DeclNodes.inc
-/source/ast/StmtNodes.inc
+/include/lyre/ast/DeclNodes.inc
+/include/lyre/ast/StmtNodes.inc
+/include/lyre/frontend/Options.inc

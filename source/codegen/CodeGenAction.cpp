@@ -1,5 +1,5 @@
-#include "codegen/CodeGenAction.h"
-#include "codegen/CodeGenBackend.h"
+#include "lyre/codegen/CodeGenAction.h"
+#include "lyre/codegen/CodeGenBackend.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 

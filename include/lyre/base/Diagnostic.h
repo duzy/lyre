@@ -1,8 +1,8 @@
 // -*- c++ -*-
 #ifndef __LYRE_BASE_DIAGNOSTIC_H____DUZY__
 #define __LYRE_BASE_DIAGNOSTIC_H____DUZY__ 1
-#include "base/DiagnosticOptions.h"
-#include "base/SourceLocation.h"
+#include "lyre/base/DiagnosticOptions.h"
+#include "lyre/base/SourceLocation.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"

@@ -1,4 +1,4 @@
-#include "CodeGenBackend.h"
+#include "lyre/codegen/CodeGenBackend.h"
 
 namespace lyre
 {

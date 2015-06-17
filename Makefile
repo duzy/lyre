@@ -17,6 +17,8 @@ LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
 LLVMTableGen := $(LLVM)/Debug+Asserts/bin/llvm-tblgen -I$(LLVM_ROOT)/include
 LLI := $(LLVM)/Debug+Asserts/bin/lli
 
+TableGen := utils/TableGen/TableGen
+
 CXXFLAGS := -Iinclude -Isource \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
   $(shell $(LLVM_CONFIG) --cxxflags)
@@ -90,17 +92,18 @@ source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 source/parse/metast.o: source/parse/metast.cpp
 	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
 
-source/ast/DeclNodes.inc: source/base/DeclNodes.td utils/TableGen/TableGen
-	utils/TableGen/TableGen -gen-lyre-decl-nodes -o=$@ $<
+source/frontend/FrontendAction.d: include/lyre/ast/DeclNodes.inc include/lyre/ast/StmtNodes.inc
 
-source/ast/StmtNodes.inc: source/base/StmtNodes.td utils/TableGen/TableGen
-	utils/TableGen/TableGen -gen-lyre-stmt-nodes -o=$@ $<
+include/lyre/ast/DeclNodes.inc: include/lyre/base/DeclNodes.td $(TableGen)
+	$(TableGen) -gen-lyre-decl-nodes -o=$@ $<
 
-source/frontend/CompilerInvocation.cpp: source/frontend/Options.inc
-source/frontend/Options.inc: source/frontend/Options.td
+include/lyre/ast/StmtNodes.inc: include/lyre/base/StmtNodes.td $(TableGen)
+	$(TableGen) -gen-lyre-stmt-nodes -o=$@ $<
+
+include/lyre/frontend/Options.inc: include/lyre/frontend/Options.td
 	$(LLVMTableGen) -gen-opt-parser-defs -o $@ $<
 
-utils/TableGen/TableGen: \
+$(TableGen): \
     utils/TableGen/TableGen.cpp \
     utils/TableGen/TableGenBackends.h \
     utils/TableGen/LyreASTNodesEmitter.cpp \

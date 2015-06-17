@@ -1,7 +1,7 @@
 // -*- c++ -*-
 #ifndef __LYRE_FRONTEND_ACTION_H____DUZY__
 #define __LYRE_FRONTEND_ACTION_H____DUZY__ 1
-#include "frontend/FrontendInputFile.h"
+#include "lyre/frontend/FrontendInputFile.h"
 #include <memory>
 
 namespace lyre
