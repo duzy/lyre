@@ -1,7 +1,5 @@
 // Define the diagnostic severities.
-class Severity<string N> {
-  string Name = N;
-}
+class Severity<string N> { string Name = N; }
 def SEV_Ignored : Severity<"Ignored">;
 def SEV_Remark  : Severity<"Remark">;
 def SEV_Warning : Severity<"Warning">;
@@ -19,14 +17,14 @@ def CLASS_ERROR     : DiagClass;
 // Diagnostic Categories.  These can be applied to groups or individual
 // diagnostics to specify a category.
 class DiagCategory<string Name> {
-  string CategoryName = Name;
+      string CategoryName = Name;
 }
 
 // Diagnostic Groups.
 class DiagGroup<string Name, list<DiagGroup> subgroups = []> {
-  string GroupName = Name;
-  list<DiagGroup> SubGroups = subgroups;
-  string CategoryName = "";
+      string GroupName = Name;
+      list<DiagGroup> SubGroups = subgroups;
+      string CategoryName = "";
 }
 class InGroup<DiagGroup G> { DiagGroup Group = G; }
 
@@ -37,24 +35,31 @@ include "DiagnosticCategories.td"
 include "DiagnosticGroups.td"
 
 // All diagnostics emitted by the compiler are an indirect subclass of this.
-class Diagnostic<string text, DiagClass DC, Severity defaultmapping> {
-  /// Component is specified by the file with a big let directive.
-  string         Component = ?;
-  string         Text = text;
-  DiagClass      Class = DC;
-  bit            AccessControl = 0;
-  bit            WarningNoWerror = 0;
-  Severity       DefaultSeverity = defaultmapping;
-  DiagGroup      Group;
-  string         CategoryName = "";
+class Diagnostic<string text, DiagClass dc, Severity defaultmapping> {
+      /// Component is specified by the file with a big let directive.
+      string         Component = ?;
+      string         CategoryName = "";
+      string         Text = text;
+      Severity       DefaultSeverity = defaultmapping;
+      DiagClass      Class = dc;
+      DiagGroup      Group;
+      bit            WarningNoWerror = 0;
 }
 
-class Error<string str>     : Diagnostic<str, CLASS_ERROR, SEV_Error>;
-class Warning<string str>   : Diagnostic<str, CLASS_WARNING, SEV_Warning>;
-class Remark<string str>    : Diagnostic<str, CLASS_REMARK, SEV_Ignored>;
-class Extension<string str> : Diagnostic<str, CLASS_EXTENSION, SEV_Ignored>;
-class ExtWarn<string str>   : Diagnostic<str, CLASS_EXTENSION, SEV_Warning>;
-class Note<string str>      : Diagnostic<str, CLASS_NOTE, SEV_Fatal/*ignored*/>;
+class Error<string str>     : Diagnostic<str, CLASS_ERROR,      SEV_Error>;
+class Warning<string str>   : Diagnostic<str, CLASS_WARNING,    SEV_Warning>;
+class Remark<string str>    : Diagnostic<str, CLASS_REMARK,     SEV_Ignored>;
+class Extension<string str> : Diagnostic<str, CLASS_EXTENSION,  SEV_Ignored>;
+class ExtWarn<string str>   : Diagnostic<str, CLASS_EXTENSION,  SEV_Warning>;
+class Note<string str>      : Diagnostic<str, CLASS_NOTE,       SEV_Fatal/*ignored*/>;
+
+class DefaultIgnore         { Severity DefaultSeverity = SEV_Ignored; }
+class DefaultWarn           { Severity DefaultSeverity = SEV_Warning; }
+class DefaultError          { Severity DefaultSeverity = SEV_Error; }
+class DefaultFatal          { Severity DefaultSeverity = SEV_Fatal; }
+class DefaultRemark         { Severity DefaultSeverity = SEV_Remark; }
+class DefaultWarnNoWerror   { bit WarningNoWerror = 1; }
 
 // Definitions for Diagnostics.
 include "DiagnosticCommonKinds.td"
+include "DiagnosticDriverKinds.td"

@@ -24,6 +24,8 @@ using llvm::RecordKeeper;
 
 namespace lyre
 {
+    std::string getDiagComponent();
+    
     void EmitLyreDiagDefs(RecordKeeper &Records, raw_ostream &OS);
     void EmitLyreDiagGroups(RecordKeeper &Records, raw_ostream &OS);
     void EmitLyreDeclNodes(RecordKeeper &Records, raw_ostream &OS);

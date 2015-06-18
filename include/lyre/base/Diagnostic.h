@@ -9,15 +9,6 @@
 
 namespace lyre
 {
-    namespace diag
-    {
-        enum 
-        {
-            err_drv_unknown_argument,
-            err_drv_missing_argument,
-        };
-    } // end namespace diag
-
     namespace ast
     {
         class DeclContext;
@@ -28,6 +19,7 @@ namespace lyre
     class DiagnosticConsumer;
     class DiagnosticOptions;
     class IdentifierInfo;
+    class LangOptions;
     class StoredDiagnostic;
     
     /// \brief Annotates a diagnostic with some code that should be
