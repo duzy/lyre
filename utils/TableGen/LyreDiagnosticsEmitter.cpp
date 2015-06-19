@@ -305,30 +305,24 @@ namespace lyre
         
     }
 
-    void EmitLyreDiagDefs(RecordKeeper &Records, raw_ostream &OS)
+    void EmitLyreDiagDefs(raw_ostream &OS,
+        const std::string & Component, 
+        const std::vector<Record *> & Diags,
+        const std::vector<Record *> & DiagGroups,
+        const std::map<std::string, GroupInfo> & DiagsInGroup,
+        DiagCategoryIDMap & CategoryIDs,
+        DiagGroupParentMap & DGParentMap)
     {
-        const auto Component = getDiagComponent();
+        const std::string ComponentMacroName = StringRef(Component).upper();
+
+        //OS << "NUM_" << ComponentMacroName << "_DIAGNOSTICS\n";
         
         // Write the component begin guard
-        if (!Component.empty()) {
-            std::string ComponentName = StringRef(Component).upper();
-            OS << "#ifdef " << ComponentName << "START\n";
-            OS << "__" << ComponentName << "_START = DIAG_START_" << ComponentName << ",\n";
-            OS << "#endif\n\n";
+        if (!ComponentMacroName.empty()) {
+            OS << "#ifdef DIAGS_FOR_" << ComponentMacroName << "\n";
+            OS << "DIAGS_BEG(" << ComponentMacroName << ", " << Component << ")\n";
         }
-
-        std::vector<Record *> Diags = Records.getAllDerivedDefinitions("Diagnostic");
-        std::vector<Record *> DiagGroups = Records.getAllDerivedDefinitions("DiagGroup");
         
-
-        OS << "#ifdef DIAG\n";
-
-        std::map<std::string, GroupInfo> DiagsInGroup;
-        groupDiagnostics(Diags, DiagGroups, DiagsInGroup);
-
-        DiagCategoryIDMap CategoryIDs(Records);
-        DiagGroupParentMap DGParentMap(Records);
-
         for (unsigned i = 0, e = Diags.size(); i != e; ++i) {
             const Record &R = *Diags[i];
 
@@ -368,7 +362,7 @@ namespace lyre
             // Warning associated with the diagnostic. This is stored as an index into
             // the alphabetically sorted warning table.
             if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
-                std::map<std::string, GroupInfo>::iterator I =
+                std::map<std::string, GroupInfo>::const_iterator I =
                     DiagsInGroup.find(DI->getDef()->getValueAsString("GroupName"));
                 assert(I != DiagsInGroup.end());
                 OS << ", " << I->second.IDNo;
@@ -387,16 +381,62 @@ namespace lyre
             OS << ")\n";
         }
 
-        OS << "#undef DIAG\n";
-        OS << "#endif\n\n";
-
         // Write the component end guard
-        if (!Component.empty()) {
-            std::string ComponentName = StringRef(Component).upper();
-            OS << "#ifdef " << ComponentName << "START\n";
-            OS << "NUM_" << ComponentName << "_DIAGNOSTICS\n";
-            OS << "#undef " << ComponentName << "START\n";
+        if (!ComponentMacroName.empty()) {
+            OS << "DIAGS_END(" << ComponentMacroName << ", " << Component << ")\n";
             OS << "#endif\n\n";
         }
+    }
+
+    void EmitLyreDiagDefs(RecordKeeper &Records, raw_ostream &OS)
+    {
+        std::vector<Record *> Diags = Records.getAllDerivedDefinitions("Diagnostic");
+        std::vector<Record *> DiagGroups = Records.getAllDerivedDefinitions("DiagGroup");
+
+        std::map<std::string, GroupInfo> DiagsInGroup;
+        groupDiagnostics(Diags, DiagGroups, DiagsInGroup);
+
+        DiagCategoryIDMap CategoryIDs(Records);
+        DiagGroupParentMap DGParentMap(Records);
+
+        OS << "#ifdef DIAG\n\n";
+
+        OS << "#ifdef DIAGS_FOR_ALL_COMPONENTS\n";
+        for (unsigned i = 0, e = Diags.size(); i != e; ++i) {
+            const Record &R = *Diags[i];
+            const std::string ComponentMacroName = StringRef(
+                R.getValueAsString("Component")).upper();
+            OS << "# ifndef DIAGS_FOR_" << ComponentMacroName << "\n";
+            OS << "# define DIAGS_FOR_" << ComponentMacroName << "()\n";
+            OS << "# endif\n";
+        }
+        OS << "# undef DIAGS_FOR_ALL_COMPONENTS\n";
+        OS << "#endif\n\n";
+
+        OS << "#ifdef DIAGS_BEG\n";
+        OS << "# define DIAGS_BEG(UC,LC)\n";
+        OS << "#endif\n";
+        OS << "#ifdef DIAGS_END\n";
+        OS << "# define DIAGS_END(UC,LC)\n";
+        OS << "#endif\n\n";
+
+        std::string lastComponent, lastComponentMacroName;
+        for (unsigned i = 0, e = Diags.size(); i != e; ++i) {
+            const Record &R = *Diags[i];
+            const std::string Component(R.getValueAsString("Component"));
+            const std::string ComponentMacroName = StringRef(Component).upper();
+            EmitLyreDiagDefs(OS, Component, Diags, DiagGroups, DiagsInGroup, 
+                CategoryIDs, DGParentMap);
+            lastComponentMacroName = ComponentMacroName;
+            lastComponent = Component;
+        }
+
+        OS << "#endif\n\n";
+        
+        
+        
+        OS << "#undef DIAGS_BEG\n";
+        OS << "#undef DIAGS_END\n";
+        OS << "#undef DIAG\n";
     }
 }

@@ -50,9 +50,11 @@ namespace
                 "Generate Lyre AST statement nodes"),
             clEnumValEnd));
 
+    /*
     cl::opt<std::string> DiagComponent("lyre-component",
         cl::desc("Only use warnings from specified component"),
         cl::value_desc("component"), cl::Hidden);
+    */
    
     bool LyreTableGenMain(raw_ostream &OS, RecordKeeper &Records)
     {
@@ -66,7 +68,7 @@ namespace
 
 namespace lyre
 {
-    std::string getDiagComponent() { return DiagComponent; }
+    //std::string getDiagComponent() { return DiagComponent; }
 }
 
 int main(int argc, char **argv)

@@ -7,9 +7,6 @@ else
   LLVMLIBS := interpreter nativecodegen option
 endif
 
-#$(info LLVMLIBS: $(LLVMLIBS))
-#$(info ---------------------------)
-
 LLVM_ROOT := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
 LLVM := $(LLVM_ROOT)/build
 LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
@@ -94,27 +91,14 @@ source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 source/parse/metast.o: source/parse/metast.cpp
 	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
 
-source/base/DiagnosticIDs.d: \
-    include/lyre/base/DiagnosticGroups.inc \
-    include/lyre/base/DiagnosticCommonKinds.inc \
-
-source/frontend/FrontendAction.d: \
-    include/lyre/ast/DeclNodes.inc \
-    include/lyre/ast/StmtNodes.inc \
-
-source/frontend/CompilerInvocation.d: \
-    include/lyre/base/DiagnosticDriverKinds.inc \
-
 include/lyre/base/DiagnosticGroups.inc: include/lyre/base/Diagnostic.td $(TableGen)
 	$(TableGen) -Iinclude/lyre/base -gen-lyre-diag-groups -o=$@ $<
 
-include/lyre/base/DiagnosticCommonKinds.inc: include/lyre/base/Diagnostic.td \
-    include/lyre/base/DiagnosticCommonKinds.td $(TableGen)
-	$(TableGen) -Iinclude/lyre/base -gen-lyre-diag-defs -lyre-component=Common -o=$@ $<
-
-include/lyre/base/DiagnosticDriverKinds.inc: include/lyre/base/Diagnostic.td \
-    include/lyre/base/DiagnosticDriverKinds.td $(TableGen)
-	$(TableGen) -Iinclude/lyre/base -gen-lyre-diag-defs -lyre-component=Driver -o=$@ $<
+include/lyre/base/DiagnosticDefs.inc: include/lyre/base/Diagnostic.td \
+    include/lyre/base/DiagnosticCommonKinds.td \
+    include/lyre/base/DiagnosticDriverKinds.td \
+    $(TableGen)
+	$(TableGen) -Iinclude/lyre/base -gen-lyre-diag-defs -o=$@ $<
 
 include/lyre/ast/DeclNodes.inc: include/lyre/base/DeclNodes.td $(TableGen)
 	$(TableGen) -gen-lyre-decl-nodes -o=$@ $<
@@ -138,6 +122,17 @@ $(TableGen): \
 
 %.d: %.cpp
 	$(CXX) -MM -MF $@ -MT $(@:%.d=%.o) $(CXXFLAGS) $<
+
+source/base/DiagnosticIDs.d: \
+    include/lyre/base/DiagnosticGroups.inc \
+    include/lyre/base/DiagnosticDefs.inc \
+
+source/frontend/FrontendAction.d: \
+    include/lyre/ast/DeclNodes.inc \
+    include/lyre/ast/StmtNodes.inc \
+
+source/frontend/CompilerInvocation.d: \
+    include/lyre/base/DiagnosticDefs.inc \
 
 -include $(OBJECTS:%.o=%.d)
 

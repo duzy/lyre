@@ -39,10 +39,22 @@ namespace lyre
         enum 
         {
 #define DIAG(NAME,FLAGS,DEFAULT_MAPPING,DESC,GROUP,CATEGORY,NOWERROR) NAME,
-#define COMMONSTART
-#include "lyre/base/DiagnosticCommonKinds.inc"
+#define DIAGS_BEG(UC,LC) __##UC##_START = DIAG_START_##UC,
+#define DIAGS_END(UC,LC) NUM_##UC##_DIAGNOSTICS,
+#define DIAGS_FOR_ALL_COMPONENTS
+#include "lyre/base/DiagnosticDefs.inc"
         };
 
+        enum 
+        {
+#define GET_CATEGORY_TABLE
+#define CATEGORY(X, ENUM) ENUM,
+#include "lyre/base/DiagnosticGroups.inc"
+#undef CATEGORY
+#undef GET_CATEGORY_TABLE
+            DiagCat_NUM_CATEGORIES
+        };
+        
         /// Enum values that allow the client to map NOTEs, WARNINGs, and EXTENSIONs
         /// to either Ignore (nothing), Remark (emit a remark), Warning
         /// (emit a warning) or Error (emit as an error).  It allows clients to

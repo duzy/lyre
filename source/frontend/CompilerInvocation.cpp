@@ -1,7 +1,6 @@
 #include "lyre/frontend/CompilerInvocation.h"
 #include "lyre/frontend/Options.h"
 #include "lyre/base/Diagnostic.h"
-#include "lyre/driver/DriverDiagnostic.h"
 #include "llvm/Option/Arg.h"            // 
 #include "llvm/Option/ArgList.h"        // llvm::opt::InputArgList
 
