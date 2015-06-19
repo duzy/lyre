@@ -75,17 +75,7 @@ static const StaticDiagInfoRec StaticDiagInfo[] = {
         diag::ENUM, DEFAULT_SEVERITY, CLASS, NOWERROR,                  \
         SHOWINSYSHEADER, CATEGORY, GROUP, STR_SIZE(DESC, uint16_t), DESC \
     },
-#include "lyre/base/DiagnosticCommonKinds.inc"
-#include "lyre/base/DiagnosticDriverKinds.inc"
-#include "lyre/base/DiagnosticFrontendKinds.inc"
-#include "lyre/base/DiagnosticSerializationKinds.inc"
-#include "lyre/base/DiagnosticLexKinds.inc"
-#include "lyre/base/DiagnosticParseKinds.inc"
-#include "lyre/base/DiagnosticASTKinds.inc"
-#include "lyre/base/DiagnosticCommentKinds.inc"
-#include "lyre/base/DiagnosticSemaKinds.inc"
-#include "lyre/base/DiagnosticAnalysisKinds.inc"
-#undef DIAG
+#include "lyre/base/DiagnosticDefs.inc"
 };
 
 static const unsigned StaticDiagInfoSize = llvm::array_lengthof(StaticDiagInfo);
