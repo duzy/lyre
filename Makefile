@@ -102,6 +102,9 @@ source/frontend/FrontendAction.d: \
     include/lyre/ast/DeclNodes.inc \
     include/lyre/ast/StmtNodes.inc \
 
+source/frontend/CompilerInvocation.d: \
+    include/lyre/base/DiagnosticDriverKinds.inc \
+
 include/lyre/base/DiagnosticGroups.inc: include/lyre/base/Diagnostic.td $(TableGen)
 	$(TableGen) -Iinclude/lyre/base -gen-lyre-diag-groups -o=$@ $<
 

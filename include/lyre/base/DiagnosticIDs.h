@@ -39,8 +39,8 @@ namespace lyre
         enum 
         {
 #define DIAG(NAME,FLAGS,DEFAULT_MAPPING,DESC,GROUP,CATEGORY,NOWERROR) NAME,
+#define COMMONSTART
 #include "lyre/base/DiagnosticCommonKinds.inc"
-            NUM_BUILTIN_COMMON_DIAGNOSTICS
         };
 
         /// Enum values that allow the client to map NOTEs, WARNINGs, and EXTENSIONs

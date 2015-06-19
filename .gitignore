@@ -8,4 +8,6 @@
 /liblyre.a
 /include/lyre/ast/DeclNodes.inc
 /include/lyre/ast/StmtNodes.inc
+/include/lyre/base/DiagnosticCommonKinds.inc
+/include/lyre/base/DiagnosticDriverKinds.inc
 /include/lyre/frontend/Options.inc

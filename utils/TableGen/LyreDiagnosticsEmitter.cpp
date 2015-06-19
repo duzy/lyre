@@ -300,21 +300,20 @@ namespace lyre
         std::vector<Record *> DiagGroups = Records.getAllDerivedDefinitions("DiagGroup");
         
         llvm::errs() << "Diags: " << Diags.size() << "\n";
-        llvm::errs() << "DiagGroupss: " << DiagGroups.size() << "\n";
+        llvm::errs() << "DiagGroup: " << DiagGroups.size() << "\n";
 
         
     }
 
     void EmitLyreDiagDefs(RecordKeeper &Records, raw_ostream &OS)
     {
-        auto Component = getDiagComponent();
+        const auto Component = getDiagComponent();
         
+        // Write the component begin guard
         if (!Component.empty()) {
-            // Write the #if guard
             std::string ComponentName = StringRef(Component).upper();
-            OS << "#ifdef " << ComponentName << "_START\n";
+            OS << "#ifdef " << ComponentName << "START\n";
             OS << "__" << ComponentName << "_START = DIAG_START_" << ComponentName << ",\n";
-            OS << "#undef " << ComponentName << "_START\n";
             OS << "#endif\n\n";
         }
 
@@ -389,6 +388,15 @@ namespace lyre
         }
 
         OS << "#undef DIAG\n";
-        OS << "#endif\n";
+        OS << "#endif\n\n";
+
+        // Write the component end guard
+        if (!Component.empty()) {
+            std::string ComponentName = StringRef(Component).upper();
+            OS << "#ifdef " << ComponentName << "START\n";
+            OS << "NUM_" << ComponentName << "_DIAGNOSTICS\n";
+            OS << "#undef " << ComponentName << "START\n";
+            OS << "#endif\n\n";
+        }
     }
 }
