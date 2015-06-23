@@ -115,9 +115,9 @@ namespace lyre
     /// on "inode", so that a file with two names (e.g. symlinked) will be treated
     /// as a single file.
     ///
-    class FileManager : public RefCountedBase<FileManager> 
+    class FileManager : public llvm::RefCountedBase<FileManager> 
     {
-        IntrusiveRefCntPtr<vfs::FileSystem> FS;
+        llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS;
         FileSystemOptions FileSystemOpts;
 
         /// \brief Cache for existing real directories.
@@ -130,9 +130,9 @@ namespace lyre
         ///
         /// For each virtual file (e.g. foo/bar/baz.cpp), we add all of its parent
         /// directories (foo/ and foo/bar/) here.
-        SmallVector<DirectoryEntry*, 4> VirtualDirectoryEntries;
+        llvm::SmallVector<DirectoryEntry*, 4> VirtualDirectoryEntries;
         /// \brief The virtual files that we have allocated.
-        SmallVector<FileEntry*, 4> VirtualFileEntries;
+        llvm::SmallVector<FileEntry*, 4> VirtualFileEntries;
 
         /// \brief A cache that maps paths to directory entries (either real or
         /// virtual) we have looked up
@@ -172,11 +172,11 @@ namespace lyre
 
         /// Add all ancestors of the given path (pointing to either a file
         /// or a directory) as virtual directories.
-        void addAncestorsAsVirtualDirs(StringRef Path);
+        void addAncestorsAsVirtualDirs(llvm::StringRef Path);
 
     public:
         FileManager(const FileSystemOptions &FileSystemOpts,
-            IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
+            llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
         ~FileManager();
 
         /// \brief Installs the provided FileSystemStatCache object within
@@ -206,7 +206,7 @@ namespace lyre
         ///
         /// \param CacheFailure If true and the file does not exist, we'll cache
         /// the failure to find this file.
-        const DirectoryEntry *getDirectory(StringRef DirName,
+        const DirectoryEntry *getDirectory(llvm::StringRef DirName,
             bool CacheFailure = true);
 
         /// \brief Lookup, cache, and verify the specified file (real or
@@ -218,13 +218,13 @@ namespace lyre
         ///
         /// \param CacheFailure If true and the file does not exist, we'll cache
         /// the failure to find this file.
-        const FileEntry *getFile(StringRef Filename, bool OpenFile = false,
+        const FileEntry *getFile(llvm::StringRef Filename, bool OpenFile = false,
             bool CacheFailure = true);
 
         /// \brief Returns the current file system options
         const FileSystemOptions &getFileSystemOptions() { return FileSystemOpts; }
 
-        IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystem() const {
+        llvm::IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystem() const {
             return FS;
         }
 
@@ -232,7 +232,7 @@ namespace lyre
         /// if there were a file with the given name on disk.
         ///
         /// The file itself is not accessed.
-        const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
+        const FileEntry *getVirtualFile(llvm::StringRef Filename, off_t Size,
             time_t ModificationTime);
 
         /// \brief Open the specified file as a MemoryBuffer, returning a new
@@ -241,7 +241,7 @@ namespace lyre
         getBufferForFile(const FileEntry *Entry, bool isVolatile = false,
             bool ShouldCloseOpenFile = true);
         llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-        getBufferForFile(StringRef Filename);
+        getBufferForFile(llvm::StringRef Filename);
 
         /// \brief Get the 'stat' information for the given \p Path.
         ///
@@ -249,7 +249,7 @@ namespace lyre
         /// FileManager's FileSystemOptions.
         ///
         /// \returns false on success, true on error.
-        bool getNoncachedStatValue(StringRef Path,
+        bool getNoncachedStatValue(llvm::StringRef Path,
             vfs::Status &Result);
 
         /// \brief Remove the real file \p Entry from the cache.
@@ -258,12 +258,12 @@ namespace lyre
         /// \brief If path is not absolute and FileSystemOptions set the working
         /// directory, the path is modified to be relative to the given
         /// working directory.
-        void FixupRelativePath(SmallVectorImpl<char> &path) const;
+        void FixupRelativePath(llvm::SmallVectorImpl<char> &path) const;
 
         /// \brief Produce an array mapping from the unique IDs assigned to each
         /// file to the corresponding FileEntry pointer.
         void GetUniqueIDMapping(
-            SmallVectorImpl<const FileEntry *> &UIDToFiles) const;
+            llvm::SmallVectorImpl<const FileEntry *> &UIDToFiles) const;
 
         /// \brief Modifies the size and modification time of a previously created
         /// FileEntry. Use with caution.
@@ -271,14 +271,14 @@ namespace lyre
             time_t ModificationTime);
 
         /// \brief Remove any './' components from a path.
-        static bool removeDotPaths(SmallVectorImpl<char> &Path);
+        static bool removeDotPaths(llvm::SmallVectorImpl<char> &Path);
 
         /// \brief Retrieve the canonical name for a given directory.
         ///
         /// This is a very expensive operation, despite its results being cached,
         /// and should only be used when the physical layout of the file system is
         /// required, which is (almost) never.
-        StringRef getCanonicalName(const DirectoryEntry *Dir);
+        llvm::StringRef getCanonicalName(const DirectoryEntry *Dir);
 
         void PrintStats() const;
     };

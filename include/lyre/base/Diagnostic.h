@@ -1335,6 +1335,10 @@ namespace lyre
         // The printer sets this variable to true if the template diff was used.
         unsigned TemplateDiffUsed : 1;
     };
+
+    /// Special character that the diagnostic printer will use to toggle the bold
+    /// attribute.  The character itself will be not be printed.
+    const char ToggleHighlight = 127;
     
 } // end namespace lyre
 

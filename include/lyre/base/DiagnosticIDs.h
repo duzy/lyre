@@ -40,7 +40,7 @@ namespace lyre
         {
 #define DIAG(NAME,FLAGS,DEFAULT_MAPPING,DESC,GROUP,CATEGORY,NOWERROR) NAME,
 #define DIAGS_BEG(UC,LC) __##UC##_START = DIAG_START_##UC,
-#define DIAGS_END(UC,LC) NUM_##UC##_DIAGNOSTICS,
+#define DIAGS_END(UC,LC) NUM_BUILTIN_##UC##_DIAGNOSTICS,
 #define DIAGS_FOR_ALL_COMPONENTS
 #include "lyre/base/DiagnosticDefs.inc"
         };

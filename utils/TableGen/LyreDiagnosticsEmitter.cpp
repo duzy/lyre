@@ -292,17 +292,236 @@ static bool isRemark(const Record &Diag)
     return ClsName == "CLASS_REMARK";
 }
 
+typedef std::vector<const Record *> RecordVec;
+
+static std::string getDiagCategoryEnum(llvm::StringRef name) 
+{
+    if (name.empty())
+        return "DiagCat_None";
+    SmallString<256> enumName = llvm::StringRef("DiagCat_");
+    for (llvm::StringRef::iterator I = name.begin(), E = name.end(); I != E; ++I)
+        enumName += isalnum(*I) ? *I : '_';
+    return enumName.str();
+}
+
+/// \brief Emit the array of diagnostic subgroups.
+///
+/// The array of diagnostic subgroups contains for each group a list of its
+/// subgroups. The individual lists are separated by '-1'. Groups with no
+/// subgroups are skipped.
+///
+/// \code
+///   static const int16_t DiagSubGroups[] = {
+///     /* Empty */ -1,
+///     /* DiagSubGroup0 */ 142, -1,
+///     /* DiagSubGroup13 */ 265, 322, 399, -1
+///   }
+/// \endcode
+///
+static void emitDiagSubGroups(std::map<std::string, GroupInfo> &DiagsInGroup, raw_ostream &OS) 
+{
+    OS << "static const int16_t DiagSubGroups[] = {\n"
+       << "  /* Empty */ -1,\n";
+    for (auto const &I : DiagsInGroup) {
+        const std::vector<std::string> &SubGroups = I.second.SubGroups;
+        if (!SubGroups.empty()) {
+            OS << "  /* DiagSubGroup" << I.second.IDNo << " */ ";
+            for (auto const &SubGroup : SubGroups) {
+                std::map<std::string, GroupInfo>::const_iterator RI =
+                    DiagsInGroup.find(SubGroup);
+                assert(RI != DiagsInGroup.end() && "Referenced without existing?");
+                OS << RI->second.IDNo << ", ";
+            }
+            OS << "-1,\n";
+        }
+    }
+    OS << "};\n\n";
+}
+
+/// \brief Emit the list of diagnostic arrays.
+///
+/// This data structure is a large array that contains itself arrays of varying
+/// size. Each array represents a list of diagnostics. The different arrays are
+/// separated by the value '-1'.
+///
+/// \code
+///   static const int16_t DiagArrays[] = {
+///     /* Empty */ -1,
+///     /* DiagArray1 */ diag::warn_pragma_message,
+///                      -1,
+///     /* DiagArray2 */ diag::warn_abs_too_small,
+///                      diag::warn_unsigned_abs,
+///                      diag::warn_wrong_absolute_value_type,
+///                      -1
+///   };
+/// \endcode
+///
+static void emitDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup, raw_ostream &OS) 
+{
+    OS << "static const int16_t DiagArrays[] = {\n"
+       << "  /* Empty */ -1,\n";
+    for (auto const &I : DiagsInGroup) {
+        const std::vector<const Record *> &V = I.second.DiagsInGroup;
+        if (!V.empty()) {
+            OS << "  /* DiagArray" << I.second.IDNo << " */ ";
+            for (auto *Record : V)
+                OS << "diag::" << Record->getName() << ", ";
+            OS << "-1,\n";
+        }
+    }
+    OS << "};\n\n";
+}
+
+/// \brief Emit a list of group names.
+///
+/// This creates a long string which by itself contains a list of pascal style
+/// strings, which consist of a length byte directly followed by the string.
+///
+/// \code
+///   static const char DiagGroupNames[] = {
+///     \000\020#pragma-messages\t#warnings\020CFString-literal"
+///   };
+/// \endcode
+static void emitDiagGroupNames(StringToOffsetTable &GroupNames, raw_ostream &OS) 
+{
+    OS << "static const char DiagGroupNames[] = {\n";
+    GroupNames.EmitString(OS);
+    OS << "\n};\n\n";
+}
+
+/// \brief Emit diagnostic arrays and related data structures.
+///
+/// This creates the actual diagnostic array, an array of diagnostic subgroups
+/// and an array of subgroup names.
+///
+/// \code
+///  #ifdef GET_DIAG_ARRAYS
+///     static const int16_t DiagArrays[];
+///     static const int16_t DiagSubGroups[];
+///     static const char DiagGroupNames[];
+///  #endif
+///  \endcode
+static void emitAllDiagArrays(std::map<std::string, GroupInfo> &DiagsInGroup,
+    StringToOffsetTable &GroupNames, raw_ostream &OS)
+{
+    OS << "\n#ifdef GET_DIAG_ARRAYS\n";
+    emitDiagArrays(DiagsInGroup, OS);
+    emitDiagSubGroups(DiagsInGroup, OS);
+    emitDiagGroupNames(GroupNames, OS);
+    OS << "#endif // GET_DIAG_ARRAYS\n\n";
+}
+
+/// \brief Emit diagnostic table.
+///
+/// The table is sorted by the name of the diagnostic group. Each element
+/// consists of the name of the diagnostic group (given as offset in the
+/// group name table), a reference to a list of diagnostics (optional) and a
+/// reference to a set of subgroups (optional).
+///
+/// \code
+/// #ifdef GET_DIAG_TABLE
+///  {/* abi */              159, /* DiagArray11 */ 19, /* Empty */          0},
+///  {/* aggregate-return */ 180, /* Empty */        0, /* Empty */          0},
+///  {/* all */              197, /* Empty */        0, /* DiagSubGroup13 */ 3},
+///  {/* deprecated */       1981,/* DiagArray1 */ 348, /* DiagSubGroup3 */  9},
+/// #endif
+/// \endcode
+static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
+    StringToOffsetTable &GroupNames, raw_ostream &OS)
+{
+    unsigned MaxLen = 0;
+
+    for (auto const &I: DiagsInGroup)
+        MaxLen = std::max(MaxLen, (unsigned)I.first.size());
+
+    OS << "\n#ifdef GET_DIAG_TABLE\n";
+    
+    unsigned SubGroupIndex = 1, DiagArrayIndex = 1;
+    for (auto const &I: DiagsInGroup) {
+        // Group option string.
+        OS << "  { /* ";
+        if (I.first.find_first_not_of("abcdefghijklmnopqrstuvwxyz"
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                "0123456789!@#$%^*-+=:?") !=
+            std::string::npos)
+            PrintFatalError("Invalid character in diagnostic group '" + I.first +
+                "'");
+        OS << I.first << " */ " << std::string(MaxLen - I.first.size(), ' ');
+        // Store a pascal-style length byte at the beginning of the string.
+        std::string Name = char(I.first.size()) + I.first;
+        OS << GroupNames.GetOrAddStringOffset(Name, false) << ", ";
+
+        // Diagnostics in the group.
+        const std::vector<const Record *> &V = I.second.DiagsInGroup;
+        const bool hasDiags = !V.empty();
+        if (hasDiags) {
+            OS << "/* DiagArray" << I.second.IDNo << " */ " << DiagArrayIndex
+               << ", ";
+            DiagArrayIndex += V.size() + 1;
+        } else {
+            OS << "/* Empty */     0, ";
+        }
+
+        // Subgroups.
+        const std::vector<std::string> &SubGroups = I.second.SubGroups;
+        const bool hasSubGroups = !SubGroups.empty() ;
+        if (hasSubGroups) {
+            OS << "/* DiagSubGroup" << I.second.IDNo << " */ " << SubGroupIndex;
+            SubGroupIndex += SubGroups.size() + 1;
+        } else {
+            OS << "/* Empty */         0";
+        }
+
+        OS << " },\n";
+    }
+    OS << "#endif // GET_DIAG_TABLE\n\n";
+}
+
+/// \brief Emit the table of diagnostic categories.
+///
+/// The table has the form of macro calls that have two parameters. The
+/// category's name as well as an enum that represents the category. The
+/// table can be used by defining the macro 'CATEGORY' and including this
+/// table right after.
+///
+/// \code
+/// #ifdef GET_CATEGORY_TABLE
+///   CATEGORY("Semantic Issue", DiagCat_Semantic_Issue)
+///   CATEGORY("Lambda Issue", DiagCat_Lambda_Issue)
+/// #endif
+/// \endcode
+static void emitCategoryTable(RecordKeeper &Records, raw_ostream &OS) 
+{
+    DiagCategoryIDMap CategoriesByID(Records);
+    OS << "\n#ifdef GET_CATEGORY_TABLE\n";
+    for (auto const &C : CategoriesByID)
+        OS << "CATEGORY(\"" << C << "\", " << getDiagCategoryEnum(C) << ")\n";
+    OS << "#endif // GET_CATEGORY_TABLE\n\n";
+}
+
 namespace lyre
 {
     void EmitLyreDiagGroups(RecordKeeper &Records, raw_ostream &OS)
     {
         std::vector<Record *> Diags = Records.getAllDerivedDefinitions("Diagnostic");
         std::vector<Record *> DiagGroups = Records.getAllDerivedDefinitions("DiagGroup");
-        
-        llvm::errs() << "Diags: " << Diags.size() << "\n";
-        llvm::errs() << "DiagGroup: " << DiagGroups.size() << "\n";
 
-        
+        std::map<std::string, GroupInfo> DiagsInGroup;
+        groupDiagnostics(Diags, DiagGroups, DiagsInGroup);
+
+        StringToOffsetTable GroupNames;
+        for (std::map<std::string, GroupInfo>::const_iterator
+                 I = DiagsInGroup.begin(),
+                 E = DiagsInGroup.end();
+             I != E; ++I) {
+                // Store a pascal-style length byte at the beginning of the string.
+            std::string Name = char(I->first.size()) + I->first;
+            GroupNames.GetOrAddStringOffset(Name, false);
+        }
+
+        emitAllDiagArrays(DiagsInGroup, GroupNames, OS);
+        emitDiagTable(DiagsInGroup, GroupNames, OS);
+        emitCategoryTable(Records, OS);
     }
 
     void EmitLyreDiagDefs(raw_ostream &OS,
@@ -384,6 +603,7 @@ namespace lyre
         // Write the component end guard
         if (!ComponentMacroName.empty()) {
             OS << "DIAGS_END(" << ComponentMacroName << ", " << Component << ")\n";
+            OS << "#undef DIAGS_FOR_" << ComponentMacroName << "\n";
             OS << "#endif\n\n";
         }
     }
@@ -393,6 +613,7 @@ namespace lyre
         std::vector<Record *> Diags = Records.getAllDerivedDefinitions("Diagnostic");
         std::vector<Record *> DiagGroups = Records.getAllDerivedDefinitions("DiagGroup");
 
+        std::set<std::string> Components;
         std::map<std::string, GroupInfo> DiagsInGroup;
         groupDiagnostics(Diags, DiagGroups, DiagsInGroup);
 
@@ -404,8 +625,10 @@ namespace lyre
         OS << "#ifdef DIAGS_FOR_ALL_COMPONENTS\n";
         for (unsigned i = 0, e = Diags.size(); i != e; ++i) {
             const Record &R = *Diags[i];
-            const std::string ComponentMacroName = StringRef(
-                R.getValueAsString("Component")).upper();
+            Components.insert(R.getValueAsString("Component"));
+        }
+        for (auto & Component : Components) {
+            const std::string ComponentMacroName = StringRef(Component).upper();
             OS << "# ifndef DIAGS_FOR_" << ComponentMacroName << "\n";
             OS << "# define DIAGS_FOR_" << ComponentMacroName << "()\n";
             OS << "# endif\n";
@@ -413,17 +636,15 @@ namespace lyre
         OS << "# undef DIAGS_FOR_ALL_COMPONENTS\n";
         OS << "#endif\n\n";
 
-        OS << "#ifdef DIAGS_BEG\n";
+        OS << "#ifndef DIAGS_BEG\n";
         OS << "# define DIAGS_BEG(UC,LC)\n";
         OS << "#endif\n";
-        OS << "#ifdef DIAGS_END\n";
+        OS << "#ifndef DIAGS_END\n";
         OS << "# define DIAGS_END(UC,LC)\n";
         OS << "#endif\n\n";
 
         std::string lastComponent, lastComponentMacroName;
-        for (unsigned i = 0, e = Diags.size(); i != e; ++i) {
-            const Record &R = *Diags[i];
-            const std::string Component(R.getValueAsString("Component"));
+        for (auto & Component : Components) {
             const std::string ComponentMacroName = StringRef(Component).upper();
             EmitLyreDiagDefs(OS, Component, Diags, DiagGroups, DiagsInGroup, 
                 CategoryIDs, DGParentMap);

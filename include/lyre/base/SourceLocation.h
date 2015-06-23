@@ -6,6 +6,10 @@
 
 namespace llvm
 {
+    template <typename T> struct DenseMapInfo;
+    template <typename T> struct isPodLike;
+    template <typename T> class PointerLikeTypeTraits;
+    
     class StringRef;
     class raw_ostream;
 }
@@ -333,7 +337,96 @@ namespace lyre
         }
 
     };
+
+    /// \brief Represents an unpacked "presumed" location which can be presented
+    /// to the user.
+    ///
+    /// A 'presumed' location can be modified by \#line and GNU line marker
+    /// directives and is always the expansion point of a normal location.
+    ///
+    /// You can get a PresumedLoc from a SourceLocation with SourceManager.
+    class PresumedLoc 
+    {
+        const char *Filename;
+        unsigned Line, Col;
+        SourceLocation IncludeLoc;
+        
+    public:
+        PresumedLoc() : Filename(nullptr) {}
+        PresumedLoc(const char *FN, unsigned Ln, unsigned Co, SourceLocation IL)
+            : Filename(FN), Line(Ln), Col(Co), IncludeLoc(IL) {
+        }
+
+        /// \brief Return true if this object is invalid or uninitialized.
+        ///
+        /// This occurs when created with invalid source locations or when walking
+        /// off the top of a \#include stack.
+        bool isInvalid() const { return Filename == nullptr; }
+        bool isValid() const { return Filename != nullptr; }
+
+        /// \brief Return the presumed filename of this location.
+        ///
+        /// This can be affected by \#line etc.
+        const char *getFilename() const { return Filename; }
+
+        /// \brief Return the presumed line number of this location.
+        ///
+        /// This can be affected by \#line etc.
+        unsigned getLine() const { return Line; }
+
+        /// \brief Return the presumed column number of this location.
+        ///
+        /// This cannot be affected by \#line, but is packaged here for convenience.
+        unsigned getColumn() const { return Col; }
+
+        /// \brief Return the presumed include location of this location.
+        ///
+        /// This can be affected by GNU linemarker directives.
+        SourceLocation getIncludeLoc() const { return IncludeLoc; }
+    };
     
 } // end namespace lyre
+
+namespace llvm 
+{
+    /// Define DenseMapInfo so that FileID's can be used as keys in DenseMap and
+    /// DenseSets.
+    template <>
+    struct DenseMapInfo<lyre::FileID> 
+    {
+        static inline lyre::FileID getEmptyKey() {
+            return lyre::FileID();
+        }
+        static inline lyre::FileID getTombstoneKey() {
+            return lyre::FileID::getSentinel();
+        }
+
+        static unsigned getHashValue(lyre::FileID S) {
+            return S.getHashValue();
+        }
+
+        static bool isEqual(lyre::FileID LHS, lyre::FileID RHS) {
+            return LHS == RHS;
+        }
+    };
+  
+    template <> struct isPodLike<lyre::SourceLocation> { static const bool value = true; };
+    template <> struct isPodLike<lyre::FileID> { static const bool value = true; };
+
+    // Teach SmallPtrSet how to handle SourceLocation.
+    template<>
+    class PointerLikeTypeTraits<lyre::SourceLocation> 
+    {
+    public:
+        static inline void *getAsVoidPointer(lyre::SourceLocation L) {
+            return L.getPtrEncoding();
+        }
+        static inline lyre::SourceLocation getFromVoidPointer(void *P) {
+            return lyre::SourceLocation::getFromRawEncoding((unsigned)(uintptr_t)P);
+        }
+        enum { NumLowBitsAvailable = 0 };
+    };
+
+}  // end namespace llvm
 
 #endif//__LYRE_BASE_SOURCELOCATION_H____DUZY__

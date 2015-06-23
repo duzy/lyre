@@ -17,7 +17,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <map>
-using namespace clang;
+
+using namespace lyre;
+using namespace llvm;
 
 //===----------------------------------------------------------------------===//
 // Builtin Diagnostic information
@@ -27,7 +29,8 @@ namespace
 {
 
     // Diagnostic classes.
-    enum {
+    enum 
+    {
         CLASS_NOTE       = 0x01,
         CLASS_REMARK     = 0x02,
         CLASS_WARNING    = 0x03,
@@ -35,11 +38,12 @@ namespace
         CLASS_ERROR      = 0x05
     };
 
-    struct StaticDiagInfoRec {
+    struct StaticDiagInfoRec
+    {
         uint16_t DiagID;
         unsigned DefaultSeverity : 3;
         unsigned Class : 3;
-        unsigned SFINAE : 2;
+        //unsigned SFINAE : 2;
         unsigned WarnNoWerror : 1;
         unsigned WarnShowInSystemHeader : 1;
         unsigned Category : 5;
@@ -67,14 +71,26 @@ namespace
         }
     };
 
+    template <size_t SizeOfStr, typename FieldType>
+    class StringSizerHelper
+    {
+        char FIELD_TOO_SMALL[SizeOfStr <= FieldType(~0U) ? 1 : -1];
+        
+    public:
+        enum { Size = SizeOfStr };
+    };
+    
 } // namespace anonymous
+
+#define STR_SIZE(str, fieldTy) StringSizerHelper<sizeof(str)-1, fieldTy>::Size 
 
 static const StaticDiagInfoRec StaticDiagInfo[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, NOWERROR, CATEGORY) \
     {                                                                   \
         diag::ENUM, DEFAULT_SEVERITY, CLASS, NOWERROR,                  \
-        SHOWINSYSHEADER, CATEGORY, GROUP, STR_SIZE(DESC, uint16_t), DESC \
+        0, CATEGORY, GROUP, STR_SIZE(DESC, uint16_t), DESC              \
     },
+#define DIAGS_FOR_ALL_COMPONENTS
 #include "lyre/base/DiagnosticDefs.inc"
 };
 
@@ -89,7 +105,7 @@ static const StaticDiagInfoRec *GetDiagInfo(unsigned DiagID) {
     if (IsFirst) {
         for (unsigned i = 1; i != StaticDiagInfoSize; ++i) {
             assert(StaticDiagInfo[i-1].DiagID != StaticDiagInfo[i].DiagID &&
-                "Diag ID conflict, the enums at the start of clang::diag (in "
+                "Diag ID conflict, the enums at the start of lyre::diag (in "
                 "DiagnosticIDs.h) probably need to be increased");
 
             assert(StaticDiagInfo[i-1] < StaticDiagInfo[i] &&
@@ -120,6 +136,7 @@ static const StaticDiagInfoRec *GetDiagInfo(unsigned DiagID) {
         ID -= DIAG_START_##NAME - DIAG_START_##PREV;                    \
     }
     CATEGORY(DRIVER, COMMON)
+        /*
         CATEGORY(FRONTEND, DRIVER)
         CATEGORY(SERIALIZATION, FRONTEND)
         CATEGORY(LEX, SERIALIZATION)
@@ -128,6 +145,7 @@ static const StaticDiagInfoRec *GetDiagInfo(unsigned DiagID) {
         CATEGORY(COMMENT, AST)
         CATEGORY(SEMA, COMMENT)
         CATEGORY(ANALYSIS, SEMA)
+        */
 #undef CATEGORY
 
         // Avoid out of bounds reads.
@@ -220,13 +238,14 @@ StringRef DiagnosticIDs::getCategoryNameFromID(unsigned CategoryID) {
 }
 
 
-
+/*
 DiagnosticIDs::SFINAEResponse
 DiagnosticIDs::getDiagnosticSFINAEResponse(unsigned DiagID) {
     if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
         return static_cast<DiagnosticIDs::SFINAEResponse>(Info->SFINAE);
     return SFINAE_Report;
 }
+*/
 
 /// getBuiltinDiagClass - Return the class field of the diagnostic.
 ///
@@ -240,12 +259,16 @@ static unsigned getBuiltinDiagClass(unsigned DiagID) {
 // Custom Diagnostic information
 //===----------------------------------------------------------------------===//
 
-namespace clang {
-    namespace diag {
-        class CustomDiagInfo {
+namespace lyre
+{
+    namespace diag 
+    {
+        class CustomDiagInfo 
+        {
             typedef std::pair<DiagnosticIDs::Level, std::string> DiagDesc;
             std::vector<DiagDesc> DiagInfo;
             std::map<DiagDesc, unsigned> DiagIDs;
+
         public:
 
             /// getDescription - Return the description of the specified custom
@@ -280,7 +303,7 @@ namespace clang {
         };
 
     } // end diag namespace
-} // end clang namespace
+} // end lyre namespace
 
 
 //===----------------------------------------------------------------------===//
@@ -289,7 +312,8 @@ namespace clang {
 
 DiagnosticIDs::DiagnosticIDs() { CustomDiagInfo = nullptr; }
 
-DiagnosticIDs::~DiagnosticIDs() {
+DiagnosticIDs::~DiagnosticIDs() 
+{
     delete CustomDiagInfo;
 }
 
@@ -299,7 +323,8 @@ DiagnosticIDs::~DiagnosticIDs() {
 ///
 /// \param FormatString A fixed diagnostic format string that will be hashed and
 /// mapped to a unique DiagID.
-unsigned DiagnosticIDs::getCustomDiagID(Level L, StringRef FormatString) {
+unsigned DiagnosticIDs::getCustomDiagID(Level L, StringRef FormatString) 
+{
     if (!CustomDiagInfo)
         CustomDiagInfo = new diag::CustomDiagInfo();
     return CustomDiagInfo->getOrCreateDiagID(L, FormatString, *this);
@@ -310,14 +335,16 @@ unsigned DiagnosticIDs::getCustomDiagID(Level L, StringRef FormatString) {
 /// level of the specified diagnostic ID is a Warning or Extension.
 /// This only works on builtin diagnostics, not custom ones, and is not legal to
 /// call on NOTEs.
-bool DiagnosticIDs::isBuiltinWarningOrExtension(unsigned DiagID) {
+bool DiagnosticIDs::isBuiltinWarningOrExtension(unsigned DiagID) 
+{
     return DiagID < diag::DIAG_UPPER_LIMIT &&
                     getBuiltinDiagClass(DiagID) != CLASS_ERROR;
 }
 
 /// \brief Determine whether the given built-in diagnostic ID is a
 /// Note.
-bool DiagnosticIDs::isBuiltinNote(unsigned DiagID) {
+bool DiagnosticIDs::isBuiltinNote(unsigned DiagID) 
+{
     return DiagID < diag::DIAG_UPPER_LIMIT &&
                     getBuiltinDiagClass(DiagID) == CLASS_NOTE;
 }
@@ -328,7 +355,8 @@ bool DiagnosticIDs::isBuiltinNote(unsigned DiagID) {
 /// which case -pedantic enables it) or treated as a warning/error by default.
 ///
 bool DiagnosticIDs::isBuiltinExtensionDiag(unsigned DiagID,
-    bool &EnabledByDefault) {
+    bool &EnabledByDefault) 
+{
     if (DiagID >= diag::DIAG_UPPER_LIMIT ||
         getBuiltinDiagClass(DiagID) != CLASS_EXTENSION)
         return false;
@@ -338,7 +366,8 @@ bool DiagnosticIDs::isBuiltinExtensionDiag(unsigned DiagID,
     return true;
 }
 
-bool DiagnosticIDs::isDefaultMappingAsError(unsigned DiagID) {
+bool DiagnosticIDs::isDefaultMappingAsError(unsigned DiagID) 
+{
     if (DiagID >= diag::DIAG_UPPER_LIMIT)
         return false;
 
@@ -347,7 +376,8 @@ bool DiagnosticIDs::isDefaultMappingAsError(unsigned DiagID) {
 
 /// getDescription - Given a diagnostic ID, return a description of the
 /// issue.
-StringRef DiagnosticIDs::getDescription(unsigned DiagID) const {
+StringRef DiagnosticIDs::getDescription(unsigned DiagID) const 
+{
     if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
         return Info->getDescription();
     assert(CustomDiagInfo && "Invalid CustomDiagInfo");
@@ -376,7 +406,8 @@ static DiagnosticIDs::Level toLevel(diag::Severity SV)
 /// by consumable the DiagnosticClient.
 DiagnosticIDs::Level
 DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
-    const DiagnosticsEngine &Diag) const {
+    const DiagnosticsEngine &Diag) const 
+{
     // Handle custom diagnostics, which cannot be mapped.
     if (DiagID >= diag::DIAG_UPPER_LIMIT) {
         assert(CustomDiagInfo && "Invalid CustomDiagInfo");
@@ -396,7 +427,8 @@ DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
 /// diagnostic state. Can be null in order to query the latest state.
 diag::Severity
 DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
-    const DiagnosticsEngine &Diag) const {
+    const DiagnosticsEngine &Diag) const 
+{
     assert(getBuiltinDiagClass(DiagID) != CLASS_NOTE);
 
     // Specific non-error diagnostics may be mapped to various levels from ignored

@@ -10,7 +10,58 @@ namespace lyre
     class DiagnosticOptions : public llvm::RefCountedBase<DiagnosticOptions>
     {
     public:
-        enum TextDiagnosticFormat { Clang, MSVC, Vi };
+        enum TextDiagnosticFormat { Lyre, MSVC, Vi };
+
+        // Default values.
+        enum 
+        {
+            DefaultTabStop = 8, MaxTabStop = 100,
+            DefaultMacroBacktraceLimit = 6,
+            DefaultTemplateBacktraceLimit = 10,
+            DefaultConstexprBacktraceLimit = 10,
+            DefaultSpellCheckingLimit = 50 
+        };
+
+        // Define simple diagnostic options (with no accessors).
+#define DIAGOPT(Name, Bits, Default) unsigned Name : Bits;
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)
+#include "lyre/base/DiagnosticOptions.def"
+
+    protected:
+        // Define diagnostic options of enumeration type. These are private, and will
+        // have accessors (below).
+#define DIAGOPT(Name, Bits, Default)
+#define ENUM_DIAGOPT(Name, Type, Bits, Default) unsigned Name : Bits;
+#include "lyre/base/DiagnosticOptions.def"
+
+    public:
+        /// \brief The file to log diagnostic output to.
+        std::string DiagnosticLogFile;
+  
+        /// \brief The file to serialize diagnostics to (non-appending).
+        std::string DiagnosticSerializationFile;
+
+        /// The list of -W... options used to alter the diagnostic mappings, with the
+        /// prefixes removed.
+        std::vector<std::string> Warnings;
+
+        /// The list of -R... options used to alter the diagnostic mappings, with the
+        /// prefixes removed.
+        std::vector<std::string> Remarks;
+
+    public:
+        // Define accessors/mutators for diagnostic options of enumeration type.
+#define DIAGOPT(Name, Bits, Default)
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)                         \
+        Type get##Name() const { return static_cast<Type>(Name); }      \
+        void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
+#include "lyre/base/DiagnosticOptions.def"
+
+        DiagnosticOptions() {
+#define DIAGOPT(Name, Bits, Default) Name = Default;
+#define ENUM_DIAGOPT(Name, Type, Bits, Default) set##Name(Default);
+#include "lyre/base/DiagnosticOptions.def"
+        }
     };
     
 } // end namespace lyre

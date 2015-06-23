@@ -48,14 +48,14 @@ namespace lyre
         public:
             Status() : Type(llvm::sys::fs::file_type::status_error) {}
             Status(const llvm::sys::fs::file_status &Status);
-            Status(StringRef Name, StringRef RealName, llvm::sys::fs::UniqueID UID,
+            Status(llvm::StringRef Name, llvm::StringRef RealName, llvm::sys::fs::UniqueID UID,
                 llvm::sys::TimeValue MTime, uint32_t User, uint32_t Group,
                 uint64_t Size, llvm::sys::fs::file_type Type,
                 llvm::sys::fs::perms Perms);
 
             /// \brief Returns the name that should be used for this file or directory.
-            StringRef getName() const { return Name; }
-            void setName(StringRef N) { Name = N; }
+            llvm::StringRef getName() const { return Name; }
+            void setName(llvm::StringRef N) { Name = N; }
 
             /// @name Status interface from llvm::sys::fs
             /// @{
@@ -94,12 +94,12 @@ namespace lyre
             virtual llvm::ErrorOr<Status> status() = 0;
             /// \brief Get the contents of the file as a \p MemoryBuffer.
             virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-            getBuffer(const Twine &Name, int64_t FileSize = -1,
+            getBuffer(const llvm::Twine &Name, int64_t FileSize = -1,
                 bool RequiresNullTerminator = true, bool IsVolatile = false) = 0;
             /// \brief Closes the file.
             virtual std::error_code close() = 0;
             /// \brief Sets the name to use for this file.
-            virtual void setName(StringRef Name) = 0;
+            virtual void setName(llvm::StringRef Name) = 0;
         };
 
         namespace detail 
@@ -167,7 +167,7 @@ namespace lyre
             std::shared_ptr<IterState> State; // Input iterator semantics on copy.
 
         public:
-            recursive_directory_iterator(FileSystem &FS, const Twine &Path,
+            recursive_directory_iterator(FileSystem &FS, const llvm::Twine &Path,
                 std::error_code &EC);
             /// \brief Construct an 'end' iterator.
             recursive_directory_iterator() { }
@@ -193,26 +193,26 @@ namespace lyre
             virtual ~FileSystem();
 
             /// \brief Get the status of the entry at \p Path, if one exists.
-            virtual llvm::ErrorOr<Status> status(const Twine &Path) = 0;
+            virtual llvm::ErrorOr<Status> status(const llvm::Twine &Path) = 0;
             /// \brief Get a \p File object for the file at \p Path, if one exists.
             virtual llvm::ErrorOr<std::unique_ptr<File>>
-            openFileForRead(const Twine &Path) = 0;
+            openFileForRead(const llvm::Twine &Path) = 0;
 
             /// This is a convenience method that opens a file, gets its content and then
             /// closes the file.
             llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-            getBufferForFile(const Twine &Name, int64_t FileSize = -1,
+            getBufferForFile(const llvm::Twine &Name, int64_t FileSize = -1,
                 bool RequiresNullTerminator = true, bool IsVolatile = false);
 
             /// \brief Get a directory_iterator for \p Dir.
             /// \note The 'end' iterator is directory_iterator().
-            virtual directory_iterator dir_begin(const Twine &Dir,
+            virtual directory_iterator dir_begin(const llvm::Twine &Dir,
                 std::error_code &EC) = 0;
         };
 
         /// \brief Gets an \p vfs::FileSystem for the 'real' file system, as seen by
         /// the operating system.
-        IntrusiveRefCntPtr<FileSystem> getRealFileSystem();
+        llvm::IntrusiveRefCntPtr<FileSystem> getRealFileSystem();
 
         /// \brief A file system that allows overlaying one \p AbstractFileSystem on top
         /// of another.
@@ -225,20 +225,20 @@ namespace lyre
         /// that exists in more than one file system, the file in the top-most file
         /// system overrides the other(s).
         class OverlayFileSystem : public FileSystem {
-            typedef SmallVector<IntrusiveRefCntPtr<FileSystem>, 1> FileSystemList;
+            typedef llvm::SmallVector<llvm::IntrusiveRefCntPtr<FileSystem>, 1> FileSystemList;
             /// \brief The stack of file systems, implemented as a list in order of
             /// their addition.
             FileSystemList FSList;
 
         public:
-            OverlayFileSystem(IntrusiveRefCntPtr<FileSystem> Base);
+            OverlayFileSystem(llvm::IntrusiveRefCntPtr<FileSystem> Base);
             /// \brief Pushes a file system on top of the stack.
-            void pushOverlay(IntrusiveRefCntPtr<FileSystem> FS);
+            void pushOverlay(llvm::IntrusiveRefCntPtr<FileSystem> FS);
 
-            llvm::ErrorOr<Status> status(const Twine &Path) override;
+            llvm::ErrorOr<Status> status(const llvm::Twine &Path) override;
             llvm::ErrorOr<std::unique_ptr<File>>
-            openFileForRead(const Twine &Path) override;
-            directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
+            openFileForRead(const llvm::Twine &Path) override;
+            directory_iterator dir_begin(const llvm::Twine &Dir, std::error_code &EC) override;
 
             typedef FileSystemList::reverse_iterator iterator;
   
@@ -255,11 +255,11 @@ namespace lyre
 
         /// \brief Gets a \p FileSystem for a virtual file system described in YAML
         /// format.
-        IntrusiveRefCntPtr<FileSystem>
+        llvm::IntrusiveRefCntPtr<FileSystem>
         getVFSFromYAML(std::unique_ptr<llvm::MemoryBuffer> Buffer,
             llvm::SourceMgr::DiagHandlerTy DiagHandler,
             void *DiagContext = nullptr,
-            IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
+            llvm::IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
 
         struct YAMLVFSEntry 
         {
@@ -272,11 +272,11 @@ namespace lyre
         class YAMLVFSWriter 
         {
             std::vector<YAMLVFSEntry> Mappings;
-            Optional<bool> IsCaseSensitive;
+            llvm::Optional<bool> IsCaseSensitive;
 
         public:
             YAMLVFSWriter() {}
-            void addFileMapping(StringRef VirtualPath, StringRef RealPath);
+            void addFileMapping(llvm::StringRef VirtualPath, llvm::StringRef RealPath);
             void setCaseSensitivity(bool CaseSensitive) {
                 IsCaseSensitive = CaseSensitive;
             }

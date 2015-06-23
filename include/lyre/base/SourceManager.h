@@ -255,9 +255,9 @@ namespace lyre
             /// bitmangled together.
             uintptr_t Data;
 
-            friend class clang::SourceManager;
-            friend class clang::ASTWriter;
-            friend class clang::ASTReader;
+            friend class lyre::SourceManager;
+            friend class lyre::ASTWriter;
+            friend class lyre::ASTReader;
         public:
             /// \brief Return a FileInfo object.
             static FileInfo get(SourceLocation IL, const ContentCache *Con,
@@ -447,7 +447,7 @@ namespace lyre
         /// \brief Retrieve the module import location and name for the given ID, if
         /// in fact it was loaded from a module (rather than, say, a precompiled
         /// header).
-        virtual std::pair<SourceLocation, StringRef> getModuleImportLoc(int ID) = 0;
+        virtual std::pair<SourceLocation, llvm::StringRef> getModuleImportLoc(int ID) = 0;
     };
 
 
@@ -530,7 +530,7 @@ namespace lyre
     /// \brief The stack used when building modules on demand, which is used
     /// to provide a link between the source managers of the different compiler
     /// instances.
-    typedef ArrayRef<std::pair<std::string, FullSourceLoc> > ModuleBuildStack;
+    typedef llvm::ArrayRef<std::pair<std::string, FullSourceLoc> > ModuleBuildStack;
 
     /// \brief This class handles loading and caching of source files into memory.
     ///
@@ -544,7 +544,7 @@ namespace lyre
     /// the case of a macro expansion, for example, the spelling location indicates
     /// where the expanded token came from and the expansion location specifies
     /// where it was expanded.
-    class SourceManager : public RefCountedBase<SourceManager> 
+    class SourceManager : public llvm::RefCountedBase<SourceManager> 
     {
         /// \brief DiagnosticsEngine object.
         DiagnosticsEngine &Diag;
@@ -597,13 +597,13 @@ namespace lyre
         ///
         /// Positive FileIDs are indexes into this table. Entry 0 indicates an invalid
         /// expansion.
-        SmallVector<SrcMgr::SLocEntry, 0> LocalSLocEntryTable;
+        llvm::SmallVector<SrcMgr::SLocEntry, 0> LocalSLocEntryTable;
 
         /// \brief The table of SLocEntries that are loaded from other modules.
         ///
         /// Negative FileIDs are indexes into this table. To get from ID to an index,
         /// use (-ID - 2).
-        mutable SmallVector<SrcMgr::SLocEntry, 0> LoadedSLocEntryTable;
+        mutable llvm::SmallVector<SrcMgr::SLocEntry, 0> LoadedSLocEntryTable;
 
         /// \brief The starting offset of the next local SLocEntry.
         ///
@@ -697,7 +697,7 @@ namespace lyre
         /// There is no way to set this value from the command line. If we ever need
         /// to do so (e.g., if on-demand module construction moves out-of-process),
         /// we can add a cc1-level option to do so.
-        SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
+        llvm::SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
 
         // SourceManager doesn't support copy construction.
         explicit SourceManager(const SourceManager&) = delete;
@@ -736,7 +736,7 @@ namespace lyre
         }
 
         /// \brief Push an entry to the module build stack.
-        void pushModuleBuildStack(StringRef moduleName, FullSourceLoc importLoc) {
+        void pushModuleBuildStack(llvm::StringRef moduleName, FullSourceLoc importLoc) {
             StoredModuleBuildStack.push_back(std::make_pair(moduleName.str(),importLoc));
         }
 
@@ -925,7 +925,7 @@ namespace lyre
         ///
         /// \param FID The file ID whose contents will be returned.
         /// \param Invalid If non-NULL, will be set true if an error occurred.
-        StringRef getBufferData(FileID FID, bool *Invalid = nullptr) const;
+        llvm::StringRef getBufferData(FileID FID, bool *Invalid = nullptr) const;
 
         /// \brief Get the number of FileIDs (files and macros) that were created
         /// during preprocessing of \p FID, including it.
@@ -971,10 +971,10 @@ namespace lyre
         }
 
         /// \brief Return the filename of the file containing a SourceLocation.
-        StringRef getFilename(SourceLocation SpellingLoc) const {
+        llvm::StringRef getFilename(SourceLocation SpellingLoc) const {
             if (const FileEntry *F = getFileEntryForID(getFileID(SpellingLoc)))
                 return F->getName();
-            return StringRef();
+            return llvm::StringRef();
         }
 
         /// \brief Return the source location corresponding to the first byte of
@@ -1015,7 +1015,7 @@ namespace lyre
         // \brief Returns the import location if the given source location is
         // located within a module, or an invalid location if the source location
         // is within the current translation unit.
-        std::pair<SourceLocation, StringRef>
+        std::pair<SourceLocation, llvm::StringRef>
         getModuleImportLoc(SourceLocation Loc) const {
             FileID FID = getFileID(Loc);
 
@@ -1358,7 +1358,7 @@ namespace lyre
 
         /// \brief Return the uniqued ID for the specified filename.
         ///
-        unsigned getLineTableFilenameID(StringRef Str);
+        unsigned getLineTableFilenameID(llvm::StringRef Str);
 
         /// \brief Add a line note to the line table for the FileID and offset
         /// specified by Loc.
