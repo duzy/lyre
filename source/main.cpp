@@ -8,6 +8,42 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/ManagedStatic.h"         /// llvm_shutdown()
+#include "llvm/Support/TargetSelect.h"
+
+static llvm::ExecutionEngine * createExecutionEngine(std::unique_ptr<llvm::Module> M, std::string *ErrorStr)
+{
+    return llvm::EngineBuilder(std::move(M))
+        .setEngineKind(llvm::EngineKind::Either)
+        .setErrorStr(ErrorStr)
+        .create();
+}
+
+static int Execute(std::unique_ptr<llvm::Module> Mod, char *const *envp)
+{
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+
+    llvm::Module &M = *Mod;
+    std::string Error;
+    std::unique_ptr<llvm::ExecutionEngine> EE(createExecutionEngine(std::move(Mod), &Error));
+    if (!EE) {
+        llvm::errs() << "unable to make execution engine: " << Error << "\n";
+        return 255;
+    }
+
+    llvm::Function *EntryFn = M.getFunction("lyre.main");
+    if (!EntryFn) {
+        llvm::errs() << "'lyre.main' function not found in module.\n";
+        return 255;
+    }
+
+    // FIXME: Support passing arguments.
+    std::vector<std::string> Args;
+    Args.push_back(M.getModuleIdentifier());
+
+    EE->finalizeObject();
+    return EE->runFunctionAsMain(EntryFn, Args, envp);
+}
 
 int main(int argc, char**argv, char * const *envp)
 {
@@ -23,6 +59,12 @@ int main(int argc, char**argv, char * const *envp)
 
     lyre::Compiler Lyre;
     Lyre.setInvocation(Invocation.release());
+
+    // Create the compilers actual diagnostics engine.
+    Lyre.createDiagnostics();
+    if (!Lyre.hasDiagnostics()) {
+        return 1;
+    }
 
     std::unique_ptr<lyre::CodeGenAction> Act(new lyre::EmitLLVMOnlyAction());
     if (!Lyre.ExecuteAction(*Act)) {

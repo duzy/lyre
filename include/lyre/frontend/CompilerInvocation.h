@@ -8,16 +8,49 @@
 
 namespace lyre
 {
+    class CodeGenOptions;
+    class DiagnosticOptions;
+    class FileSystemOptions;
+    class FrontendOptions;
+    class LangOptions;
+    class TargetOptions;
     
     class CompilerInvocation : public llvm::RefCountedBase<CompilerInvocation>
     {
         const CompilerInvocation &operator=(const CompilerInvocation &) = delete;
-        
+
     public:
+
+        std::shared_ptr<LangOptions> LangOpts;
+        std::shared_ptr<TargetOptions> TargetOpts;
+        
+        std::unique_ptr<CodeGenOptions> CodeGenOpts;
+        std::unique_ptr<DiagnosticOptions> DiagnosticOpts;
+        std::unique_ptr<FileSystemOptions> FileSystemOpts;
+        std::unique_ptr<FrontendOptions> FrontendOpts;
+        
         CompilerInvocation();
 
         bool LoadFromArgs(const char* const *ArgBegin, const char* const *ArgEnd, 
             DiagnosticsEngine &Diags);
+
+        CodeGenOptions &getCodeGenOpts() { return *CodeGenOpts; }
+        const CodeGenOptions &getCodeGenOpts() const { return *CodeGenOpts; }
+
+        DiagnosticOptions &getDiagnosticOpts() { return *DiagnosticOpts; }
+        const DiagnosticOptions &getDiagnosticOpts() const { return *DiagnosticOpts; }
+
+        FileSystemOptions &getFileSystemOpts() { return *FileSystemOpts; }
+        const FileSystemOptions &getFileSystemOpts() const { return *FileSystemOpts; }
+
+        FrontendOptions &getFrontendOpts() { return *FrontendOpts; }
+        const FrontendOptions &getFrontendOpts() const { return *FrontendOpts; }
+
+        LangOptions &getLangOpts() { return *LangOpts; }
+        const LangOptions &getLangOpts() const { return *LangOpts; }
+
+        TargetOptions &getTargetOpts() { return *TargetOpts; }
+        const TargetOptions &getTargetOpts() const { return *TargetOpts; }
     }; // end class CompilerInvocation
     
 } // end namespace lyre

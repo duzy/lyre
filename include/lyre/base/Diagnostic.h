@@ -135,7 +135,8 @@ namespace lyre
             Fatal = DiagnosticIDs::Fatal
         };
 
-        enum ArgumentKind {
+        enum ArgumentKind 
+        {
             ak_std_string,      ///< std::string
             ak_c_string,        ///< const char *
             ak_sint,            ///< int
@@ -190,7 +191,8 @@ namespace lyre
         /// A new DiagState is created and kept around when diagnostic pragmas modify
         /// the state so that we know what is the diagnostic state at any given
         /// source location.
-        class DiagState {
+        class DiagState 
+        {
             llvm::DenseMap<unsigned, DiagnosticMapping> DiagMap;
 
         public:
@@ -216,7 +218,8 @@ namespace lyre
         ///
         /// 'Loc' can be null if the point represents the diagnostic state
         /// modifications done through the command-line.
-        struct DiagStatePoint {
+        struct DiagStatePoint 
+        {
             DiagState *State;
             FullSourceLoc Loc;
             DiagStatePoint(DiagState *State, FullSourceLoc Loc)

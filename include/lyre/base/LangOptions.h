@@ -16,8 +16,6 @@
 #define LLVM_LYRE_BASIC_LANGOPTIONS_H
 
 #include "lyre/base/CommentOptions.h"
-#include "lyre/base/ObjCRuntime.h"
-#include "lyre/base/Sanitizers.h"
 #include "lyre/base/Visibility.h"
 #include <string>
 #include <vector>
@@ -78,13 +76,13 @@ namespace lyre
 
     public:
         /// \brief Set of enabled sanitizers.
-        SanitizerSet Sanitize;
+        //SanitizerSet Sanitize;
 
         /// \brief Paths to blacklist files specifying which objects
         /// (files, functions, variables) should not be instrumented.
         std::vector<std::string> SanitizerBlacklistFiles;
 
-        lyre::ObjCRuntime ObjCRuntime;
+        //lyre::ObjCRuntime ObjCRuntime;
 
         std::string ObjCConstantStringClass;
   
@@ -123,8 +121,9 @@ namespace lyre
         }
   
         bool isSubscriptPointerArithmetic() const {
-            return ObjCRuntime.isSubscriptPointerArithmetic() &&
-                !ObjCSubscriptingLegacyRuntime;
+            //return ObjCRuntime.isSubscriptPointerArithmetic() &&
+            //    !ObjCSubscriptingLegacyRuntime;
+            return false;
         }
 
         bool isCompatibleWithMSVC(MSVCMajorVersion MajorVersion) const {

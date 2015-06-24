@@ -1,7 +1,7 @@
 // -*- c++ -*-
 #ifndef __LYRE_FRONTEND_ACTION_H____DUZY__
 #define __LYRE_FRONTEND_ACTION_H____DUZY__ 1
-#include "lyre/frontend/FrontendInputFile.h"
+#include "lyre/frontend/FrontendOptions.h"
 #include <memory>
 
 namespace lyre
@@ -60,6 +60,13 @@ namespace lyre
         /// objects, and run statistics and output file cleanup code.
         void EndSourceFile();
         /// @}
+
+        /// \brief Is this action invoked on a model file? 
+        ///
+        /// Model files are incomplete translation units that relies on type
+        /// information from another translation unit. Check ParseModelFileAction for
+        /// details.
+        virtual bool isModelParsingAction() const { return false; }
     }; // end class FrontendAction
 
     /// \brief Abstract base class to use for AST consumer-based frontend actions.
