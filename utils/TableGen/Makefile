@@ -15,7 +15,7 @@ LIBS := \
 
 LOADLIBS := 
 
-OBJECTS = TableGen.o \
+OBJECTS = TableGen.o NeonEmitter.o \
   LyreASTNodesEmitter.o \
   LyreDiagnosticsEmitter.o \
 

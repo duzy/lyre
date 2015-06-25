@@ -15,7 +15,7 @@
 // The format of this database matches clang/Basic/Builtins.def.
 
 #define GET_NEON_BUILTINS
-#include "clang/Basic/arm_neon.inc"
+#include "lyre/base/arm_neon.inc"
 #undef GET_NEON_BUILTINS
 
 #undef BUILTIN

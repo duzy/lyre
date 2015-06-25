@@ -1,7 +1,7 @@
 #include "lyre/frontend/Options.h"
 #include "llvm/ADT/STLExtras.h" // for llvm::array_lengthof
-#include "llvm/Option/Arg.h"
-#include "llvm/Option/ArgList.h"
+//#include "llvm/Option/Arg.h"
+//#include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 
@@ -33,6 +33,7 @@ namespace lyre
         
         llvm::opt::OptTable *createLyreCompilerOptions()
         {
+            sizeof(LyreCompilerOptions);
             return new LyreCompilerOptions();
         }
 

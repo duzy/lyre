@@ -16,7 +16,7 @@ LLI := $(LLVM)/Debug+Asserts/bin/lli
 
 TableGen := utils/TableGen/TableGen
 
-CXXFLAGS := -Iinclude -Isource \
+CXXFLAGS := -Iinclude -Isource -g -ggdb \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
   $(shell $(LLVM_CONFIG) --cxxflags)
 
@@ -115,6 +115,11 @@ include/lyre/base/DiagnosticDefs.inc: include/lyre/base/Diagnostic.td $(TableGen
     include/lyre/base/DiagnosticCategories.td
 	$(TableGen) -Iinclude/lyre/base -gen-lyre-diag-defs -o=$@ $<
 
+source/base/Targets.cpp: include/lyre/base/BuiltinsNEON.def
+include/lyre/base/BuiltinsNEON.def: include/lyre/base/arm_neon.inc
+include/lyre/base/arm_neon.inc: include/lyre/base/arm_neon.td $(TableGen)
+	$(TableGen) -Iinclude/lyre/base -gen-arm-neon -o=$@ $<
+
 include/lyre/ast/DeclNodes.inc: include/lyre/base/DeclNodes.td $(TableGen)
 	$(TableGen) -gen-lyre-decl-nodes -o=$@ $<
 
@@ -142,6 +147,9 @@ ifeq ($(findstring $(MAKECMDGOALS),clean),)
   source/base/DiagnosticIDs.d: \
     include/lyre/base/DiagnosticGroups.inc \
     include/lyre/base/DiagnosticDefs.inc \
+
+  source/base/Targets.d: \
+    include/lyre/base/arm_neon.inc \
 
   source/frontend/FrontendAction.d: \
     include/lyre/ast/DeclNodes.inc \

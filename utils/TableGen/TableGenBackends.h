@@ -30,6 +30,10 @@ namespace lyre
     void EmitLyreDiagGroups(RecordKeeper &Records, raw_ostream &OS);
     void EmitLyreDeclNodes(RecordKeeper &Records, raw_ostream &OS);
     void EmitLyreStmtNodes(RecordKeeper &Records, raw_ostream &OS);
+
+    void EmitArmNeon(RecordKeeper &Records, raw_ostream &OS);
+    void EmitArmNeonSema(RecordKeeper &Records, raw_ostream &OS);
+    void EmitArmNeonTest(RecordKeeper &Records, raw_ostream &OS);
 }
 
 #endif//__TABLEGEN_EMITTERS_H__

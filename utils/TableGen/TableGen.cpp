@@ -28,6 +28,10 @@ namespace
         GenLyreDiagGroups,
         GenLyreDeclNodes,
         GenLyreStmtNodes,
+
+        GenArmNeon,
+        GenArmNeonSema,
+        GenArmNeonTest,
     };
 
     static EmitterFn Emitters[] = {
@@ -35,6 +39,10 @@ namespace
         EmitLyreDiagGroups,
         EmitLyreDeclNodes,
         EmitLyreStmtNodes,
+
+        EmitArmNeon,
+        EmitArmNeonSema,
+        EmitArmNeonTest,
     };
 
     cl::opt<ActionName> Action(
@@ -48,6 +56,14 @@ namespace
                 "Generate Lyre AST declaration nodes"),
             clEnumValN(GenLyreStmtNodes, "gen-lyre-stmt-nodes",
                 "Generate Lyre AST statement nodes"),
+
+            clEnumValN(GenArmNeon, "gen-arm-neon",
+                "Generate arm_neon.h for Lyre"),
+            clEnumValN(GenArmNeonSema, "gen-arm-neon-sema",
+                "Generate ARM NEON sema support for Lyre"),
+            clEnumValN(GenArmNeonTest, "gen-arm-neon-test",
+                "Generate ARM NEON tests for Lyre"),
+            
             clEnumValEnd));
 
     /*
