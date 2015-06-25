@@ -28,6 +28,48 @@ namespace lyre
             assert(TheCompiler && "Compiler not registered!");
             return *TheCompiler;
         }
+
+        /// \brief Is this action invoked on a model file? 
+        ///
+        /// Model files are incomplete translation units that relies on type
+        /// information from another translation unit. Check ParseModelFileAction for
+        /// details.
+        virtual bool isModelParsingAction() const { return false; }
+
+        /// @name Current File Information
+        /// @{
+        /*
+        bool isCurrentFileAST() const {
+            assert(!CurrentInput.isEmpty() && "No current file!");
+            return (bool)CurrentASTUnit;
+        }
+        */
+
+        const FrontendInputFile &getCurrentInput() const {
+            return CurrentInput;
+        }
+  
+        const llvm::StringRef getCurrentFile() const {
+            assert(!CurrentInput.isEmpty() && "No current file!");
+            return CurrentInput.getFile();
+        }
+
+        InputKind getCurrentFileKind() const {
+            assert(!CurrentInput.isEmpty() && "No current file!");
+            return CurrentInput.getKind();
+        }
+        
+        /*
+        ASTUnit &getCurrentASTUnit() const {
+            assert(CurrentASTUnit && "No current AST unit!");
+            return *CurrentASTUnit;
+        }
+
+        std::unique_ptr<ASTUnit> takeCurrentASTUnit() { return std::move(CurrentASTUnit); }
+
+        void setCurrentInput(const FrontendInputFile &CurrentInput, std::unique_ptr<ASTUnit> AST = nullptr);
+        */
+        /// @}
         
         /// @name Public Action Interface
         /// @{
@@ -60,13 +102,6 @@ namespace lyre
         /// objects, and run statistics and output file cleanup code.
         void EndSourceFile();
         /// @}
-
-        /// \brief Is this action invoked on a model file? 
-        ///
-        /// Model files are incomplete translation units that relies on type
-        /// information from another translation unit. Check ParseModelFileAction for
-        /// details.
-        virtual bool isModelParsingAction() const { return false; }
     }; // end class FrontendAction
 
     /// \brief Abstract base class to use for AST consumer-based frontend actions.

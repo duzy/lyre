@@ -33,7 +33,10 @@ namespace lyre
 
     void CodeGenAction::ExecuteAction()
     {
-        // ...
+        if (getCurrentFileKind() == IK_LLVM_IR) {
+            // ...
+            return;
+        }
         
         this->ASTAction::ExecuteAction();
     }

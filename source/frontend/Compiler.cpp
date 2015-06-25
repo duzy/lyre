@@ -123,7 +123,6 @@ namespace lyre
         return Diags;
     }
     
-    //void Compiler::evalFile(const std::string & filename)
     bool Compiler::ExecuteAction(FrontendAction & Act)
     {
         assert(hasDiagnostics() && "Diagnostics engine is not initialized!");
@@ -137,8 +136,10 @@ namespace lyre
         // Create the target instance.
         setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
                 getInvocation().TargetOpts));
-        if (!hasTarget())
+        if (!hasTarget()) {
+            llvm::errs() << "lyre: no target";
             return false;
+        }
 
         // Inform the target of the language options.
         //
@@ -158,12 +159,14 @@ namespace lyre
                << " default target " << llvm::sys::getDefaultTargetTriple() << "\n";
         */
 
-        if (getFrontendOpts().ShowTimers)
-            createFrontendTimer();
+        //if (getFrontendOpts().ShowTimers)
+        //    createFrontendTimer();
 
         if (getFrontendOpts().ShowStats)
             llvm::EnableStatistics();
 
+        llvm::errs() << "lyre: inputs=" << getFrontendOpts().Inputs.size() << "\n";
+        
         for (unsigned i = 0, e = getFrontendOpts().Inputs.size(); i != e; ++i) {
             // Reset the ID tables if we are reusing the SourceManager and parsing
             // regular files.
@@ -199,7 +202,7 @@ namespace lyre
             getFileManager().PrintStats();
             OS << "\n";
         }
-
+           
         return !getDiagnostics().getClient()->getNumErrors();
     }
 }

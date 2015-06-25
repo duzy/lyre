@@ -55,6 +55,8 @@ OBJECTS.base := \
   source/base/VirtualFileSystem.o \
   source/base/SourceLocation.o \
   source/base/SourceManager.o \
+  source/base/TargetInfo.o \
+  source/base/Targets.o \
 
 OBJECTS.frontend := \
   source/frontend/Compiler.o \
@@ -85,8 +87,8 @@ OBJECTS.parse := \
 OBJECTS.gc := \
   source/gc/lygc.o \
 
-lyre: source/main.o | liblyre.a
-	$(LINK.cc) -o $@ $^ liblyre.a $(LOADLIBS) $(LIBS)
+lyre: source/main.o liblyre.a
+	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
 
 liblyre.a: $(OBJECTS.lyre) ; $(AR) crs $@ $^
 
