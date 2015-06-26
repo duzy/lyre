@@ -24,7 +24,7 @@ LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
   -lpthread -ldl -lm -lz
 
-#LIBS += -ltinfo
+LIBS += -ltinfo
 
 LOADLIBS := 
 
