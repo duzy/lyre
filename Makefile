@@ -20,10 +20,11 @@ CXXFLAGS := -Iinclude -Isource -g -ggdb \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
   $(shell $(LLVM_CONFIG) --cxxflags)
 
-# -ltinfo
 LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
   -lpthread -ldl -lm -lz
+
+#LIBS += -ltinfo
 
 LOADLIBS := 
 
@@ -149,6 +150,9 @@ $(TableGen): \
 	$(CXX) -MM -MF $@ -MT $(@:%.d=%.o) $(CXXFLAGS) $<
 
 ifeq ($(findstring $(MAKECMDGOALS),clean),)
+  source/frontend/Options.d: \
+    include/lyre/frontend/Options.inc \
+
   source/base/DiagnosticIDs.d: \
     include/lyre/base/DiagnosticGroups.inc \
     include/lyre/base/DiagnosticDefs.inc \

@@ -8,10 +8,11 @@ LLVMLIBS := TableGen Support
 
 CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
 
-# -ltinfo
 LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
   -lpthread -ldl -lm -lz
+
+LIBS += -ltinfo
 
 LOADLIBS := 
 
