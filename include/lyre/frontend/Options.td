@@ -28,6 +28,16 @@ def CoreOption : OptionFlag;
 // NoDriverOption - This option should not be accepted by the driver.
 def NoDriverOption : OptionFlag;
 
+/////////
+// Groups
+
+// Meta-group for options which are only used for compilation,
+// and not linking etc.
+def CompileOnly_Group     : OptionGroup<"<CompileOnly group>">;
+
+def Action_Group          : OptionGroup<"<action group>">;
+
+
 
 ///////////
 // Options
@@ -37,3 +47,23 @@ def help : Flag<["-", "--"], "help">, Flags<[NoDriverOption]>,
 
 def o : JoinedOrSeparate<["-"], "o">, Flags<[RenderAsInput, DriverOption]>, MetaVarName<"<file>">,
     HelpText<"Write output to <file>">;
+
+let Flags = [NoDriverOption] in {
+
+def target_abi : Separate<["-"], "target-abi">,
+  HelpText<"Target a particular ABI type">;
+def target_cpu : Separate<["-"], "target-cpu">,
+  HelpText<"Target a specific cpu type">;
+def target_feature : Separate<["-"], "target-feature">,
+  HelpText<"Target specific attributes">;
+def triple : Separate<["-"], "triple">,
+  HelpText<"Specify target triple (e.g. i686-apple-darwin9)">;
+
+}
+
+def triple_EQ : Joined<["-"], "triple=">, Alias<triple>;
+def mfpmath : Separate<["-"], "mfpmath">,
+  HelpText<"Which unit to use for fp math">;
+
+def target_linker_version : Separate<["-"], "target-linker-version">,
+  HelpText<"Target linker version">;

@@ -29,7 +29,7 @@ LOADLIBS :=
 
 COMBINE = $(LD) -r -o $@ $^
 
-OBJECTS = \
+#OBJECTS = \
   $(OBJECTS.lyre) \
   $(OBJECTS.base) \
   $(OBJECTS.ast) \
@@ -38,13 +38,40 @@ OBJECTS = \
   $(OBJECTS.gc) \
   $(OBJECTS.frontend) \
 
+OBJECTS = $(OBJECTS.lyre)
+
 OBJECTS.lyre := \
-  source/base.o \
-  source/gc.o \
-  source/ast.o \
-  source/parse.o \
-  source/codegen.o \
-  source/frontend.o \
+  source/base/CharInfo.o \
+  source/base/Diagnostic.o \
+  source/base/DiagnosticIDs.o \
+  source/base/FileManager.o \
+  source/base/FileSystemStatCache.o \
+  source/base/LangOptions.o \
+  source/base/VirtualFileSystem.o \
+  source/base/SourceLocation.o \
+  source/base/SourceManager.o \
+  source/base/TargetInfo.o \
+  source/base/Targets.o \
+  source/gc/lygc.o \
+  source/ast/Context.o \
+  source/ast/Decl.o \
+  source/ast/DeclKinds.o \
+  source/ast/DeclGroup.o \
+  source/ast/Stmt.o \
+  source/ast/Expr.o \
+  source/parse/metast.o \
+  source/parse/parse.o \
+  source/codegen/CodeGenAction.o \
+  source/codegen/CodeGenBackend.o \
+  source/codegen/CodeGenOptions.o \
+  source/frontend/Compiler.o \
+  source/frontend/CompilerInvocation.o \
+  source/frontend/FrontendAction.o \
+  source/frontend/DiagnosticRenderer.o \
+  source/frontend/Options.o \
+  source/frontend/TextDiagnostic.o \
+  source/frontend/TextDiagnosticBuffer.o \
+  source/frontend/TextDiagnosticPrinter.o \
 
 OBJECTS.base := \
   source/base/CharInfo.o \

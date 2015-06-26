@@ -1,7 +1,6 @@
 let Component = "Common" in {
     
     // Basic.
-
     def fatal_too_many_errors
         : Error<"too many errors emitted, stopping now">, DefaultFatal; 
     
@@ -12,8 +11,7 @@ let Component = "Common" in {
     }
 
     // Targets
-
-    def err_target_unknown_triple : Error<
+        def err_target_unknown_triple : Error<
       "unknown target triple '%0', please use -triple or -arch">;
     def err_target_unknown_cpu : Error<"unknown target CPU '%0'">;
     def err_target_unknown_abi : Error<"unknown target ABI '%0'">;

@@ -99,7 +99,6 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple)
 {
     llvm::Triple::OSType os = Triple.getOS();
 
-    
     switch (Triple.getArch()) {
     default:
         return nullptr;
@@ -126,6 +125,7 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple)
             return new X86_64TargetInfo(Triple);
         }
     }
+    
     llvm_unreachable("Unknown target.");
 }
 
@@ -135,6 +135,8 @@ TargetInfo *
 TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
     const std::shared_ptr<TargetOptions> &Opts) 
 {
+    assert(Opts && "Null instance of TargetOptions passed!");
+    
     llvm::Triple Triple(Opts->Triple);
 
     // Construct the target

@@ -141,28 +141,8 @@ namespace lyre
         // Create the target instance.
         setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
                 getInvocation().TargetOpts));
-        if (!hasTarget()) {
-            llvm::errs() << "lyre: no target";
+        if (!hasTarget())
             return false;
-        }
-
-        /*
-        // Inform the target of the language options.
-        //
-        // FIXME: We shouldn't need to do this, the target should be immutable once
-        // created. This complexity should be lifted elsewhere.
-        getTarget().adjust(getLangOpts());
-
-        // rewriter project will change target built-in bool type from its default. 
-        if (getFrontendOpts().ProgramAction == frontend::RewriteObjC)
-            getTarget().noSignedCharForObjCBool();
-
-        // Validate/process some options.
-        if (getHeaderSearchOpts().Verbose)
-            OS << "clang -cc1 version " CLANG_VERSION_STRING
-               << " based upon " << BACKEND_PACKAGE_STRING
-               << " default target " << llvm::sys::getDefaultTargetTriple() << "\n";
-        */
 
         //if (getFrontendOpts().ShowTimers)
         //    createFrontendTimer();

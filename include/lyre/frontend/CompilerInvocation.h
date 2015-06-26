@@ -1,10 +1,10 @@
 // -*- c++ -*-
 #ifndef __LYRE_FRONTEND_COMPILER_INVOCATION_H____DUZY__
 #define __LYRE_FRONTEND_COMPILER_INVOCATION_H____DUZY__ 1
-#include <string>
 #include "lyre/base/Diagnostic.h"
 #include "lyre/ast/AST.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include <string>
 
 namespace lyre
 {
@@ -30,6 +30,7 @@ namespace lyre
         std::unique_ptr<FrontendOptions> FrontendOpts;
         
         CompilerInvocation();
+        CompilerInvocation(const CompilerInvocation &X);
 
         bool LoadFromArgs(const char* const *ArgBegin, const char* const *ArgEnd, 
             DiagnosticsEngine &Diags);
@@ -52,7 +53,7 @@ namespace lyre
         TargetOptions &getTargetOpts() { return *TargetOpts; }
         const TargetOptions &getTargetOpts() const { return *TargetOpts; }
     }; // end class CompilerInvocation
-    
+
 } // end namespace lyre
 
 #endif//__LYRE_FRONTEND_COMPILER_INVOCATION_H____DUZY__

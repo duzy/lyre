@@ -64,3 +64,4 @@ class DefaultWarnNoWerror   { bit WarningNoWerror = 1; }
 include "DiagnosticCommonKinds.td"
 include "DiagnosticDriverKinds.td"
 include "DiagnosticSemaKinds.td"
+include "DiagnosticFrontendKinds.td"

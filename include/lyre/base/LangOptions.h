@@ -75,17 +75,6 @@ namespace lyre
         };
 
     public:
-        /// \brief Set of enabled sanitizers.
-        //SanitizerSet Sanitize;
-
-        /// \brief Paths to blacklist files specifying which objects
-        /// (files, functions, variables) should not be instrumented.
-        std::vector<std::string> SanitizerBlacklistFiles;
-
-        //lyre::ObjCRuntime ObjCRuntime;
-
-        std::string ObjCConstantStringClass;
-  
         /// \brief The name of the handler function to be called when -ftrapv is
         /// specified.
         ///
@@ -146,21 +135,6 @@ namespace lyre
         FPOptions(const LangOptions &LangOpts) :
             fp_contract(LangOpts.DefaultFPContract) {}
     };
-
-    /*
-    /// \brief OpenCL volatile options
-    class OpenCLOptions 
-    {
-    public:
-#define OPENCLEXT(nm)  unsigned nm : 1;
-#include "lyre/base/OpenCLExtensions.def"
-
-        OpenCLOptions() {
-#define OPENCLEXT(nm)   nm = 0;
-#include "lyre/base/OpenCLExtensions.def"
-        }
-    };
-    */
 
     /// \brief Describes the kind of translation unit being processed.
     enum TranslationUnitKind 

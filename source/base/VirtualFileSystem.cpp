@@ -327,6 +327,7 @@ directory_iterator OverlayFileSystem::dir_begin(const Twine &Dir,
 // Allow DenseMap<StringRef, ...>.  This is useful below because we know all the
 // strings are literals and will outlive the map, and there is no reason to
 // store them.
+/*
 namespace llvm {
     template<>
     struct DenseMapInfo<StringRef> {
@@ -337,6 +338,7 @@ namespace llvm {
         static bool isEqual(StringRef LHS, StringRef RHS) { return LHS == RHS; }
     };
 }
+*/
 
 namespace {
 

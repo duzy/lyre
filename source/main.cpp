@@ -63,6 +63,7 @@ int main(int argc, char**argv, char * const *envp)
     // Create the compilers actual diagnostics engine.
     Lyre.createDiagnostics();
     if (!Lyre.hasDiagnostics()) {
+        llvm::errs() << "lyre: Failed to create diagnostics!\n";
         return 1;
     }
 
@@ -77,6 +78,8 @@ int main(int argc, char**argv, char * const *envp)
     int Res = 255;
     if (std::unique_ptr<llvm::Module> Module = Act->takeModule())
         Res = Execute(std::move(Module), envp);
+    else 
+        llvm::errs() << "lyre: No module built!\n";
  
     return 0;
 }
