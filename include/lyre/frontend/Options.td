@@ -44,6 +44,12 @@ def Action_Group          : OptionGroup<"<action group>">;
 
 def help : Flag<["-", "--"], "help">, Flags<[NoDriverOption]>,
     HelpText<"Display available options">;
+def version : Flag<["-"], "version">,
+  HelpText<"Print the compiler version">;
+def print_stats : Flag<["-"], "print-stats">,
+  HelpText<"Print performance metrics and statistics">;
+
+//def ftime_report : Flag<["-"], "ftime-report">, Group<f_Group>, Flags<[CC1Option]>;
 
 def o : JoinedOrSeparate<["-"], "o">, Flags<[RenderAsInput, DriverOption]>, MetaVarName<"<file>">,
     HelpText<"Write output to <file>">;
@@ -67,3 +73,14 @@ def mfpmath : Separate<["-"], "mfpmath">,
 
 def target_linker_version : Separate<["-"], "target-linker-version">,
   HelpText<"Target linker version">;
+
+
+def load : Separate<["-"], "load">, MetaVarName<"<dsopath>">,
+  HelpText<"Load the named plugin (dynamic shared object)">;
+def plugin : Separate<["-"], "plugin">, MetaVarName<"<name>">,
+  HelpText<"Use the named plugin action instead of the default action (use \"help\" to list available options)">;
+def plugin_arg : JoinedAndSeparate<["-"], "plugin-arg-">,
+    MetaVarName<"<name> <arg>">,
+    HelpText<"Pass <arg> to plugin <name>">;
+def add_plugin : Separate<["-"], "add-plugin">, MetaVarName<"<name>">,
+  HelpText<"Use the named plugin action in addition to the default action">;

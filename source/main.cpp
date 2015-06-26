@@ -50,9 +50,9 @@ int main(int argc, char**argv, char * const *envp)
     llvm::IntrusiveRefCntPtr<lyre::DiagnosticIDs> DiagID(new lyre::DiagnosticIDs());
     llvm::IntrusiveRefCntPtr<lyre::DiagnosticOptions> DiagOpts = new lyre::DiagnosticOptions();
     lyre::DiagnosticsEngine Diags(DiagID, &*DiagOpts, new lyre::TextDiagnosticPrinter(llvm::errs(), &*DiagOpts));
-    
+
     std::unique_ptr<lyre::CompilerInvocation> Invocation(new lyre::CompilerInvocation);
-    if (!Invocation->LoadFromArgs(argv, argv+argc, Diags)) {
+    if (!Invocation->LoadFromArgs(argv+1, argv+argc, Diags)) {
         llvm::errs() << "lyre: Failed parsing command line arguments!\n";
         return 1;
     }

@@ -40,7 +40,15 @@ COMBINE = $(LD) -r -o $@ $^
 
 OBJECTS = $(OBJECTS.lyre)
 
-OBJECTS.lyre := \
+OBJECTS.lyre = \
+  $(OBJECTS.base) \
+  $(OBJECTS.ast) \
+  $(OBJECTS.codegen) \
+  $(OBJECTS.parse) \
+  $(OBJECTS.frontend) \
+  $(OBJECTS.gc) \
+
+OBJECTS.base := \
   source/base/CharInfo.o \
   source/base/Diagnostic.o \
   source/base/DiagnosticIDs.o \
@@ -52,44 +60,13 @@ OBJECTS.lyre := \
   source/base/SourceManager.o \
   source/base/TargetInfo.o \
   source/base/Targets.o \
-  source/gc/lygc.o \
-  source/ast/Context.o \
-  source/ast/Decl.o \
-  source/ast/DeclKinds.o \
-  source/ast/DeclGroup.o \
-  source/ast/Stmt.o \
-  source/ast/Expr.o \
-  source/parse/metast.o \
-  source/parse/parse.o \
-  source/codegen/CodeGenAction.o \
-  source/codegen/CodeGenBackend.o \
-  source/codegen/CodeGenOptions.o \
-  source/frontend/Compiler.o \
-  source/frontend/CompilerInvocation.o \
-  source/frontend/FrontendAction.o \
-  source/frontend/DiagnosticRenderer.o \
-  source/frontend/Options.o \
-  source/frontend/TextDiagnostic.o \
-  source/frontend/TextDiagnosticBuffer.o \
-  source/frontend/TextDiagnosticPrinter.o \
-
-OBJECTS.base := \
-  source/base/CharInfo.o \
-  source/base/Diagnostic.o \
-  source/base/DiagnosticIDs.o \
-  source/base/FileManager.o \
-  source/base/FileSystemStatCache.o \
-  source/base/VirtualFileSystem.o \
-  source/base/SourceLocation.o \
-  source/base/SourceManager.o \
-  source/base/TargetInfo.o \
-  source/base/Targets.o \
 
 OBJECTS.frontend := \
   source/frontend/Compiler.o \
   source/frontend/CompilerInvocation.o \
-  source/frontend/FrontendAction.o \
   source/frontend/DiagnosticRenderer.o \
+  source/frontend/FrontendAction.o \
+  source/frontend/FrontendOptions.o \
   source/frontend/Options.o \
   source/frontend/TextDiagnostic.o \
   source/frontend/TextDiagnosticBuffer.o \
@@ -106,6 +83,7 @@ OBJECTS.ast := \
 OBJECTS.codegen := \
   source/codegen/CodeGenAction.o \
   source/codegen/CodeGenBackend.o \
+  source/codegen/CodeGenOptions.o \
 
 OBJECTS.parse := \
   source/parse/metast.o \

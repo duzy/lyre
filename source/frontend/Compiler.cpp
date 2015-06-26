@@ -150,7 +150,8 @@ namespace lyre
         if (getFrontendOpts().ShowStats)
             llvm::EnableStatistics();
 
-        llvm::errs() << "lyre: inputs=" << getFrontendOpts().Inputs.size() << "\n";
+        llvm::errs() << __FILE__ << ":" << __LINE__ << ": "
+                     << "inputs=" << getFrontendOpts().Inputs.size() << "\n";
         
         for (unsigned i = 0, e = getFrontendOpts().Inputs.size(); i != e; ++i) {
             // Reset the ID tables if we are reusing the SourceManager and parsing

@@ -25,7 +25,7 @@ namespace lyre
 {
     namespace frontend 
     {
-        enum ActionKind 
+        enum ActionKind
         {
             ASTDeclList,            ///< Parse ASTs and list Decl nodes.
             ASTDump,                ///< Parse ASTs and dump them.
@@ -65,17 +65,7 @@ namespace lyre
     {
         IK_None,
         IK_Asm,
-        IK_C,
-        IK_CXX,
-        IK_ObjC,
-        IK_ObjCXX,
-        IK_PreprocessedC,
-        IK_PreprocessedCXX,
-        IK_PreprocessedObjC,
-        IK_PreprocessedObjCXX,
-        IK_OpenCL,
-        IK_CUDA,
-        IK_PreprocessedCuda,
+        IK_Lyre,
         IK_AST,
         IK_LLVM_IR
     };
@@ -98,8 +88,7 @@ namespace lyre
         FrontendInputFile() : Buffer(nullptr), Kind(IK_None) { }
         FrontendInputFile(llvm::StringRef File, InputKind Kind, bool IsSystem = false)
             : File(File.str()), Buffer(nullptr), Kind(Kind), IsSystem(IsSystem) { }
-        FrontendInputFile(llvm::MemoryBuffer *buffer, InputKind Kind,
-            bool IsSystem = false)
+        FrontendInputFile(llvm::MemoryBuffer *buffer, InputKind Kind, bool IsSystem = false)
             : Buffer(buffer), Kind(Kind), IsSystem(IsSystem) { }
 
         InputKind getKind() const { return Kind; }

@@ -2,6 +2,7 @@
 #include "lyre/frontend/CompilerInvocation.h"
 #include "lyre/frontend/FrontendAction.h"
 #include "lyre/parse/parse.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace lyre
 {
@@ -15,6 +16,8 @@ namespace lyre
     
     bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input)
     {
+        llvm::errs() << __FILE__ << ":" << __LINE__ << ": "
+                     << "input: " << Input.getFile() << "\n";
         return false;
     }
 
