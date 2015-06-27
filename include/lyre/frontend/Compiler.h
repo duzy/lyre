@@ -94,6 +94,32 @@ namespace lyre
         /// \brief Whether we should (re)build the global module index once we
         /// have finished with this translation unit.
         bool BuildGlobalModuleIndex;
+
+
+        /// If TempFilename is not empty we must rename it to Filename at the end.
+        /// TempFilename may be empty and Filename non-empty if creating the temporary
+        /// failed.
+        struct OutputFile 
+        {
+            std::string Filename;
+            std::string TempFilename;
+            std::unique_ptr<llvm::raw_ostream> OS;
+
+            OutputFile(const std::string &filename, const std::string &tempFilename,
+                std::unique_ptr<llvm::raw_ostream> OS)
+                : Filename(filename), TempFilename(tempFilename), OS(std::move(OS)) {}
+            OutputFile(OutputFile &&O)
+                : Filename(std::move(O.Filename)),
+                  TempFilename(std::move(O.TempFilename)), OS(std::move(O.OS)) {}
+        };
+
+        /// If the output doesn't support seeking (terminal, pipe). we switch
+        /// the stream to a buffer_ostream. These are the buffer and the original
+        /// stream.
+        std::unique_ptr<llvm::raw_fd_ostream> NonSeekStream;
+
+        /// The list of active output files.
+        std::list<OutputFile> OutputFiles;
         
     public:
         Compiler(bool BuildingModule = false);
@@ -250,6 +276,20 @@ namespace lyre
 
         /// }
         
+        /// @name ast::Context
+        /// {
+
+        bool hasASTContext() const { return Context != nullptr; }
+        ast::Context &getASTContext() const {
+            assert(Context && "Compiler instance has no AST context!");
+            return *Context;
+        }
+  
+        /// setASTContext - Replace the current AST context.
+        void setASTContext(ast::Context *Value);
+        
+        /// }
+        
         /// @name Semantic analysis
         /// {
 
@@ -259,6 +299,10 @@ namespace lyre
             assert(Sema && "Compiler has no Sema object!");
             return *Sema;
         }
+        
+        /// \brief Replace the current Sema; the compiler instance takes ownership
+        /// of S.
+        void setSema(sema::Sema *S);
 
         std::unique_ptr<sema::Sema> takeSema() { return std::move(Sema); }
 
@@ -419,6 +463,23 @@ namespace lyre
         /// }
 
 
+        /// @name Output Files
+        /// {
+
+        /// addOutputFile - Add an output file onto the list of tracked output files.
+        ///
+        /// \param OutFile - The output file info.
+        void addOutputFile(OutputFile &&OutFile);
+
+        /// clearOutputFiles - Clear the output file list, destroying the contained
+        /// output streams.
+        ///
+        /// \param EraseFiles - If true, attempt to erase the files from disk.
+        void clearOutputFiles(bool EraseFiles);
+
+        /// }
+
+        
         /// @name Forwarding Methods
         /// {
         CodeGenOptions &getCodeGenOpts() { return Invocation->getCodeGenOpts(); }

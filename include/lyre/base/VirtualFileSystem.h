@@ -224,7 +224,8 @@ namespace lyre
         /// top-most (most recently added) directory are used.  When there is a file
         /// that exists in more than one file system, the file in the top-most file
         /// system overrides the other(s).
-        class OverlayFileSystem : public FileSystem {
+        class OverlayFileSystem : public FileSystem 
+        {
             typedef llvm::SmallVector<llvm::IntrusiveRefCntPtr<FileSystem>, 1> FileSystemList;
             /// \brief The stack of file systems, implemented as a list in order of
             /// their addition.

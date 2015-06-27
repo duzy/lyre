@@ -1,8 +1,4 @@
-LLVM_ROOT := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
-LLVM := $(LLVM_ROOT)/build
-LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
-LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
-LLI := $(LLVM)/Debug+Asserts/bin/lli
+include ../../utils/build/common.mk
 
 LLVMLIBS := TableGen Support
 
@@ -12,7 +8,9 @@ LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
   -lpthread -ldl -lm -lz
 
-LIBS += -ltinfo
+ifeq ($(pkg-config --exists tinfo && echo ok),ok)
+  LIBS += -ltinfo
+endif
 
 LOADLIBS := 
 

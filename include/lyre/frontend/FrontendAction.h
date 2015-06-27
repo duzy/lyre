@@ -8,27 +8,89 @@ namespace lyre
 {
     class Compiler;
     class FrontendInputFile;
+    class ASTUnit {};
     
     /// Abstract base class for actions which can be performed by the frontend.
     class FrontendAction
     {
         Compiler *TheCompiler;
         FrontendInputFile CurrentInput;
+        std::unique_ptr<ASTUnit> CurrentASTUnit;
+
+    private:
+        void setCompiler(Compiler *Value) { TheCompiler = Value; }
+        void setCurrentInput(const FrontendInputFile &CurrentInput, std::unique_ptr<ASTUnit> AST = nullptr);
         
     protected:
+        FrontendAction();
+        
+        /// @name Implementation Action Interface
+        /// @{
+
+        /// \brief Create the AST consumer object for this action, if supported.
+        ///
+        /// This routine is called as part of BeginSourceFile(), which will
+        /// fail if the AST consumer cannot be created. This will not be called if the
+        /// action has indicated that it only uses the preprocessor.
+        ///
+        /// \param CI - The current compiler instance, provided as a convenience, see
+        /// getCompiler().
+        ///
+        /// \param InFile - The current input file, provided as a convenience, see
+        /// getCurrentFile().
+        ///
+        /// \return The new AST consumer, or null on failure.
+        //virtual std::unique_ptr<ASTConsumer> CreateASTConsumer(Compiler &CI, StringRef InFile) = 0;
+
+        /// \brief Callback before starting processing a single input, giving the
+        /// opportunity to modify the CompilerInvocation or do some other action
+        /// before BeginSourceFileAction is called.
+        ///
+        /// \return True on success; on failure BeginSourceFileAction(),
+        /// ExecuteAction() and EndSourceFileAction() will not be called.
+        virtual bool BeginInvocation(Compiler &CI) { return true; }
+
+        /// \brief Callback at the start of processing a single input.
+        ///
+        /// \return True on success; on failure ExecutionAction() and
+        /// EndSourceFileAction() will not be called.
+        virtual bool BeginSourceFileAction(Compiler &CI, llvm::StringRef Filename) { return true; }
+
+        /// \brief Callback to run the program action, using the initialized
+        /// compiler instance.
+        ///
+        /// This is guaranteed to only be called between BeginSourceFileAction()
+        /// and EndSourceFileAction().
         virtual void ExecuteAction() = 0;
+
+        /// \brief Callback at the end of processing a single input.
+        ///
+        /// This is guaranteed to only be called following a successful call to
+        /// BeginSourceFileAction (and BeginSourceFile).
+        virtual void EndSourceFileAction() {}
+
+        /// \brief Callback at the end of processing a single input, to determine
+        /// if the output files should be erased or not.
+        ///
+        /// By default it returns true if a compiler error occurred.
+        /// This is guaranteed to only be called following a successful call to
+        /// BeginSourceFileAction (and BeginSourceFile).
+        virtual bool shouldEraseOutputFiles();
+
+        /// @}
         
     public:
         virtual ~FrontendAction();
-
-        void setCompiler(Compiler *Value) { TheCompiler = Value; }
-        
+       
         Compiler &getCompiler() const 
         {
             assert(TheCompiler && "Compiler not registered!");
             return *TheCompiler;
         }
 
+        /// @name Supported Modes
+        /// @{
+        
         /// \brief Is this action invoked on a model file? 
         ///
         /// Model files are incomplete translation units that relies on type
@@ -36,14 +98,26 @@ namespace lyre
         /// details.
         virtual bool isModelParsingAction() const { return false; }
 
+        /// \brief For AST-based actions, the kind of translation unit we're handling.
+        //virtual TranslationUnitKind getTranslationUnitKind() { return TU_Complete; }
+
+        /// \brief Does this action support use with AST files?
+        virtual bool hasASTFileSupport() const { return true; }
+
+        /// \brief Does this action support use with IR files?
+        virtual bool hasIRSupport() const { return false; }
+
+        /// \brief Does this action support use with code completion?
+        virtual bool hasCodeCompletionSupport() const { return false; }
+        
+        /// @}
+
         /// @name Current File Information
         /// @{
-        /*
         bool isCurrentFileAST() const {
             assert(!CurrentInput.isEmpty() && "No current file!");
             return (bool)CurrentASTUnit;
         }
-        */
 
         const FrontendInputFile &getCurrentInput() const {
             return CurrentInput;
@@ -59,16 +133,12 @@ namespace lyre
             return CurrentInput.getKind();
         }
         
-        /*
         ASTUnit &getCurrentASTUnit() const {
             assert(CurrentASTUnit && "No current AST unit!");
             return *CurrentASTUnit;
         }
 
         std::unique_ptr<ASTUnit> takeCurrentASTUnit() { return std::move(CurrentASTUnit); }
-
-        void setCurrentInput(const FrontendInputFile &CurrentInput, std::unique_ptr<ASTUnit> AST = nullptr);
-        */
         /// @}
         
         /// @name Public Action Interface
@@ -86,8 +156,8 @@ namespace lyre
         /// \param Input - The input filename and kind. Some input kinds are handled
         /// specially, for example AST inputs, since the AST file itself contains
         /// several objects which would normally be owned by the
-        /// CompilerInstance. When processing AST input files, these objects should
-        /// generally not be initialized in the CompilerInstance -- they will
+        /// Compiler. When processing AST input files, these objects should
+        /// generally not be initialized in the Compiler -- they will
         /// automatically be shared with the AST file in between
         /// BeginSourceFile() and EndSourceFile().
         ///

@@ -1,3 +1,5 @@
+include utils/build/common.mk
+
 LYRE_USING_MCJIT := true
 
 ifeq ($(LYRE_USING_MCJIT),true)
@@ -6,13 +8,6 @@ ifeq ($(LYRE_USING_MCJIT),true)
 else
   LLVMLIBS := interpreter nativecodegen option
 endif
-
-LLVM_ROOT := $(or $(wildcard /open/llvm),$(wildcard ~/Tools/llvm))
-LLVM := $(LLVM_ROOT)/build
-LLVM_CONFIG := $(LLVM)/Debug+Asserts/bin/llvm-config
-LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
-LLVMTableGen := $(LLVM)/Debug+Asserts/bin/llvm-tblgen -I$(LLVM_ROOT)/include
-LLI := $(LLVM)/Debug+Asserts/bin/lli
 
 TableGen := utils/TableGen/TableGen
 
@@ -24,7 +19,9 @@ LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
   -lpthread -ldl -lm -lz
 
-LIBS += -ltinfo
+ifeq ($(pkg-config --exists tinfo && echo ok),ok)
+  LIBS += -ltinfo
+endif
 
 LOADLIBS := 
 
