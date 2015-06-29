@@ -88,6 +88,7 @@ OBJECTS.codegen := \
   source/codegen/CodeGenAction.o \
   source/codegen/CodeGenBackend.o \
   source/codegen/CodeGenOptions.o \
+  source/codegen/CodeGenerator.o \
 
 OBJECTS.parse := \
   source/parse/metast.o \

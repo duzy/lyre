@@ -1,6 +1,8 @@
 #include "lyre/frontend/Compiler.h"
 #include "lyre/frontend/CompilerInvocation.h"
 #include "lyre/frontend/FrontendAction.h"
+#include "lyre/ast/Consumer.h"
+#include "lyre/ast/Context.h"
 #include "lyre/parse/parse.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -57,7 +59,43 @@ void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput, std:
     CurrentASTUnit = std::move(AST);
 }
 
-   
+std::unique_ptr<ast::Consumer> FrontendAction::CreateWrappedASTConsumer(Compiler &C, StringRef InFile)
+{
+    std::unique_ptr<ast::Consumer> Consumer = CreateASTConsumer(C, InFile);
+    if (!Consumer)
+        return nullptr;
+    
+    if (C.getFrontendOpts().AddPluginActions.size() == 0)
+        return Consumer;
+
+#if 0
+    // Make sure the non-plugin consumer is first, so that plugins can't
+    // modifiy the AST.
+    std::vector<std::unique_ptr<ast::Consumer>> Consumers;
+    Consumers.push_back(std::move(Consumer));
+
+    for (size_t i = 0, e = C.getFrontendOpts().AddPluginActions.size();
+         i != e; ++i) { 
+        // This is O(|plugins| * |add_plugins|), but since both numbers are
+        // way below 50 in practice, that's ok.
+        for (FrontendPluginRegistry::iterator
+                 it = FrontendPluginRegistry::begin(),
+                 ie = FrontendPluginRegistry::end();
+             it != ie; ++it) {
+            if (it->getName() != C.getFrontendOpts().AddPluginActions[i])
+                continue;
+            std::unique_ptr<PluginASTAction> P = it->instantiate();
+            if (P->ParseArgs(C, C.getFrontendOpts().AddPluginArgs[i]))
+                Consumers.push_back(P->CreateASTConsumer(C, InFile));
+        }
+    }
+
+    return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
+#else
+    return Consumer;
+#endif
+}
+
 bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input)
 {
     llvm::errs() << __FILE__ << ":" << __LINE__ << ": "
@@ -164,11 +202,68 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
     if (!C.InitializeSourceManager(CurrentInput))
         goto failure;
 
+    // Create the AST context and consumer unless this is a preprocessor only
+    // action.
+    if (true /*!usesPreprocessorOnly()*/) {
+        // Parsing a model file should reuse the existing ASTContext.
+        if (!isModelParsingAction())
+            C.createASTContext();
+
+        std::unique_ptr<ast::Consumer> Consumer = CreateWrappedASTConsumer(C, InputFile);
+        if (!Consumer)
+            goto failure;
+
+#if 0
+        // FIXME: should not overwrite ASTMutationListener when parsing model files?
+        if (!isModelParsingAction())
+            C.getASTContext().setASTMutationListener(Consumer->GetASTMutationListener());
+
+        if (!C.getPreprocessorOpts().ChainedIncludes.empty()) {
+            // Convert headers to PCH and chain them.
+            IntrusiveRefCntPtr<ExternalSemaSource> source, FinalReader;
+            source = createChainedIncludesSource(CI, FinalReader);
+            if (!source)
+                goto failure;
+            C.setModuleManager(static_cast<ASTReader *>(FinalReader.get()));
+            C.getASTContext().setExternalSource(source);
+        } else if (!C.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+            // Use PCH.
+            assert(hasPCHSupport() && "This action does not have PCH support!");
+            ASTDeserializationListener *DeserialListener =
+                Consumer->GetASTDeserializationListener();
+            bool DeleteDeserialListener = false;
+            if (C.getPreprocessorOpts().DumpDeserializedPCHDecls) {
+                DeserialListener = new DeserializedDeclsDumper(DeserialListener,
+                    DeleteDeserialListener);
+                DeleteDeserialListener = true;
+            }
+            if (!C.getPreprocessorOpts().DeserializedPCHDeclsToErrorOn.empty()) {
+                DeserialListener = new DeserializedDeclsChecker(
+                    C.getASTContext(),
+                    C.getPreprocessorOpts().DeserializedPCHDeclsToErrorOn,
+                    DeserialListener, DeleteDeserialListener);
+                DeleteDeserialListener = true;
+            }
+            C.createPCHExternalASTSource(
+                C.getPreprocessorOpts().ImplicitPCHInclude,
+                C.getPreprocessorOpts().DisablePCHValidation,
+                C.getPreprocessorOpts().AllowPCHWithCompilerErrors, DeserialListener,
+                DeleteDeserialListener);
+            if (!C.getASTContext().getExternalSource())
+                goto failure;
+        }
+#endif
+
+        C.setASTConsumer(std::move(Consumer));
+        if (!C.hasASTConsumer())
+            goto failure;
+    }
+
 #if 0
     // Initialize built-in info as long as we aren't using an external AST
     // source.
     if (!C.hasASTContext() /*|| !C.getASTContext().getExternalSource()*/) {
-        //Preprocessor &PP = CI.getPreprocessor();
+        //Preprocessor &PP = C.getPreprocessor();
 
         // If modules are enabled, create the module manager before creating
         // any builtins, so that all declarations know that they might be
@@ -267,6 +362,28 @@ void FrontendAction::EndSourceFile()
     // Finalize the action.
     EndSourceFileAction();
 
+    // Sema references the ast consumer, so reset sema first.
+    //
+    // FIXME: There is more per-file stuff we could just drop here?
+    bool DisableFree = C.getFrontendOpts().DisableFree;
+    // if (DisableFree) {
+    //     C.resetAndLeakSema();
+    //     C.resetAndLeakASTContext();
+    //     BuryPointer(C.takeASTConsumer().get());
+    // } else {
+    C.setSema(nullptr);
+    C.setASTContext(nullptr);
+    C.setASTConsumer(nullptr);
+
+    if (C.getFrontendOpts().ShowStats) {
+        llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFile() << "':\n";
+        // C.getPreprocessor().PrintStats();
+        // C.getPreprocessor().getIdentifierTable().PrintStats();
+        // C.getPreprocessor().getHeaderSearchInfo().PrintStats();
+        C.getSourceManager().PrintStats();
+        llvm::errs() << "\n";
+    }
+    
     // Cleanup the output streams, and erase the output files if instructed by the
     // FrontendAction.
     C.clearOutputFiles(/*EraseFiles=*/shouldEraseOutputFiles());

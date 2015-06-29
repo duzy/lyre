@@ -26,7 +26,11 @@ namespace lyre
         /// otherwise it creates a fresh LLVM context and takes ownership.
         CodeGenAction(unsigned A, llvm::LLVMContext *VMCtx = nullptr);
 
+        std::unique_ptr<ast::Consumer> CreateASTConsumer(Compiler &CI,
+            llvm::StringRef InFile) override;
+        
         void ExecuteAction() override;
+        void EndSourceFileAction() override;
         
     public:
         ~CodeGenAction() override;

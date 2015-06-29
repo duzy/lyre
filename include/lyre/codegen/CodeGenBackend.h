@@ -2,12 +2,12 @@
 
 #ifndef __LYRE_CODEGEN_BACKEND_H____DUZY__
 #define __LYRE_CODEGEN_BACKEND_H____DUZY__ 1
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm 
 {
     class LLVMContext;
     class Module;
+    class raw_pwrite_stream;
 }
 
 namespace lyre

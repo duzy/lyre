@@ -10,6 +10,8 @@ namespace lyre
     class Compiler;
     class FrontendInputFile;
     class ASTUnit {};
+
+    namespace ast { class Consumer; }
     
     /// Abstract base class for actions which can be performed by the frontend.
     class FrontendAction
@@ -19,9 +21,11 @@ namespace lyre
         std::unique_ptr<ASTUnit> CurrentASTUnit;
 
     private:
+        std::unique_ptr<ast::Consumer> CreateWrappedASTConsumer(Compiler &C, llvm::StringRef InFile);
+
         void setCompiler(Compiler *Value) { TheCompiler = Value; }
         void setCurrentInput(const FrontendInputFile &CurrentInput, std::unique_ptr<ASTUnit> AST = nullptr);
-        
+
     protected:
         FrontendAction();
         
@@ -41,7 +45,7 @@ namespace lyre
         /// getCurrentFile().
         ///
         /// \return The new AST consumer, or null on failure.
-        //virtual std::unique_ptr<ASTConsumer> CreateASTConsumer(Compiler &CI, StringRef InFile) = 0;
+        virtual std::unique_ptr<ast::Consumer> CreateASTConsumer(Compiler &C, llvm::StringRef InFile) = 0;
 
         /// \brief Callback before starting processing a single input, giving the
         /// opportunity to modify the CompilerInvocation or do some other action
@@ -49,13 +53,13 @@ namespace lyre
         ///
         /// \return True on success; on failure BeginSourceFileAction(),
         /// ExecuteAction() and EndSourceFileAction() will not be called.
-        virtual bool BeginInvocation(Compiler &CI) { return true; }
+        virtual bool BeginInvocation(Compiler &C) { return true; }
 
         /// \brief Callback at the start of processing a single input.
         ///
         /// \return True on success; on failure ExecutionAction() and
         /// EndSourceFileAction() will not be called.
-        virtual bool BeginSourceFileAction(Compiler &CI, llvm::StringRef Filename) { return true; }
+        virtual bool BeginSourceFileAction(Compiler &C, llvm::StringRef Filename) { return true; }
 
         /// \brief Callback to run the program action, using the initialized
         /// compiler instance.
