@@ -1,6 +1,8 @@
 // -*- c++ -*-
 #ifndef __LYRE_AST_CONTEXT_H____DUZY__
 #define __LYRE_AST_CONTEXT_H____DUZY__ 1
+#include "lyre/base/Builtins.h"
+#include "lyre/base/IdentifierTable.h"
 //#include "llvm/ADT/DenseMap.h"
 //#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -12,20 +14,65 @@
 
 namespace lyre
 {
+    class LangOptions;
+    class SelectorTable;
+    class SourceManager;
+    class TargetInfo;
+
+    namespace Builtin { class Context; }
+    
     namespace ast
     {
         class Context : public llvm::RefCountedBase<Context>
         {
+            Context(const Context &) = delete;
+            void operator=(const Context &) = delete;
+            
             /// \brief The allocator used to create AST objects.
             ///
             /// AST objects are never destructed; rather, all memory associated with the
             /// AST objects will be released when the ASTContext itself is destroyed.
             mutable llvm::BumpPtrAllocator BumpAlloc;
 
+            /// \brief The language options used to create the AST associated with
+            ///  this ASTContext object.
+            LangOptions &LangOpts;
+
+            /// \brief The associated SourceManager object.a
+            SourceManager &SourceMgr;
+
+            /// \brief Mapping/lookup information for all identifiers in
+            /// the program, including program keywords.
+            mutable IdentifierTable Identifiers;
+
+            /// \brief This table contains all the selectors in the program.
+            ///
+            /// Unlike IdentifierTable above, this table *isn't* populated by the
+            /// preprocessor. It is declared/expanded here because its role/lifetime is
+            /// conceptually similar to the IdentifierTable. In addition, the current
+            /// control flow (in lyre::ParseAST()), make it convenient to put here.
+            ///
+            /// FIXME: Make sure the lifetime of Identifiers/Selectors *isn't* tied to
+            /// the lifetime of the preprocessor.
+            SelectorTable Selectors;
+
+            /// \brief Information about builtins.
+            Builtin::Context BuiltinInfo;
+
+            const TargetInfo  *Target;
+            
         public:
-            Context();
+            Context(LangOptions &Opts, SourceManager &SM, IdentifierInfoLookup *IILookup);
 
             ~Context();
+
+            /// \brief Initialize built-in types.
+            ///
+            /// This routine may only be invoked once for a given ASTContext object.
+            /// It is normally invoked after ASTContext construction.
+            ///
+            /// \param Target The target 
+            void InitBuiltinTypes(const TargetInfo &Target);
             
             void *Allocate(size_t Size, unsigned Align = 8) const { return BumpAlloc.Allocate(Size, Align); }
             void Deallocate(void *Ptr) const { }

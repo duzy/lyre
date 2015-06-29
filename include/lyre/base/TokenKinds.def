@@ -352,11 +352,11 @@ ALIAS("__complex"    , _Complex   , KEYALL)
 ALIAS("__complex__"  , _Complex   , KEYALL)
 ALIAS("__const"      , const      , KEYALL)
 ALIAS("__const__"    , const      , KEYALL)
-ALIAS("__decltype"   , decltype   , KEYCXX)
+//ALIAS("__decltype"   , decltype   , KEYCXX)
 ALIAS("__imag__"     , __imag     , KEYALL)
 ALIAS("__inline"     , inline     , KEYALL)
 ALIAS("__inline__"   , inline     , KEYALL)
-ALIAS("__nullptr"    , nullptr    , KEYCXX)
+//ALIAS("__nullptr"    , nullptr    , KEYCXX)
 ALIAS("__real__"     , __real     , KEYALL)
 ALIAS("__restrict"   , restrict   , KEYALL)
 ALIAS("__restrict__" , restrict   , KEYALL)
@@ -409,8 +409,8 @@ ALIAS("_pascal"      , __pascal   , KEYBORLAND)
 
 // Clang Extensions.
 KEYWORD(__builtin_convertvector   , KEYALL)
-ALIAS("__char16_t"   , char16_t   , KEYCXX)
-ALIAS("__char32_t"   , char32_t   , KEYCXX)
+//ALIAS("__char16_t"   , char16_t   , KEYCXX)
+//ALIAS("__char32_t"   , char32_t   , KEYCXX)
 
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
@@ -523,17 +523,11 @@ ANNOTATION(module_end)
 
 #undef ANNOTATION
 #undef TESTING_KEYWORD
-#undef OBJC2_AT_KEYWORD
-#undef OBJC1_AT_KEYWORD
-#undef CXX_KEYWORD_OPERATOR
-#undef PPKEYWORD
 #undef ALIAS
 #undef TYPE_TRAIT_N
 #undef TYPE_TRAIT_2
 #undef TYPE_TRAIT_1
 #undef TYPE_TRAIT
-#undef CONCEPTS_KEYWORD
-#undef CXX11_KEYWORD
 #undef KEYWORD
 #undef PUNCTUATOR
 #undef TOK

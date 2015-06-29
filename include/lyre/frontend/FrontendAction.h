@@ -1,6 +1,7 @@
 // -*- c++ -*-
 #ifndef __LYRE_FRONTEND_ACTION_H____DUZY__
 #define __LYRE_FRONTEND_ACTION_H____DUZY__ 1
+#include "lyre/base/LangOptions.h"
 #include "lyre/frontend/FrontendOptions.h"
 #include <memory>
 
@@ -99,7 +100,7 @@ namespace lyre
         virtual bool isModelParsingAction() const { return false; }
 
         /// \brief For AST-based actions, the kind of translation unit we're handling.
-        //virtual TranslationUnitKind getTranslationUnitKind() { return TU_Complete; }
+        virtual TranslationUnitKind getTranslationUnitKind() { return TU_Complete; }
 
         /// \brief Does this action support use with AST files?
         virtual bool hasASTFileSupport() const { return true; }

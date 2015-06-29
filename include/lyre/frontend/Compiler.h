@@ -189,7 +189,8 @@ namespace lyre
         bool hasDiagnostics() const { return Diagnostics != nullptr; }
 
         /// Get the current diagnostics engine.
-        DiagnosticsEngine &getDiagnostics() const {
+        DiagnosticsEngine &getDiagnostics() const 
+        {
             assert(Diagnostics && "Compiler instance has no diagnostics!");
             return *Diagnostics;
         }
@@ -250,7 +251,8 @@ namespace lyre
         bool hasFileManager() const { return FileMgr != nullptr; }
 
         /// Return the current file manager to the caller.
-        FileManager &getFileManager() const {
+        FileManager &getFileManager() const 
+        {
             assert(FileMgr && "Compiler instance has no file manager!");
             return *FileMgr;
         }
@@ -288,6 +290,23 @@ namespace lyre
         /// setASTContext - Replace the current AST context.
         void setASTContext(ast::Context *Value);
         
+        /// }
+
+        /// @name ASTConsumer
+        /// {
+
+        bool hasASTConsumer() const { return (bool)Consumer; }
+
+        ast::Consumer &getASTConsumer() const 
+        {
+            assert(Consumer && "Compiler instance has no AST consumer!");
+            return *Consumer;
+        }
+
+        /// setASTConsumer - Replace the current AST consumer; the compiler instance
+        /// takes ownership of \p Value.
+        void setASTConsumer(std::unique_ptr<ast::Consumer> Value);
+
         /// }
         
         /// @name Semantic analysis
@@ -462,6 +481,7 @@ namespace lyre
 
         /// }
 
+        void createModuleManager();
 
         /// @name Output Files
         /// {
@@ -502,6 +522,7 @@ namespace lyre
         /// }
         
     };
+
 } // end namespace lyre
 
 #endif//__LYRE_FRONTEND_COMPILER_H____DUZY__

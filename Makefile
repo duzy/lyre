@@ -41,17 +41,20 @@ OBJECTS = $(OBJECTS.lyre)
 OBJECTS.lyre = \
   $(OBJECTS.base) \
   $(OBJECTS.ast) \
+  $(OBJECTS.sema) \
   $(OBJECTS.codegen) \
   $(OBJECTS.parse) \
   $(OBJECTS.frontend) \
   $(OBJECTS.gc) \
 
 OBJECTS.base := \
+  source/base/Builtins.o \
   source/base/CharInfo.o \
   source/base/Diagnostic.o \
   source/base/DiagnosticIDs.o \
   source/base/FileManager.o \
   source/base/FileSystemStatCache.o \
+  source/base/IdentifierTable.o \
   source/base/LangOptions.o \
   source/base/VirtualFileSystem.o \
   source/base/SourceLocation.o \
@@ -77,6 +80,9 @@ OBJECTS.ast := \
   source/ast/DeclGroup.o \
   source/ast/Stmt.o \
   source/ast/Expr.o \
+
+OBJECTS.sema := \
+  source/sema/Sema.o \
 
 OBJECTS.codegen := \
   source/codegen/CodeGenAction.o \

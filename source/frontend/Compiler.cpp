@@ -5,9 +5,11 @@
 #include "lyre/base/TargetInfo.h"
 #include "lyre/base/SourceManager.h"
 #include "lyre/base/DiagnosticOptions.h"
+#include "lyre/lex/PTHManager.h"
 #include "lyre/codegen/CodeGenOptions.h"
-#include "lyre/ast/Consumer.h"
 #include "lyre/ast/AST.h"
+#include "lyre/ast/Consumer.h"
+#include "lyre/sema/Sema.h"
 #include "lyre/parse/parse.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -122,7 +124,58 @@ Compiler::createDiagnostics(DiagnosticOptions *Opts, DiagnosticConsumer *Client,
     return Diags;
 }
 
+void Compiler::createASTContext() 
+{
+    PTHManager *PTHMgr = nullptr;
+    //if (!PPOpts.TokenCache.empty())
+    //    PTHMgr = PTHManager::Create(PPOpts.TokenCache, getDiagnostics());
+    
+    
+    
+    Context = new ast::Context(getLangOpts(), getSourceManager(), PTHMgr);
+    Context->InitBuiltinTypes(getTarget());
+}
+
+void Compiler::createSema(TranslationUnitKind TUKind, CodeCompleteConsumer *CompletionConsumer) 
+{
+    Sema.reset(new sema::Sema(getLangOpts(), getASTContext(), getASTConsumer(), 
+            getDiagnostics(), getSourceManager(), TUKind, CompletionConsumer));
+}
+
+void Compiler::createFileManager()
+{
+    if (!hasVirtualFileSystem()) {
+        // TODO: choose the virtual file system based on the CompilerInvocation.
+        setVirtualFileSystem(vfs::getRealFileSystem());
+    }
+    FileMgr = new FileManager(getFileSystemOpts(), VirtualFileSystem);
+}
+
+void Compiler::createSourceManager(FileManager &FileMgr)
+{
+    SourceMgr = new SourceManager(getDiagnostics(), FileMgr);
+}
+
+// Create module manager.
+void Compiler::createModuleManager()
+{
+    assert("ModuleManager not implemented yet!");
+}
+
 void Compiler::setTarget(TargetInfo *Value) { Target = Value; }
+
+void Compiler::setASTConsumer(std::unique_ptr<ast::Consumer> Value) { Consumer = std::move(Value); }
+
+void Compiler::setFileManager(FileManager *Value) 
+{
+    FileMgr = Value;
+    if (Value)
+        VirtualFileSystem = Value->getVirtualFileSystem();
+    else
+        VirtualFileSystem.reset();
+}
+
+void Compiler::setSourceManager(SourceManager *Value) { SourceMgr = Value; }
 
 void Compiler::setASTContext(ast::Context *Value) { Context = Value; }
 
@@ -184,127 +237,203 @@ llvm::raw_null_ostream *Compiler::createNullOutputFile()
 
 raw_pwrite_stream *
 Compiler::createOutputFile(StringRef OutputPath, bool Binary,
-                                   bool RemoveFileOnSignal, StringRef InFile,
-                                   StringRef Extension, bool UseTemporary,
-                                   bool CreateMissingDirectories) {
-  std::string OutputPathName, TempPathName;
-  std::error_code EC;
-  std::unique_ptr<raw_pwrite_stream> OS = createOutputFile(
-      OutputPath, EC, Binary, RemoveFileOnSignal, InFile, Extension,
-      UseTemporary, CreateMissingDirectories, &OutputPathName, &TempPathName);
-  if (!OS) {
-    getDiagnostics().Report(diag::err_fe_unable_to_open_output) << OutputPath
-                                                                << EC.message();
-    return nullptr;
-  }
+    bool RemoveFileOnSignal, StringRef InFile,
+    StringRef Extension, bool UseTemporary,
+    bool CreateMissingDirectories) 
+{
+    std::string OutputPathName, TempPathName;
+    std::error_code EC;
+    std::unique_ptr<raw_pwrite_stream> OS = createOutputFile(
+        OutputPath, EC, Binary, RemoveFileOnSignal, InFile, Extension,
+        UseTemporary, CreateMissingDirectories, &OutputPathName, &TempPathName);
+    if (!OS) {
+        getDiagnostics().Report(diag::err_fe_unable_to_open_output) << OutputPath
+                                                                    << EC.message();
+        return nullptr;
+    }
 
-  raw_pwrite_stream *Ret = OS.get();
-  // Add the output file -- but don't try to remove "-", since this means we are
-  // using stdin.
-  addOutputFile(OutputFile((OutputPathName != "-") ? OutputPathName : "",
-                           TempPathName, std::move(OS)));
+    raw_pwrite_stream *Ret = OS.get();
+    // Add the output file -- but don't try to remove "-", since this means we are
+    // using stdin.
+    addOutputFile(OutputFile((OutputPathName != "-") ? OutputPathName : "",
+            TempPathName, std::move(OS)));
 
-  return Ret;
+    return Ret;
 }
 
 std::unique_ptr<llvm::raw_pwrite_stream> Compiler::createOutputFile(
     StringRef OutputPath, std::error_code &Error, bool Binary,
     bool RemoveFileOnSignal, StringRef InFile, StringRef Extension,
     bool UseTemporary, bool CreateMissingDirectories,
-    std::string *ResultPathName, std::string *TempPathName) {
-  assert((!CreateMissingDirectories || UseTemporary) &&
-         "CreateMissingDirectories is only allowed when using temporary files");
+    std::string *ResultPathName, std::string *TempPathName)
+{
+    assert((!CreateMissingDirectories || UseTemporary) &&
+        "CreateMissingDirectories is only allowed when using temporary files");
 
-  std::string OutFile, TempFile;
-  if (!OutputPath.empty()) {
-    OutFile = OutputPath;
-  } else if (InFile == "-") {
-    OutFile = "-";
-  } else if (!Extension.empty()) {
-    SmallString<128> Path(InFile);
-    llvm::sys::path::replace_extension(Path, Extension);
-    OutFile = Path.str();
-  } else {
-    OutFile = "-";
-  }
-
-  std::unique_ptr<llvm::raw_fd_ostream> OS;
-  std::string OSFile;
-
-  if (UseTemporary) {
-    if (OutFile == "-")
-      UseTemporary = false;
-    else {
-      llvm::sys::fs::file_status Status;
-      llvm::sys::fs::status(OutputPath, Status);
-      if (llvm::sys::fs::exists(Status)) {
-        // Fail early if we can't write to the final destination.
-        if (!llvm::sys::fs::can_write(OutputPath))
-          return nullptr;
-
-        // Don't use a temporary if the output is a special file. This handles
-        // things like '-o /dev/null'
-        if (!llvm::sys::fs::is_regular_file(Status))
-          UseTemporary = false;
-      }
-    }
-  }
-
-  if (UseTemporary) {
-    // Create a temporary file.
-    SmallString<128> TempPath;
-    TempPath = OutFile;
-    TempPath += "-%%%%%%%%";
-    int fd;
-    std::error_code EC =
-        llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath);
-
-    if (CreateMissingDirectories &&
-        EC == llvm::errc::no_such_file_or_directory) {
-      StringRef Parent = llvm::sys::path::parent_path(OutputPath);
-      EC = llvm::sys::fs::create_directories(Parent);
-      if (!EC) {
-        EC = llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath);
-      }
+    std::string OutFile, TempFile;
+    if (!OutputPath.empty()) {
+        OutFile = OutputPath;
+    } else if (InFile == "-") {
+        OutFile = "-";
+    } else if (!Extension.empty()) {
+        SmallString<128> Path(InFile);
+        llvm::sys::path::replace_extension(Path, Extension);
+        OutFile = Path.str();
+    } else {
+        OutFile = "-";
     }
 
-    if (!EC) {
-      OS.reset(new llvm::raw_fd_ostream(fd, /*shouldClose=*/true));
-      OSFile = TempFile = TempPath.str();
+    std::unique_ptr<llvm::raw_fd_ostream> OS;
+    std::string OSFile;
+
+    if (UseTemporary) {
+        if (OutFile == "-")
+            UseTemporary = false;
+        else {
+            llvm::sys::fs::file_status Status;
+            llvm::sys::fs::status(OutputPath, Status);
+            if (llvm::sys::fs::exists(Status)) {
+                // Fail early if we can't write to the final destination.
+                if (!llvm::sys::fs::can_write(OutputPath))
+                    return nullptr;
+
+                // Don't use a temporary if the output is a special file. This handles
+                // things like '-o /dev/null'
+                if (!llvm::sys::fs::is_regular_file(Status))
+                    UseTemporary = false;
+            }
+        }
     }
-    // If we failed to create the temporary, fallback to writing to the file
-    // directly. This handles the corner case where we cannot write to the
-    // directory, but can write to the file.
-  }
 
-  if (!OS) {
-    OSFile = OutFile;
-    OS.reset(new llvm::raw_fd_ostream(
-        OSFile, Error,
-        (Binary ? llvm::sys::fs::F_None : llvm::sys::fs::F_Text)));
-    if (Error)
-      return nullptr;
-  }
+    if (UseTemporary) {
+        // Create a temporary file.
+        SmallString<128> TempPath;
+        TempPath = OutFile;
+        TempPath += "-%%%%%%%%";
+        int fd;
+        std::error_code EC =
+            llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath);
 
-  // Make sure the out stream file gets removed if we crash.
-  if (RemoveFileOnSignal)
-    llvm::sys::RemoveFileOnSignal(OSFile);
+        if (CreateMissingDirectories &&
+            EC == llvm::errc::no_such_file_or_directory) {
+            StringRef Parent = llvm::sys::path::parent_path(OutputPath);
+            EC = llvm::sys::fs::create_directories(Parent);
+            if (!EC) {
+                EC = llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath);
+            }
+        }
 
-  if (ResultPathName)
-    *ResultPathName = OutFile;
-  if (TempPathName)
-    *TempPathName = TempFile;
+        if (!EC) {
+            OS.reset(new llvm::raw_fd_ostream(fd, /*shouldClose=*/true));
+            OSFile = TempFile = TempPath.str();
+        }
+        // If we failed to create the temporary, fallback to writing to the file
+        // directly. This handles the corner case where we cannot write to the
+        // directory, but can write to the file.
+    }
 
-  if (!Binary || OS->supportsSeeking())
-    return std::move(OS);
+    if (!OS) {
+        OSFile = OutFile;
+        OS.reset(new llvm::raw_fd_ostream(
+                OSFile, Error,
+                (Binary ? llvm::sys::fs::F_None : llvm::sys::fs::F_Text)));
+        if (Error)
+            return nullptr;
+    }
 
-  auto B = llvm::make_unique<llvm::buffer_ostream>(*OS);
-  assert(!NonSeekStream);
-  NonSeekStream = std::move(OS);
-  return std::move(B);
+    // Make sure the out stream file gets removed if we crash.
+    if (RemoveFileOnSignal)
+        llvm::sys::RemoveFileOnSignal(OSFile);
+
+    if (ResultPathName)
+        *ResultPathName = OutFile;
+    if (TempPathName)
+        *TempPathName = TempFile;
+
+    if (!Binary || OS->supportsSeeking())
+        return std::move(OS);
+
+    auto B = llvm::make_unique<llvm::buffer_ostream>(*OS);
+    assert(!NonSeekStream);
+    NonSeekStream = std::move(OS);
+    return std::move(B);
 }
 
-    
+bool Compiler::InitializeSourceManager(const FrontendInputFile &Input)
+{
+    return InitializeSourceManager(Input, getDiagnostics(),
+        getFileManager(), getSourceManager(), 
+        getFrontendOpts());
+}
+
+bool Compiler::InitializeSourceManager(const FrontendInputFile &Input,
+    DiagnosticsEngine &Diags,
+    FileManager &FileMgr,
+    SourceManager &SourceMgr,
+    const FrontendOptions &Opts) 
+{
+    SrcMgr::CharacteristicKind
+        Kind = Input.isSystem() ? SrcMgr::C_System : SrcMgr::C_User;
+
+    if (Input.isBuffer()) {
+        SourceMgr.setMainFileID(SourceMgr.createFileID(
+                std::unique_ptr<llvm::MemoryBuffer>(Input.getBuffer()), Kind));
+        assert(!SourceMgr.getMainFileID().isInvalid() &&
+            "Couldn't establish MainFileID!");
+        return true;
+    }
+
+    StringRef InputFile = Input.getFile();
+
+    // Figure out where to get and map in the main file.
+    if (InputFile != "-") {
+        const FileEntry *File = FileMgr.getFile(InputFile, /*OpenFile=*/true);
+        if (!File) {
+            Diags.Report(diag::err_fe_error_reading) << InputFile;
+            return false;
+        }
+
+        // The natural SourceManager infrastructure can't currently handle named
+        // pipes, but we would at least like to accept them for the main
+        // file. Detect them here, read them with the volatile flag so FileMgr will
+        // pick up the correct size, and simply override their contents as we do for
+        // STDIN.
+        if (File->isNamedPipe()) {
+            auto MB = FileMgr.getBufferForFile(File, /*isVolatile=*/true);
+            if (MB) {
+                // Create a new virtual file that will have the correct size.
+                File = FileMgr.getVirtualFile(InputFile, (*MB)->getBufferSize(), 0);
+                SourceMgr.overrideFileContents(File, std::move(*MB));
+            } else {
+                Diags.Report(diag::err_cannot_open_file) << InputFile
+                                                         << MB.getError().message();
+                return false;
+            }
+        }
+
+        SourceMgr.setMainFileID(
+            SourceMgr.createFileID(File, SourceLocation(), Kind));
+    } else {
+        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> SBOrErr =
+            llvm::MemoryBuffer::getSTDIN();
+        if (std::error_code EC = SBOrErr.getError()) {
+            Diags.Report(diag::err_fe_error_reading_stdin) << EC.message();
+            return false;
+        }
+        std::unique_ptr<llvm::MemoryBuffer> SB = std::move(SBOrErr.get());
+
+        const FileEntry *File = FileMgr.getVirtualFile(SB->getBufferIdentifier(),
+            SB->getBufferSize(), 0);
+        SourceMgr.setMainFileID(
+            SourceMgr.createFileID(File, SourceLocation(), Kind));
+        SourceMgr.overrideFileContents(File, std::move(SB));
+    }
+
+    assert(!SourceMgr.getMainFileID().isInvalid() &&
+        "Couldn't establish MainFileID!");
+    return true;
+}
+   
 bool Compiler::ExecuteAction(FrontendAction & Act)
 {
     assert(hasDiagnostics() && "Diagnostics engine is not initialized!");

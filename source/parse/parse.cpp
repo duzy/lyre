@@ -128,7 +128,8 @@ namespace lyre
     //////////////////////////////////////////////////////////////////////
     void parseAST(sema::Sema & S, bool PrintStats, bool SkipFunctionBodies)
     {
-        
+        llvm::errs() << __FILE__ << ":" << __LINE__ << ": "
+                     << "parse" << "\n";
     }
 }
 

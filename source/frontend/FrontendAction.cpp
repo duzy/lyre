@@ -167,7 +167,7 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
 #if 0
     // Initialize built-in info as long as we aren't using an external AST
     // source.
-    if (!C.hasASTContext() || !C.getASTContext().getExternalSource()) {
+    if (!C.hasASTContext() /*|| !C.getASTContext().getExternalSource()*/) {
         //Preprocessor &PP = CI.getPreprocessor();
 
         // If modules are enabled, create the module manager before creating
@@ -199,7 +199,6 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
     for (const auto &ModuleFile : C.getFrontendOpts().ModuleFiles)
         if (!C.loadModuleFile(ModuleFile))
             goto failure;
-#endif
         
     // If there is a layout overrides file, attach an external AST source that
     // provides the layouts from that file.
@@ -209,6 +208,13 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
             new LayoutOverrideSource(C.getFrontendOpts().OverrideRecordLayoutsFile));
         C.getASTContext().setExternalSource(Override);
     }
+#else
+    // Initialize built-in info as long as we aren't using an external AST
+    // source.
+    if (!C.hasASTContext()) {
+        C.createASTContext();
+    }
+#endif
         
     // Done.
     return true;
@@ -216,7 +222,6 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
  failure:
     if (isCurrentFileAST()) {
         C.setASTContext(nullptr);
-        C.setPreprocessor(nullptr);
         C.setSourceManager(nullptr);
         C.setFileManager(nullptr);
     }
@@ -231,11 +236,51 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
 
 bool FrontendAction::Execute()
 {
-    return false;
+    Compiler &C = getCompiler();
+
+    // if (C.hasFrontendTimer()) {
+    //     llvm::TimeRegion Timer(C.getFrontendTimer());
+    //     ExecuteAction();
+    // } else {
+    ExecuteAction();
+
+    /*
+    // If we are supposed to rebuild the global module index, do so now unless
+    // there were any module-build failures.
+    if (C.shouldBuildGlobalModuleIndex() && C.hasFileManager()) {
+        GlobalModuleIndex::writeIndex(
+            C.getFileManager(), *C.getPCHContainerOperations(),
+            C.getPreprocessor().getHeaderSearchInfo().getModuleCachePath());
+    }
+    */
+
+    return true;
 }
 
 void FrontendAction::EndSourceFile()
 {
+    Compiler &C = getCompiler();
+    
+    // Inform the diagnostic client we are done with this source file.
+    C.getDiagnosticClient().EndSourceFile();
+
+    // Finalize the action.
+    EndSourceFileAction();
+
+    // Cleanup the output streams, and erase the output files if instructed by the
+    // FrontendAction.
+    C.clearOutputFiles(/*EraseFiles=*/shouldEraseOutputFiles());
+
+    if (isCurrentFileAST()) {
+        // if (DisableFree) {
+        //     C.resetAndLeakPreprocessor();
+        //     C.resetAndLeakSourceManager();
+        //     C.resetAndLeakFileManager();
+        // } else {
+        C.setSourceManager(nullptr);
+        C.setFileManager(nullptr);
+    }
+    
     setCompiler(nullptr);
     setCurrentInput(FrontendInputFile());
 }
@@ -254,7 +299,10 @@ void ASTAction::anchor() {}
 void ASTAction::ExecuteAction()
 {
     Compiler &C = getCompiler();
-        
+
+    if (!C.hasSema())
+        C.createSema(getTranslationUnitKind(), nullptr/*CompletionConsumer*/);
+
     assert(C.hasSema() && "Compiler has no Sema object!");
         
     parseAST(C.getSema(), false, false);

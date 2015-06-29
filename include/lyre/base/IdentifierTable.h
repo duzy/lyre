@@ -26,6 +26,7 @@
 namespace llvm 
 {
     template <typename T> struct DenseMapInfo;
+    class raw_ostream;
 }
 
 namespace lyre
@@ -46,7 +47,8 @@ namespace lyre
     /// is a language keyword, or if it is a front-end token of some sort (e.g. a
     /// variable or function name).  The preprocessor keeps this information in a
     /// set, and all tok::identifier tokens have a pointer to one of these.
-    class IdentifierInfo {
+    class IdentifierInfo 
+    {
         unsigned TokenID            : 9; // Front-end token ID or tok::identifier.
         // Objective-C keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
         // First NUM_OBJC_KEYWORDS values are for Objective-C, the remaining values
@@ -173,19 +175,23 @@ namespace lyre
         ///
         /// 0 is not-built-in.  1 is builtin-for-some-nonprimary-target.
         /// 2+ are specific builtin functions.
-        /*
         unsigned getBuiltinID() const {
+            /*
             if (ObjCOrBuiltinID >= tok::NUM_OBJC_KEYWORDS)
                 return ObjCOrBuiltinID - tok::NUM_OBJC_KEYWORDS;
             else
                 return 0;
+            */
+            return ObjCOrBuiltinID;
         }
         void setBuiltinID(unsigned ID) {
+            /*
             ObjCOrBuiltinID = ID + tok::NUM_OBJC_KEYWORDS;
             assert(ObjCOrBuiltinID - unsigned(tok::NUM_OBJC_KEYWORDS) == ID
                 && "ID too large for field!");
+            */
+            ObjCOrBuiltinID = ID;
         }
-        */
 
         unsigned getObjCOrBuiltinID() const { return ObjCOrBuiltinID; }
         void setObjCOrBuiltinID(unsigned ID) { ObjCOrBuiltinID = ID; }
@@ -324,7 +330,8 @@ namespace lyre
     ///
     /// \p II is allowed to be null, in which case objects of this type have
     /// no effect.
-    class PoisonIdentifierRAIIObject {
+    class PoisonIdentifierRAIIObject 
+    {
         IdentifierInfo *const II;
         const bool OldValue;
     public:
@@ -350,7 +357,8 @@ namespace lyre
     /// advance, and end-of-sequence checking in a single
     /// operation. Subclasses of this iterator type will provide the
     /// actual functionality.
-    class IdentifierIterator {
+    class IdentifierIterator 
+    {
     private:
         IdentifierIterator(const IdentifierIterator &) = delete;
         void operator=(const IdentifierIterator &) = delete;
@@ -370,7 +378,8 @@ namespace lyre
     };
 
     /// \brief Provides lookups to, and iteration over, IdentiferInfo objects.
-    class IdentifierInfoLookup {
+    class IdentifierInfoLookup 
+    {
     public:
         virtual ~IdentifierInfoLookup();
 
@@ -397,7 +406,8 @@ namespace lyre
     /// \brief An abstract class used to resolve numerical identifier
     /// references (meaningful only to some external source) into
     /// IdentifierInfo pointers.
-    class ExternalIdentifierLookup {
+    class ExternalIdentifierLookup 
+    {
     public:
         virtual ~ExternalIdentifierLookup();
 
@@ -412,7 +422,8 @@ namespace lyre
     /// This has no other purpose, but this is an extremely performance-critical
     /// piece of the code, as each occurrence of every identifier goes through
     /// here when lexed.
-    class IdentifierTable {
+    class IdentifierTable 
+    {
         // Shark shows that using MallocAllocator is *much* slower than using this
         // BumpPtrAllocator!
         typedef llvm::StringMap<IdentifierInfo*, llvm::BumpPtrAllocator> HashTableTy;
@@ -515,6 +526,7 @@ namespace lyre
         void AddKeywords(const LangOptions &LangOpts);
     };
 
+#if 0
     /// \brief A family of Objective-C methods. 
     ///
     /// These families have no inherent meaning in the language, but are
@@ -532,7 +544,8 @@ namespace lyre
     /// (but would be if it returned 'id').  It is also possible to
     /// explicitly change or remove a method's family.  Therefore the
     /// method's family should be considered the single source of truth.
-    enum ObjCMethodFamily {
+    enum ObjCMethodFamily 
+    {
         /// \brief No particular method family.
         OMF_None,
 
@@ -572,7 +585,8 @@ namespace lyre
     ///
     /// These are family of methods whose result type is initially 'id', but
     /// but are candidate for the result type to be changed to 'instancetype'.
-    enum ObjCInstanceTypeFamily {
+    enum ObjCInstanceTypeFamily 
+    {
         OIT_None,
         OIT_Array,
         OIT_Dictionary,
@@ -581,12 +595,14 @@ namespace lyre
         OIT_ReturnsSelf
     };
 
-    enum ObjCStringFormatFamily {
+    enum ObjCStringFormatFamily 
+    {
         SFF_None,
         SFF_NSString,
         SFF_CFString
     };
-
+#endif
+    
     /// \brief Smart pointer class that efficiently represents Objective-C method
     /// names.
     ///
@@ -632,9 +648,8 @@ namespace lyre
             return InfoPtr & ArgFlags;
         }
 
-        static ObjCMethodFamily getMethodFamilyImpl(Selector sel);
-  
-        static ObjCStringFormatFamily getStringFormatFamilyImpl(Selector sel);
+        //static ObjCMethodFamily getMethodFamilyImpl(Selector sel);
+        //static ObjCStringFormatFamily getStringFormatFamilyImpl(Selector sel);
 
     public:
         friend class SelectorTable; // only the SelectorTable can create these
@@ -701,6 +716,7 @@ namespace lyre
         /// \brief Prints the full selector name (e.g. "foo:bar:").
         void print(llvm::raw_ostream &OS) const;
 
+        /*
         /// \brief Derive the conventional family of this method.
         ObjCMethodFamily getMethodFamily() const {
             return getMethodFamilyImpl(*this);
@@ -709,6 +725,7 @@ namespace lyre
         ObjCStringFormatFamily getStringFormatFamily() const {
             return getStringFormatFamilyImpl(*this);
         }
+        */
   
         static Selector getEmptyMarker() {
             return Selector(uintptr_t(-1));
@@ -717,15 +734,18 @@ namespace lyre
             return Selector(uintptr_t(-2));
         }
   
-        static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
+        //static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
     };
 
     /// \brief This table allows us to fully hide how we implement
     /// multi-keyword caching.
-    class SelectorTable {
-        void *Impl;  // Actually a SelectorTableImpl
+    class SelectorTable 
+    {
         SelectorTable(const SelectorTable &) = delete;
         void operator=(const SelectorTable &) = delete;
+
+        void *Impl;  // Actually a SelectorTableImpl
+        
     public:
         SelectorTable();
         ~SelectorTable();
@@ -764,7 +784,8 @@ namespace lyre
     /// DeclarationNameExtra - Common base of the MultiKeywordSelector,
     /// CXXSpecialName, and CXXOperatorIdName classes, all of which are
     /// private classes that describe different kinds of names.
-    class DeclarationNameExtra {
+    class DeclarationNameExtra 
+    {
     public:
         /// ExtraKind - The kind of "extra" information stored in the
         /// DeclarationName. See @c ExtraKindOrNumArgs for an explanation of

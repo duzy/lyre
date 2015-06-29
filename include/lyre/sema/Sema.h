@@ -1,11 +1,14 @@
 // -*- c++ -*-
 #ifndef __LYRE_SEMA_SEMA_H____DUZY__
 #define __LYRE_SEMA_SEMA_H____DUZY__ 1
+#include "lyre/base/LangOptions.h"
 
 namespace lyre
 {
-    class LangOptions;
+    class Compiler;
+    class CodeCompleteConsumer;
     class DiagnosticsEngine;
+    class LangOptions;
     class SourceManager;
     
     namespace ast 
@@ -30,7 +33,11 @@ namespace lyre
             SourceManager &SourceMgr;
         
         public:
-        
+            Sema(const LangOptions &Opts, ast::Context &ctxt, ast::Consumer &consumer,
+                DiagnosticsEngine &D, SourceManager &SM,
+                TranslationUnitKind TUKind = TU_Complete,
+                CodeCompleteConsumer *CompletionConsumer = nullptr);
+            ~Sema();
         };
         
     } // end namespace sema
