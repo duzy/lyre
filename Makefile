@@ -92,7 +92,7 @@ OBJECTS.codegen := \
 
 OBJECTS.parse := \
   source/parse/metast.o \
-  source/parse/parse.o \
+  source/parse/ParseAST.o \
 
 OBJECTS.gc := \
   source/gc/lygc.o \

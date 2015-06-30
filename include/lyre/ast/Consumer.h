@@ -7,6 +7,8 @@ namespace lyre
 {
     namespace ast
     {
+        class Context;
+        
         class Consumer //: public llvm::RefCountedBase<Consumer>
         {
         public:

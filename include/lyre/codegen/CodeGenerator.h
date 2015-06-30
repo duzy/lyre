@@ -19,12 +19,12 @@
 namespace llvm {
     class LLVMContext;
     class Module;
+    class StringRef;
 }
 
 namespace lyre
 {
     class DiagnosticsEngine;
-    class CoverageSourceInfo;
     class LangOptions;
     class CodeGenOptions;
     class Decl;
@@ -44,7 +44,7 @@ namespace lyre
     /// the allocated CodeGenerator instance.
     CodeGenerator *CreateLLVMCodeGen(DiagnosticsEngine &Diags,
         const std::string &ModuleName, const CodeGenOptions &CGO,
-        llvm::LLVMContext& C, CoverageSourceInfo *CoverageInfo = nullptr);
+        llvm::LLVMContext& C);
 }
 
 #endif

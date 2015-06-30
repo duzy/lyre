@@ -29,7 +29,6 @@ namespace lyre
 {
     class TargetInfo;
     class IdentifierTable;
-    class ASTContext;
     class QualType;
     class LangOptions;
 

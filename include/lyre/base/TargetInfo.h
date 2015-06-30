@@ -57,6 +57,8 @@ namespace lyre
         bool BigEndian;
         bool TLSSupported;
 
+        const char *DescriptionString;
+        
         const llvm::fltSemantics *HalfFormat, *FloatFormat, *DoubleFormat, *LongDoubleFormat;
 
         mutable llvm::StringRef PlatformName;
@@ -148,6 +150,16 @@ namespace lyre
 
         /// \brief Returns true if the type is signed; false otherwise.
         static bool isTypeSigned(IntType T);
+
+        /// \brief Returns the target triple of the primary target.
+        const llvm::Triple &getTriple() const {
+            return Triple;
+        }
+
+        const char *getTargetDescription() const {
+            assert(DescriptionString);
+            return DescriptionString;
+        }
     };
 
 } // end namespace lyre

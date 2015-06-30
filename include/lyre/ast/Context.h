@@ -76,6 +76,11 @@ namespace lyre
             
             void *Allocate(size_t Size, unsigned Align = 8) const { return BumpAlloc.Allocate(Size, Align); }
             void Deallocate(void *Ptr) const { }
+
+            const TargetInfo &getTargetInfo() const { 
+                assert(Target && "Invalid target info object!");
+                return *Target; 
+            }
         };
     }
 } // namespace lyre

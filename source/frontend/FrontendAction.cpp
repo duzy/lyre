@@ -98,8 +98,8 @@ std::unique_ptr<ast::Consumer> FrontendAction::CreateWrappedASTConsumer(Compiler
 
 bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input)
 {
-    llvm::errs() << __FILE__ << ":" << __LINE__ << ": "
-                 << "input: " << Input.getFile() << "\n";
+    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ 
+                 << ": " << Input.getFile() << "\n";
 
     assert(!TheCompiler && "Already processing a source file!");
     assert(!Input.isEmpty() && "Unexpected empty filename!");
@@ -331,6 +331,9 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
 
 bool FrontendAction::Execute()
 {
+    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__
+                 << "\n";
+    
     Compiler &C = getCompiler();
 
     // if (C.hasFrontendTimer()) {
@@ -354,6 +357,9 @@ bool FrontendAction::Execute()
 
 void FrontendAction::EndSourceFile()
 {
+    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__
+                 << "\n";
+    
     Compiler &C = getCompiler();
     
     // Inform the diagnostic client we are done with this source file.
@@ -415,12 +421,13 @@ void ASTAction::anchor() {}
     
 void ASTAction::ExecuteAction()
 {
+    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__
+                 << "\n";
+    
     Compiler &C = getCompiler();
 
     if (!C.hasSema())
         C.createSema(getTranslationUnitKind(), nullptr/*CompletionConsumer*/);
-
-    assert(C.hasSema() && "Compiler has no Sema object!");
         
-    parseAST(C.getSema(), false, false);
+    ParseAST(C.getSema(), false, false);
 }

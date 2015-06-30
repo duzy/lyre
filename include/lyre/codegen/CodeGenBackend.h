@@ -7,6 +7,7 @@ namespace llvm
 {
     class LLVMContext;
     class Module;
+    class StringRef;
     class raw_pwrite_stream;
 }
 
