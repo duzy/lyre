@@ -41,6 +41,7 @@ OBJECTS = $(OBJECTS.lyre)
 OBJECTS.lyre = \
   $(OBJECTS.base) \
   $(OBJECTS.ast) \
+  $(OBJECTS.lex) \
   $(OBJECTS.sema) \
   $(OBJECTS.codegen) \
   $(OBJECTS.parse) \
@@ -80,6 +81,9 @@ OBJECTS.ast := \
   source/ast/DeclGroup.o \
   source/ast/Stmt.o \
   source/ast/Expr.o \
+
+OBJECTS.lex := \
+  source/lex/Lexer.o \
 
 OBJECTS.sema := \
   source/sema/Sema.o \
