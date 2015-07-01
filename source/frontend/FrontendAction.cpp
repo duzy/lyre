@@ -3,7 +3,7 @@
 #include "lyre/frontend/FrontendAction.h"
 #include "lyre/ast/Consumer.h"
 #include "lyre/ast/Context.h"
-#include "lyre/parse/parse.h"
+#include "lyre/parse/ParseAST.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lyre;
@@ -115,8 +115,9 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
     // AST files follow a very different path, since they share objects via the
     // AST unit.
     if (Input.getKind() == IK_AST) {
+#if 1
         return false;
-        /*
+#else
         assert(hasASTFileSupport() &&
             "This action does not have AST file support!");
 
@@ -151,7 +152,7 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
             goto failure;
 
         return true;
-        */
+#endif
     }
         
     // Ensure the compiler has a VFS object.
@@ -213,104 +214,16 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
         if (!Consumer)
             goto failure;
 
-#if 0
-        // FIXME: should not overwrite ASTMutationListener when parsing model files?
-        if (!isModelParsingAction())
-            C.getASTContext().setASTMutationListener(Consumer->GetASTMutationListener());
-
-        if (!C.getPreprocessorOpts().ChainedIncludes.empty()) {
-            // Convert headers to PCH and chain them.
-            IntrusiveRefCntPtr<ExternalSemaSource> source, FinalReader;
-            source = createChainedIncludesSource(CI, FinalReader);
-            if (!source)
-                goto failure;
-            C.setModuleManager(static_cast<ASTReader *>(FinalReader.get()));
-            C.getASTContext().setExternalSource(source);
-        } else if (!C.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
-            // Use PCH.
-            assert(hasPCHSupport() && "This action does not have PCH support!");
-            ASTDeserializationListener *DeserialListener =
-                Consumer->GetASTDeserializationListener();
-            bool DeleteDeserialListener = false;
-            if (C.getPreprocessorOpts().DumpDeserializedPCHDecls) {
-                DeserialListener = new DeserializedDeclsDumper(DeserialListener,
-                    DeleteDeserialListener);
-                DeleteDeserialListener = true;
-            }
-            if (!C.getPreprocessorOpts().DeserializedPCHDeclsToErrorOn.empty()) {
-                DeserialListener = new DeserializedDeclsChecker(
-                    C.getASTContext(),
-                    C.getPreprocessorOpts().DeserializedPCHDeclsToErrorOn,
-                    DeserialListener, DeleteDeserialListener);
-                DeleteDeserialListener = true;
-            }
-            C.createPCHExternalASTSource(
-                C.getPreprocessorOpts().ImplicitPCHInclude,
-                C.getPreprocessorOpts().DisablePCHValidation,
-                C.getPreprocessorOpts().AllowPCHWithCompilerErrors, DeserialListener,
-                DeleteDeserialListener);
-            if (!C.getASTContext().getExternalSource())
-                goto failure;
-        }
-#endif
-
         C.setASTConsumer(std::move(Consumer));
         if (!C.hasASTConsumer())
             goto failure;
     }
 
-#if 0
-    // Initialize built-in info as long as we aren't using an external AST
-    // source.
-    if (!C.hasASTContext() /*|| !C.getASTContext().getExternalSource()*/) {
-        //Preprocessor &PP = C.getPreprocessor();
-
-        // If modules are enabled, create the module manager before creating
-        // any builtins, so that all declarations know that they might be
-        // extended by an external source.
-        if (C.getLangOpts().Modules)
-            C.createModuleManager();
-
-        //PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-        //    PP.getLangOpts());
-    } else {
-        // FIXME: If this is a problem, recover from it by creating a multiplex
-        // source.
-        assert((!C.getLangOpts().Modules || C.getModuleManager()) &&
-            "modules enabled but created an external source that "
-            "doesn't support modules");
-    }
-    
-    // If we were asked to load any module map files, do so now.
-    for (const auto &Filename : C.getFrontendOpts().ModuleMapFiles) {
-        if (auto *File = C.getFileManager().getFile(Filename))
-            C.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
-                File, /*IsSystem*/false);
-        else
-            C.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
-    }
-
-    // If we were asked to load any module files, do so now.
-    for (const auto &ModuleFile : C.getFrontendOpts().ModuleFiles)
-        if (!C.loadModuleFile(ModuleFile))
-            goto failure;
-        
-    // If there is a layout overrides file, attach an external AST source that
-    // provides the layouts from that file.
-    if (!C.getFrontendOpts().OverrideRecordLayoutsFile.empty() && 
-        C.hasASTContext() && !C.getASTContext().getExternalSource()) {
-        IntrusiveRefCntPtr<ExternalASTSource> Override(
-            new LayoutOverrideSource(C.getFrontendOpts().OverrideRecordLayoutsFile));
-        C.getASTContext().setExternalSource(Override);
-    }
-#else
-    // Initialize built-in info as long as we aren't using an external AST
-    // source.
-    if (!C.hasASTContext()) {
+    if (!C.hasASTContext())
         C.createASTContext();
-    }
-#endif
-        
+
+    // ...
+    
     // Done.
     return true;
         
@@ -331,8 +244,8 @@ bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input
 
 bool FrontendAction::Execute()
 {
-    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__
-                 << "\n";
+    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+                 << getCurrentFile() << "\n";
     
     Compiler &C = getCompiler();
 
@@ -357,8 +270,8 @@ bool FrontendAction::Execute()
 
 void FrontendAction::EndSourceFile()
 {
-    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__
-                 << "\n";
+    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+                 << getCurrentFile() << "\n";
     
     Compiler &C = getCompiler();
     
@@ -369,23 +282,12 @@ void FrontendAction::EndSourceFile()
     EndSourceFileAction();
 
     // Sema references the ast consumer, so reset sema first.
-    //
-    // FIXME: There is more per-file stuff we could just drop here?
-    bool DisableFree = C.getFrontendOpts().DisableFree;
-    // if (DisableFree) {
-    //     C.resetAndLeakSema();
-    //     C.resetAndLeakASTContext();
-    //     BuryPointer(C.takeASTConsumer().get());
-    // } else {
     C.setSema(nullptr);
     C.setASTContext(nullptr);
     C.setASTConsumer(nullptr);
 
     if (C.getFrontendOpts().ShowStats) {
         llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFile() << "':\n";
-        // C.getPreprocessor().PrintStats();
-        // C.getPreprocessor().getIdentifierTable().PrintStats();
-        // C.getPreprocessor().getHeaderSearchInfo().PrintStats();
         C.getSourceManager().PrintStats();
         llvm::errs() << "\n";
     }
@@ -395,11 +297,6 @@ void FrontendAction::EndSourceFile()
     C.clearOutputFiles(/*EraseFiles=*/shouldEraseOutputFiles());
 
     if (isCurrentFileAST()) {
-        // if (DisableFree) {
-        //     C.resetAndLeakPreprocessor();
-        //     C.resetAndLeakSourceManager();
-        //     C.resetAndLeakFileManager();
-        // } else {
         C.setSourceManager(nullptr);
         C.setFileManager(nullptr);
     }
@@ -421,13 +318,26 @@ void ASTAction::anchor() {}
     
 void ASTAction::ExecuteAction()
 {
-    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__
-                 << "\n";
+    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+                 << getCurrentFile() << "\n";
     
     Compiler &C = getCompiler();
 
     if (!C.hasSema())
         C.createSema(getTranslationUnitKind(), nullptr/*CompletionConsumer*/);
-        
+
+    SourceManager &SM = C.getSourceManager();
+    FileManager &FM = SM.getFileManager();
+    
+    const FileEntry *File = FM.getFile(getCurrentFile());
+    /*
+    if (time_t ModTime = File->getModificationTime()) {
+        llvm::errs() << "ModificationTime: " << ModTime << "\n";
+    }
+    */
+    
+    llvm::MemoryBuffer *Buffer = SM.getMemoryBufferForFile(File);
+    llvm::errs() << Buffer->getBuffer() << "\n";
+    
     ParseAST(C.getSema(), false, false);
 }

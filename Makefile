@@ -83,7 +83,8 @@ OBJECTS.ast := \
   source/ast/Expr.o \
 
 OBJECTS.lex := \
-  source/lex/Lexer.o \
+
+#  source/lex/Lexer.o \
 
 OBJECTS.sema := \
   source/sema/Sema.o \
@@ -95,8 +96,9 @@ OBJECTS.codegen := \
   source/codegen/CodeGenerator.o \
 
 OBJECTS.parse := \
-  source/parse/metast.o \
   source/parse/ParseAST.o \
+
+#  source/parse/metast.o \
 
 OBJECTS.gc := \
   source/gc/lygc.o \

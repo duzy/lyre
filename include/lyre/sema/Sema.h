@@ -8,6 +8,7 @@ namespace lyre
     class Compiler;
     class CodeCompleteConsumer;
     class DiagnosticsEngine;
+    class ExternalSemaSource;
     class LangOptions;
     class SourceManager;
     
@@ -31,13 +32,22 @@ namespace lyre
             ast::Consumer &Consumer;
             DiagnosticsEngine &Diags;
             SourceManager &SourceMgr;
-        
+
+            ///\brief Source of additional semantic information.
+            ExternalSemaSource *ExternalSource;
+            
         public:
             Sema(const LangOptions &Opts, ast::Context &ctxt, ast::Consumer &consumer,
                 DiagnosticsEngine &D, SourceManager &SM,
                 TranslationUnitKind TUKind = TU_Complete,
                 CodeCompleteConsumer *CompletionConsumer = nullptr);
             ~Sema();
+
+            DiagnosticsEngine &getDiagnostics() const { return Diags; }
+            SourceManager &getSourceManager() const { return SourceMgr; }
+            ast::Context &getASTContext() const { return Context; }
+            ast::Consumer &getASTConsumer() const { return Consumer; }
+            ExternalSemaSource* getExternalSource() const { return ExternalSource; }
         };
         
     } // end namespace sema

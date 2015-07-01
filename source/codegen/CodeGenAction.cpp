@@ -173,16 +173,17 @@ std::unique_ptr<ast::Consumer> CodeGenAction::CreateASTConsumer(Compiler &C,
 void CodeGenAction::EndSourceFileAction()
 {
     llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
-                 << "TODO: " << "\n";
+                 << getCurrentFile() << "\n";
 }
 
 void CodeGenAction::ExecuteAction()
 {
     llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
-                 << "TODO: " << "\n";
+                 << getCurrentFile() << "\n";
 
     if (getCurrentFileKind() == IK_LLVM_IR) {
-        // ...
+        llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+                     << "TODO: " << getCurrentFile() << "\n";
         return;
     }
         

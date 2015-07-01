@@ -10,7 +10,6 @@
 #include "lyre/ast/AST.h"
 #include "lyre/ast/Consumer.h"
 #include "lyre/sema/Sema.h"
-#include "lyre/parse/parse.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Errc.h"
@@ -362,14 +361,11 @@ std::unique_ptr<llvm::raw_pwrite_stream> Compiler::createOutputFile(
 bool Compiler::InitializeSourceManager(const FrontendInputFile &Input)
 {
     return InitializeSourceManager(Input, getDiagnostics(),
-        getFileManager(), getSourceManager(), 
-        getFrontendOpts());
+        getFileManager(), getSourceManager(), getFrontendOpts());
 }
 
 bool Compiler::InitializeSourceManager(const FrontendInputFile &Input,
-    DiagnosticsEngine &Diags,
-    FileManager &FileMgr,
-    SourceManager &SourceMgr,
+    DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr,
     const FrontendOptions &Opts) 
 {
     SrcMgr::CharacteristicKind
