@@ -54,7 +54,7 @@ enum ExternalLoadResult {
 /// sources can resolve types and declarations from abstract IDs into
 /// actual type and declaration nodes, and read parts of declaration
 /// contexts.
-class ExternalASTSource : public RefCountedBase<ExternalASTSource> {
+class ExternalASTSource : public llvm::RefCountedBase<ExternalASTSource> {
   /// Generation number for this external AST source. Must be increased
   /// whenever we might have added new redeclarations for existing decls.
   uint32_t CurrentGeneration;

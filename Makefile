@@ -11,7 +11,7 @@ endif
 
 TableGen := utils/TableGen/TableGen
 
-CXXFLAGS := -Iinclude -Isource -g -ggdb \
+CXXFLAGS := -Iinclude -Isource -I$(BOOST_ROOT) -g -ggdb \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
   $(shell $(LLVM_CONFIG) --cxxflags)
 
@@ -95,10 +95,13 @@ OBJECTS.codegen := \
   source/codegen/CodeGenOptions.o \
   source/codegen/CodeGenerator.o \
 
+OBJECTS.spirit := \
+  source/parse/parse.o \
+  source/parse/statement.o \
+
 OBJECTS.parse := \
   source/parse/ParseAST.o \
-
-#  source/parse/metast.o \
+  $(OBJECTS.spirit)
 
 OBJECTS.gc := \
   source/gc/lygc.o \
@@ -116,7 +119,10 @@ source/ast.o: $(OBJECTS.ast) ; $(COMBINE)
 source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 
 source/parse/metast.o: source/parse/metast.cpp
-	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -fPIC -c $< -o $@
+	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=$(CXXSTD) -fPIC -c $< -o $@
+
+$(OBJECTS.spirit): %.o : %.cpp
+	$(CXX) -Iinclude -Isource -I$(BOOST_ROOT) -std=$(CXXSTD) -fPIC -c $< -o $@
 
 include/lyre/base/DiagnosticGroups.inc: include/lyre/base/Diagnostic.td $(TableGen) \
     include/lyre/base/DiagnosticGroups.td \

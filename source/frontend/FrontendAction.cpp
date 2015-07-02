@@ -98,8 +98,8 @@ std::unique_ptr<ast::Consumer> FrontendAction::CreateWrappedASTConsumer(Compiler
 
 bool FrontendAction::BeginSourceFile(Compiler &C, const FrontendInputFile &Input)
 {
-    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ 
-                 << ": " << Input.getFile() << "\n";
+    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+                 << Input.getFile() << "\n";
 
     assert(!TheCompiler && "Already processing a source file!");
     assert(!Input.isEmpty() && "Unexpected empty filename!");
@@ -318,26 +318,22 @@ void ASTAction::anchor() {}
     
 void ASTAction::ExecuteAction()
 {
-    llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
-                 << getCurrentFile() << "\n";
+  llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+               << getCurrentFile() << "\n";
     
-    Compiler &C = getCompiler();
+  Compiler &C = getCompiler();
 
-    if (!C.hasSema())
-        C.createSema(getTranslationUnitKind(), nullptr/*CompletionConsumer*/);
+  if (!C.hasSema())
+    C.createSema(getTranslationUnitKind(), nullptr/*CompletionConsumer*/);
 
-    SourceManager &SM = C.getSourceManager();
-    FileManager &FM = SM.getFileManager();
+  SourceManager &SM = C.getSourceManager();
+  FileManager &FM = SM.getFileManager();
     
-    const FileEntry *File = FM.getFile(getCurrentFile());
-    /*
-    if (time_t ModTime = File->getModificationTime()) {
-        llvm::errs() << "ModificationTime: " << ModTime << "\n";
-    }
-    */
-    
+  const FileEntry *File = FM.getFile(getCurrentFile());
+  if (time_t ModTime = File->getModificationTime()) {
     llvm::MemoryBuffer *Buffer = SM.getMemoryBufferForFile(File);
-    llvm::errs() << Buffer->getBuffer() << "\n";
-    
-    ParseAST(C.getSema(), false, false);
+    ParseAST(C.getSema(), Buffer, false, false);
+  } else {
+    assert(0 < ModTime && "Missing current input file!");
+  }
 }

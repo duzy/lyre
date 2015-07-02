@@ -14,76 +14,77 @@
 
 namespace lyre
 {
-    class LangOptions;
-    class SelectorTable;
-    class SourceManager;
-    class TargetInfo;
+class ExternalASTSource;
+class LangOptions;
+class SelectorTable;
+class SourceManager;
+class TargetInfo;
 
-    namespace Builtin { class Context; }
+namespace Builtin { class Context; }
     
-    namespace ast
-    {
-        class Context : public llvm::RefCountedBase<Context>
-        {
-            Context(const Context &) = delete;
-            void operator=(const Context &) = delete;
+namespace ast
+{
+class Context : public llvm::RefCountedBase<Context>
+{
+  Context(const Context &) = delete;
+  void operator=(const Context &) = delete;
             
-            /// \brief The allocator used to create AST objects.
-            ///
-            /// AST objects are never destructed; rather, all memory associated with the
-            /// AST objects will be released when the ASTContext itself is destroyed.
-            mutable llvm::BumpPtrAllocator BumpAlloc;
+  /// \brief The allocator used to create AST objects.
+  ///
+  /// AST objects are never destructed; rather, all memory associated with the
+  /// AST objects will be released when the ASTContext itself is destroyed.
+  mutable llvm::BumpPtrAllocator BumpAlloc;
 
-            /// \brief The language options used to create the AST associated with
-            ///  this ASTContext object.
-            LangOptions &LangOpts;
+  /// \brief The language options used to create the AST associated with
+  ///  this ASTContext object.
+  LangOptions &LangOpts;
 
-            /// \brief The associated SourceManager object.a
-            SourceManager &SourceMgr;
+  /// \brief The associated SourceManager object.a
+  SourceManager &SourceMgr;
 
-            /// \brief Mapping/lookup information for all identifiers in
-            /// the program, including program keywords.
-            mutable IdentifierTable Identifiers;
+  /// \brief Mapping/lookup information for all identifiers in
+  /// the program, including program keywords.
+  mutable IdentifierTable Identifiers;
 
-            /// \brief This table contains all the selectors in the program.
-            ///
-            /// Unlike IdentifierTable above, this table *isn't* populated by the
-            /// preprocessor. It is declared/expanded here because its role/lifetime is
-            /// conceptually similar to the IdentifierTable. In addition, the current
-            /// control flow (in lyre::ParseAST()), make it convenient to put here.
-            ///
-            /// FIXME: Make sure the lifetime of Identifiers/Selectors *isn't* tied to
-            /// the lifetime of the preprocessor.
-            SelectorTable Selectors;
+  /// \brief This table contains all the selectors in the program.
+  ///
+  /// Unlike IdentifierTable above, this table *isn't* populated by the
+  /// preprocessor. It is declared/expanded here because its role/lifetime is
+  /// conceptually similar to the IdentifierTable. In addition, the current
+  /// control flow (in lyre::ParseAST()), make it convenient to put here.
+  ///
+  /// FIXME: Make sure the lifetime of Identifiers/Selectors *isn't* tied to
+  /// the lifetime of the preprocessor.
+  SelectorTable Selectors;
 
-            /// \brief Information about builtins.
-            Builtin::Context BuiltinInfo;
+  /// \brief Information about builtins.
+  Builtin::Context BuiltinInfo;
 
-            const TargetInfo  *Target;
+  const TargetInfo  *Target;
             
-        public:
-            Context(LangOptions &Opts, SourceManager &SM, IdentifierInfoLookup *IILookup);
+public:
+  Context(LangOptions &Opts, SourceManager &SM, IdentifierInfoLookup *IILookup);
 
-            ~Context();
+  ~Context();
 
-            /// \brief Initialize built-in types.
-            ///
-            /// This routine may only be invoked once for a given ASTContext object.
-            /// It is normally invoked after ASTContext construction.
-            ///
-            /// \param Target The target 
-            void InitBuiltinTypes(const TargetInfo &Target);
+  /// \brief Initialize built-in types.
+  ///
+  /// This routine may only be invoked once for a given ASTContext object.
+  /// It is normally invoked after ASTContext construction.
+  ///
+  /// \param Target The target 
+  void InitBuiltinTypes(const TargetInfo &Target);
             
-            void *Allocate(size_t Size, unsigned Align = 8) const { return BumpAlloc.Allocate(Size, Align); }
-            void Deallocate(void *Ptr) const { }
+  void *Allocate(size_t Size, unsigned Align = 8) const { return BumpAlloc.Allocate(Size, Align); }
+  void Deallocate(void *Ptr) const { }
 
-            const TargetInfo &getTargetInfo() const { 
-                assert(Target && "Invalid target info object!");
-                return *Target; 
-            }
-        };
-    }
-} // namespace lyre
+  const TargetInfo &getTargetInfo() const { 
+    assert(Target && "Invalid target info object!");
+    return *Target; 
+  }
+};
+} // end namespace ast
+} // end namespace lyre
 
 // operator new and delete aren't allowed inside namespaces.
 
@@ -117,7 +118,7 @@ namespace lyre
 /// @return The allocated memory. Could be NULL.
 inline void *operator new(size_t Bytes, const lyre::ast::Context & C, size_t Alignment = 8)
 {
-    return C.Allocate(Bytes, Alignment);
+  return C.Allocate(Bytes, Alignment);
 }
 
 /// @brief Placement delete companion to the new above.
@@ -128,7 +129,7 @@ inline void *operator new(size_t Bytes, const lyre::ast::Context & C, size_t Ali
 /// the lyre::ast::Context throws in the object constructor.
 inline void operator delete(void *Ptr, const lyre::ast::Context & C, size_t) 
 {
-    C.Deallocate(Ptr);
+  C.Deallocate(Ptr);
 }
 
 /// This placement form of operator new[] uses the lyre::ast::Context's allocator for
@@ -156,7 +157,7 @@ inline void operator delete(void *Ptr, const lyre::ast::Context & C, size_t)
 /// @return The allocated memory. Could be NULL.
 inline void *operator new[](size_t Bytes, const lyre::ast::Context& C, size_t Alignment = 8) 
 {
-    return C.Allocate(Bytes, Alignment);
+  return C.Allocate(Bytes, Alignment);
 }
 
 /// @brief Placement delete[] companion to the new[] above.
@@ -167,7 +168,7 @@ inline void *operator new[](size_t Bytes, const lyre::ast::Context& C, size_t Al
 /// the lyre::ast::Context throws in the object constructor.
 inline void operator delete[](void *Ptr, const lyre::ast::Context &C, size_t) 
 {
-    C.Deallocate(Ptr);
+  C.Deallocate(Ptr);
 }
 
 #endif//__LYRE_AST_CONTEXT_H____DUZY__
