@@ -9,31 +9,6 @@
 namespace lyre { 
   namespace metast {
     namespace x3 = boost::spirit::x3;
-    
-    struct string
-    {
-      const char *begin, *end;
-
-      string(const char *v1, const char *v2) : begin(v1), end(v2) {}
-    };
-    
-    struct unary;
-    struct variable;
-    struct expression;
-    struct none {};
-
-    struct operand : x3::variant
-    <
-      none
-      , unsigned
-      , x3::forward_ast<variable>
-      , x3::forward_ast<unary>
-      , x3::forward_ast<expression>
-    >
-    {
-        using base_type::base_type;
-        using base_type::operator=;
-    };
 
     /*
     enum opcode {
@@ -54,7 +29,7 @@ namespace lyre {
       op_or
     };
     */
-    enum class cv : int
+    enum class constant : int
     {
       null, true_, false_
     };
@@ -116,6 +91,38 @@ namespace lyre {
 
         unr,  // unreachable
     };
+    
+    struct unary;
+    struct expression;
+    
+    struct none {};
+    
+    struct string
+    {
+      const char *begin, *end;
+
+      string(const char *v1, const char *v2) : begin(v1), end(v2) {}
+    };
+
+    struct identifier
+    {
+      metast::string string;
+    };    
+    
+    struct operand : x3::variant
+    <
+      none
+      , constant
+      , unsigned
+      , identifier
+      , string
+      , x3::forward_ast<unary>
+      , x3::forward_ast<expression>
+    >
+    {
+        using base_type::base_type;
+        using base_type::operator=;
+    };
 
     struct unary
     {
@@ -133,6 +140,10 @@ namespace lyre {
     {
       operand first;
       std::list<operation> rest;
+
+      explicit expression(const operand & o) : first(o), rest() {}
+      explicit expression(const operation & o) : first(), rest({ o }) {}
+      expression() : first(), rest() {}
     };
 
     struct return_statement;
@@ -148,19 +159,20 @@ namespace lyre {
       expression
     >
     {
-        using base_type::base_type;
-        using base_type::operator=;
-    };
-    
+      using base_type::base_type;
+      using base_type::operator=;
+    };    
     
     struct statement_list : std::list<statement> {};
 
     struct return_statement
     {
+      boost::optional<expression> value;
     };
     
     struct see_statement
     {
+      expression what;
     };
     
     struct with_statement
@@ -185,5 +197,30 @@ namespace lyre {
     
   } // end namespace metast
 } // end namespace lyre
+
+#include <boost/fusion/include/adapt_struct.hpp>
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::unary,
+    (lyre::metast::opcode, opcode)
+    (lyre::metast::operand, operand)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::operation,
+    (lyre::metast::opcode, opcode)
+    (lyre::metast::operand, operand)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::expression,
+    (lyre::metast::operand, first)
+    (std::list<lyre::metast::operation>, rest)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::identifier,
+    (lyre::metast::string, string)
+)
 
 #endif//__LYRE_PARSER_METAST_HPP____DUZY__

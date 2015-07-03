@@ -58,7 +58,7 @@ namespace lyre
     static x3::symbols<char, metast::opcode> additive_op;
     static x3::symbols<char, metast::opcode> multiplicative_op;
     static x3::symbols<char, metast::opcode> unary_op;
-    static x3::symbols<char, metast::cv> builtin_constant;
+    static x3::symbols<char, metast::constant> builtin_constant;
     static x3::symbols<char> keywords;
     static void init_symbols()
     {
@@ -110,9 +110,9 @@ namespace lyre
         ;
 
       builtin_constant.add
-        ("null", metast::cv::null)
-        ("true", metast::cv::true_)
-        ("false", metast::cv::false_)
+        ("null", metast::constant::null)
+        ("true", metast::constant::true_)
+        ("false", metast::constant::false_)
         ;
 
       keywords =
@@ -143,21 +143,12 @@ namespace lyre
     RULE(unary_expression, metast::operand)
     RULE(postfix_expression, metast::operand)
     RULE(primary_expression, metast::operand)
+    RULE(identifier, metast::identifier)
+    RULE(quote, metast::string)
 
     static auto const dashes = lexeme[ repeat(3, inf)[ '-' ] ] ;
 
     static auto const idchar =  alnum | '_' ;
-    static auto const identifier = !keywords
-      >> raw[lexeme[ ( alpha | '_' ) >> *(alnum | '_') /*idchar*/ ]]
-      ;
-
-    static auto const name = identifier;
-
-    static auto const quote = (
-       ( '\'' >> raw[ *(char_ - '\'') ] >> '\'' ) |
-       ( '"' >> raw[ *(char_ - '"') ] >> '"' )
-       )
-      ;
 
     static auto const arglist =  expression % ',' ;
 
@@ -218,15 +209,25 @@ namespace lyre
       ;
 
     static auto const primary_expression_def = '(' > expression > ')'
-      |  builtin_constant
-      |  name
+      //|  builtin_constant
+      |  identifier
       |  quote
-      |  int_ >> !char_('.')
-      |  double_
-      |  prop
-      |  nodector
+      //|  uint_ >> !char_('.')
+      //|  double_
+      //|  prop
+      //|  nodector
       ;
 
+    static auto const identifier_def = !keywords
+      >> raw[lexeme[ ( alpha | '_' ) >> *(alnum | '_') /*idchar*/ ]]
+      ;
+
+    static auto const quote_def = (
+       ( '\'' >> raw[ *(char_ - '\'') ] >> '\'' ) |
+       ( '"' >> raw[ *(char_ - '"') ] >> '"' )
+       )
+      ;
+    
     // BOOST_SPIRIT_DEFINE
     DEFINE(expression, expression_def)
     DEFINE(list_expression, list_expression_def)
@@ -238,7 +239,8 @@ namespace lyre
     DEFINE(multiplicative_expression, multiplicative_expression_def)
     DEFINE(unary_expression, unary_expression_def)
     DEFINE(postfix_expression, postfix_expression_def)
-    DEFINE(primary_expression, primary_expression_def)
+    DEFINE(identifier, identifier_def)
+    DEFINE(quote, quote_def)
     
     //=====----------------------------------------------------------------------=====
     //===== Statement Grammar
