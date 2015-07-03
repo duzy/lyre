@@ -5,10 +5,8 @@
 
 namespace lyre { 
   namespace parser {
-    namespace x3 = boost::spirit::x3;
 
-    struct statement_class;
-    typedef x3::rule<statement_class, metast::statement_list> statement_type;
+    typedef boost::spirit::x3::rule<struct statement_class, metast::statement_list> statement_type;
     typedef statement_type::id statement_id;
     BOOST_SPIRIT_DECLARE(statement_type);
 

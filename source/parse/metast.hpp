@@ -20,11 +20,11 @@ namespace lyre {
     struct unary;
     struct variable;
     struct expression;
-    struct nil {};
+    struct none {};
 
     struct operand : x3::variant
     <
-      nil
+      none
       , unsigned
       , x3::forward_ast<variable>
       , x3::forward_ast<unary>
@@ -35,6 +35,7 @@ namespace lyre {
         using base_type::operator=;
     };
 
+    /*
     enum opcode {
       op_plus,
       op_minus,
@@ -51,6 +52,69 @@ namespace lyre {
       op_greater_equal,
       op_and,
       op_or
+    };
+    */
+    enum class cv : int
+    {
+      null, true_, false_
+    };
+
+    enum class opcode : int
+    {
+        nil,
+
+      // get a reference to attribute
+        attr,
+
+      // filtering children
+        select,
+
+      // call a procedure (function)
+        call,
+
+      // unary
+        unary_plus,
+        unary_minus,
+        unary_not,
+        unary_dot,
+        unary_arrow,
+
+      // multiplicative
+        mul,
+        div,
+
+      // additive
+        add,
+        sub,
+
+      // relational
+        lt, // less then
+        le, // less or equal
+        gt, // greater then
+        ge, // greater or equal
+
+      // equality
+        eq,
+        ne,
+
+      ///< type equiplant
+        is,
+
+      // logical and/or/xor
+        a,
+        o,
+        xo,
+
+      // assign
+        set,
+
+      // list, tuple, etc.
+        comma,
+
+        br,   // conditional branch
+        swi,  // switch
+
+        unr,  // unreachable
     };
 
     struct unary
@@ -91,10 +155,34 @@ namespace lyre {
     
     struct statement_list : std::list<statement> {};
 
+    struct return_statement
+    {
+    };
+    
+    struct see_statement
+    {
+    };
+    
+    struct with_statement
+    {
+    };
+    
+    struct speak_statement
+    {
+    };
+    
     struct variable_declaration
     {
     };
 
+    struct procedure_definition
+    {
+    };
+    
+    struct type_definition
+    {
+    };
+    
   } // end namespace metast
 } // end namespace lyre
 
