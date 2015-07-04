@@ -1,65 +1,84 @@
 #include "grammar.hpp"
-#include "ext/repeat.hpp"
+#include <boost/config/warning_disable.hpp>
+#include <boost/spirit/include/qi.hpp>
+#include <boost/spirit/include/phoenix_core.hpp>
+#include <boost/spirit/include/phoenix_operator.hpp>
+#include <boost/spirit/include/phoenix_fusion.hpp>
+#include <boost/spirit/include/phoenix_stl.hpp>
+#include <boost/spirit/include/phoenix_object.hpp>
+#include <boost/spirit/include/phoenix_bind.hpp>
+//#include <boost/foreach.hpp>
+#include <boost/bind.hpp>
+#include <iostream>
+#include <fstream>
 
-#define RULE(NAME, AST) struct NAME##_class;          \
-  typedef x3::rule<NAME##_class, AST> NAME##_type;    \
-  static const NAME##_type NAME(#NAME);               \
-  /***/
-
-#define DEFINE(NAME, DEF)                                               \
-  template <typename Iterator, typename Context, typename Attribute>    \
-  inline bool parse_rule(NAME##_type rule,                              \
-                         Iterator& first, Iterator const& last,         \
-                         Context const& context, Attribute& attr)       \
-  {                                                                     \
-    using boost::spirit::x3::unused;                                    \
-    auto const &def = (DEF);                                            \
-    return def.parse(first, last, context, unused, attr);               \
-  }                                                                     \
-  /***/
-
-#define INSTANTIATE(NAME, Context)                                      \
-  template bool parse_rule<const char*, Context,                        \
-                           NAME##_type::attribute_type>                 \
-  (NAME##_type rule, const char* &first, const char * const &last,      \
-   const Context &context, NAME##_type::attribute_type& attr);          \
-  /***/
+#define RULE(NAME, AST) static rule<AST> NAME(#NAME);
+#define DEFINE(NAME, DEF) NAME = (DEF);
 
 namespace lyre 
 {
   namespace parser 
   {
-    namespace x3 = boost::spirit::x3;
+    namespace qi = boost::spirit::qi;
 
-    using x3::double_;
-    using x3::int_;
-    using x3::uint_;
-    using x3::char_;
-    using x3::bool_;
-    using x3::eol;
-    using x3::alnum;
-    using x3::attr;
-    using x3::repeat;
-    using x3::omit;
-    using x3::raw;
-    using x3::lexeme;
-    using namespace x3::ascii;
+    template < class Iterator >
+    struct skipper : boost::spirit::qi::grammar<Iterator>
+    {
+        skipper() : skipper::base_type(skip, "skipper")
+        {
+            boost::spirit::ascii::space_type    space;
+            boost::spirit::qi::char_type        char_;
+            boost::spirit::qi::lexeme_type      lexeme;
+            boost::spirit::eol_type             eol;
+            skip
+                = space // tab/space/CR/LF
+                | lexeme[ "#*" >> *(char_ - "*#") >> "*#" ]
+                | lexeme[ "#"  >> *(char_ - eol)  >> eol ]
+                ;
+        }
+        boost::spirit::qi::rule<Iterator> skip;
+    };
+    
+    template <class Attribute>
+    using rule = qi::rule<
+      const char*, Attribute(),
+      qi::locals<std::string>,
+      skipper<const char*>>;
 
-    static x3::inf_type inf;
+    static qi::_1_type          _1;
+    static qi::_2_type          _2;
+    static qi::_3_type          _3;
+    static qi::_4_type          _4;
+    static qi::_val_type        _val;
+    static qi::int_type         int_;
+    static qi::double_type      double_;
+    static qi::char_type        char_;
+    static qi::attr_type        attr;
+    static qi::lit_type         lit;
+    static qi::string_type      string;
+    static qi::alpha_type       alpha;
+    static qi::alnum_type       alnum;
+    static qi::lexeme_type      lexeme;
+    static qi::omit_type        omit;
+    static qi::raw_type         raw;
+    static boost::spirit::eol_type             eol;
+    static boost::spirit::ascii::space_type    space;
+    static boost::spirit::inf_type             inf;
+    static boost::spirit::repeat_type          repeat;
     
     //=====----------------------------------------------------------------------=====
     //===== Tokens & Symbols
     //=====----------------------------------------------------------------------=====
-    static x3::symbols<char, metast::opcode> list_op;
-    static x3::symbols<char, metast::opcode> assign_op;
-    static x3::symbols<char, metast::opcode> equality_op;
-    static x3::symbols<char, metast::opcode> relational_op;
-    static x3::symbols<char, metast::opcode> logical_op;
-    static x3::symbols<char, metast::opcode> additive_op;
-    static x3::symbols<char, metast::opcode> multiplicative_op;
-    static x3::symbols<char, metast::opcode> unary_op;
-    static x3::symbols<char, metast::constant> builtin_constant;
-    static x3::symbols<char> keywords;
+    static qi::symbols<char, metast::opcode> list_op;
+    static qi::symbols<char, metast::opcode> assign_op;
+    static qi::symbols<char, metast::opcode> equality_op;
+    static qi::symbols<char, metast::opcode> relational_op;
+    static qi::symbols<char, metast::opcode> logical_op;
+    static qi::symbols<char, metast::opcode> additive_op;
+    static qi::symbols<char, metast::opcode> multiplicative_op;
+    static qi::symbols<char, metast::opcode> unary_op;
+    static qi::symbols<char, metast::constant> builtin_constant;
+    static qi::symbols<char> keywords;
     static void init_symbols()
     {
       static bool called = false;
@@ -228,19 +247,6 @@ namespace lyre
        )
       ;
     
-    // BOOST_SPIRIT_DEFINE
-    DEFINE(expression, expression_def)
-    DEFINE(list_expression, list_expression_def)
-    DEFINE(assign_expression, assign_expression_def)
-    DEFINE(logical_expression, logical_expression_def)
-    DEFINE(equality_expression, equality_expression_def)
-    DEFINE(relational_expression, relational_expression_def)
-    DEFINE(additive_expression, additive_expression_def)
-    DEFINE(multiplicative_expression, multiplicative_expression_def)
-    DEFINE(unary_expression, unary_expression_def)
-    DEFINE(postfix_expression, postfix_expression_def)
-    DEFINE(identifier, identifier_def)
-    DEFINE(quote, quote_def)
     
     //=====----------------------------------------------------------------------=====
     //===== Statement Grammar
@@ -345,35 +351,33 @@ namespace lyre
       >  speak_source
       ;
 
-    //struct statement_class : error_handler_base, annotation_base {};
+    void init_rules()
+    {
+      init_symbols();
+        
+      // Expressions
+      DEFINE(expression, expression_def);
+      DEFINE(list_expression, list_expression_def);
+      DEFINE(assign_expression, assign_expression_def);
+      DEFINE(logical_expression, logical_expression_def);
+      DEFINE(equality_expression, equality_expression_def);
+      DEFINE(relational_expression, relational_expression_def);
+      DEFINE(additive_expression, additive_expression_def);
+      DEFINE(multiplicative_expression, multiplicative_expression_def);
+      DEFINE(unary_expression, unary_expression_def);
+      DEFINE(postfix_expression, postfix_expression_def);
+      DEFINE(identifier, identifier_def);
+      DEFINE(quote, quote_def);
 
-    // BOOST_SPIRIT_DEFINE
-    DEFINE(statement, statement_list_def)
-    DEFINE(variable_declaration, variable_declaration_def)
-    DEFINE(procedure_definition, procedure_definition_def)
-    DEFINE(type_definition, type_definition_def)
-    DEFINE(return_statement, return_statement_def)
-    DEFINE(see_statement, see_statement_def)
-    DEFINE(with_statement, with_statement_def)
-    DEFINE(speak_statement, speak_statement_def)
-
-    //=====----------------------------------------------------------------------=====
-    //===== All Spirit Instantiates
-    //=====----------------------------------------------------------------------=====
-    //BOOST_SPIRIT_INSTANTIATE
-    INSTANTIATE(expression, std::string);
-    INSTANTIATE(statement, std::string);
+      // Statements
+      DEFINE(statement, statement_list_def);
+      DEFINE(variable_declaration, variable_declaration_def);
+      DEFINE(procedure_definition, procedure_definition_def);
+      DEFINE(type_definition, type_definition_def);
+      DEFINE(return_statement, return_statement_def);
+      DEFINE(see_statement, see_statement_def);
+      DEFINE(with_statement, with_statement_def);
+      DEFINE(speak_statement, speak_statement_def);
+    }
   } // end namespace parser
-
-  const parser::statement_type &statement()
-  {
-    parser::init_symbols();
-    return parser::statement;
-  }
-  
-  const parser::expression_type &expression()
-  {
-    parser::init_symbols();
-    return parser::expression;
-  }
 } // end namespace lyre

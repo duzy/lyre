@@ -122,7 +122,8 @@ source/parse/metast.o: source/parse/metast.cpp
 	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=$(CXXSTD) -fPIC -c $< -o $@
 
 $(OBJECTS.spirit): %.o : %.cpp
-	$(CXX) -Iinclude -Isource -I$(BOOST_ROOT) -std=$(CXXSTD) -fPIC -fno-rtti -DBOOST_SPIRIT_X3_NO_RTTI -c $< -o $@
+#	$(CXX) -Iinclude -Isource -I$(BOOST_ROOT) -std=$(CXXSTD) -fPIC -fno-rtti -DBOOST_SPIRIT_X3_NO_RTTI -c $< -o $@
+	$(CXX) -Iinclude -Isource -I$(BOOST_ROOT) -std=$(CXXSTD) -fPIC -c $< -o $@
 
 include/lyre/base/DiagnosticGroups.inc: include/lyre/base/Diagnostic.td $(TableGen) \
     include/lyre/base/DiagnosticGroups.td \
