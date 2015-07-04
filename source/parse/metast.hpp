@@ -101,7 +101,7 @@ namespace lyre {
     {
       const char *begin, *end;
 
-      string(const char *v1, const char *v2) : begin(v1), end(v2) {}
+      //string(const char *v1, const char *v2) : begin(v1), end(v2) {}
     };
 
     struct identifier
@@ -114,8 +114,8 @@ namespace lyre {
       none
       , constant
       , unsigned
-      , identifier
       , string
+      , identifier
       , x3::forward_ast<unary>
       , x3::forward_ast<expression>
     >
@@ -124,7 +124,7 @@ namespace lyre {
         using base_type::operator=;
     };
 
-    struct unary
+    struct unary : x3::position_tagged
     {
       metast::opcode opcode;
       metast::operand operand;
@@ -141,9 +141,9 @@ namespace lyre {
       operand first;
       std::list<operation> rest;
 
-      explicit expression(const operand & o) : first(o), rest() {}
-      explicit expression(const operation & o) : first(), rest({ o }) {}
-      expression() : first(), rest() {}
+      //explicit expression(const operand & o) : first(o), rest() {}
+      //explicit expression(const operation & o) : first(), rest({ o }) {}
+      //expression() : first(), rest() {}
     };
 
     struct return_statement;
@@ -157,6 +157,7 @@ namespace lyre {
     struct statement : x3::variant
     <
       expression
+      , x3::forward_ast<return_statement>
     >
     {
       using base_type::base_type;
@@ -165,6 +166,26 @@ namespace lyre {
     
     struct statement_list : std::list<statement> {};
 
+    struct see_bare_block
+    {
+      statement_list statements;
+    };
+
+    struct see_cond_block
+    {
+      expression value;
+      statement_list statements;
+    };
+
+    struct see_block : x3::variant
+    <
+      see_bare_block, see_cond_block
+    >
+    {
+      using base_type::base_type;
+      using base_type::operator=;
+    };
+    
     struct return_statement
     {
       boost::optional<expression> value;
@@ -173,6 +194,8 @@ namespace lyre {
     struct see_statement
     {
       expression what;
+      see_block first;
+      std::list<see_block> rest;
     };
     
     struct with_statement
@@ -201,6 +224,12 @@ namespace lyre {
 #include <boost/fusion/include/adapt_struct.hpp>
 
 BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::string,
+    (const char *, begin)
+    (const char *, end)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::unary,
     (lyre::metast::opcode, opcode)
     (lyre::metast::operand, operand)
@@ -221,6 +250,29 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::identifier,
     (lyre::metast::string, string)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::return_statement,
+    (boost::optional<lyre::metast::expression>, value)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::see_bare_block,
+    (lyre::metast::statement_list, statements)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::see_cond_block,
+    (lyre::metast::expression, value)
+    (lyre::metast::statement_list, statements)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::see_statement,
+    (lyre::metast::expression, what)
+    (lyre::metast::see_block, first)
+    (std::list<lyre::metast::see_block>, rest)
 )
 
 #endif//__LYRE_PARSER_METAST_HPP____DUZY__
