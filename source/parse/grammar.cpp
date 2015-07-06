@@ -1,4 +1,3 @@
-#include "grammar.hpp"
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
@@ -11,80 +10,156 @@
 #include <boost/bind.hpp>
 #include <iostream>
 #include <fstream>
+#include "metast.h"
+#include "metast_adapt.h"
 
-#define RULE(NAME, AST) static rule<AST> NAME(#NAME);
-#define DEFINE(NAME, DEF) NAME = (DEF);
-
-namespace lyre 
+namespace 
 {
-  namespace parser 
+  namespace metast = lyre::metast;
+  namespace qi = boost::spirit::qi;
+
+  template < class Iterator >
+  struct skipper : qi::grammar<Iterator>
   {
-    namespace qi = boost::spirit::qi;
-
-    template < class Iterator >
-    struct skipper : boost::spirit::qi::grammar<Iterator>
+    skipper() : skipper::base_type(skip, "skipper")
     {
-        skipper() : skipper::base_type(skip, "skipper")
-        {
-            boost::spirit::ascii::space_type    space;
-            boost::spirit::qi::char_type        char_;
-            boost::spirit::qi::lexeme_type      lexeme;
-            boost::spirit::eol_type             eol;
-            skip
-                = space // tab/space/CR/LF
-                | lexeme[ "#*" >> *(char_ - "*#") >> "*#" ]
-                | lexeme[ "#"  >> *(char_ - eol)  >> eol ]
-                ;
-        }
-        boost::spirit::qi::rule<Iterator> skip;
-    };
+      boost::spirit::ascii::space_type    space;
+      qi::char_type        char_;
+      qi::lexeme_type      lexeme;
+      boost::spirit::eol_type             eol;
+      skip
+        = space // tab/space/CR/LF
+        | lexeme[ "#*" >> *(char_ - "*#") >> "*#" ]
+        | lexeme[ "#"  >> *(char_ - eol)  >> eol ]
+        ;
+    }
+    qi::rule<Iterator> skip;
+  };
     
-    template <class Attribute>
-    using rule = qi::rule<
-      const char*, Attribute(),
-      qi::locals<std::string>,
-      skipper<const char*>>;
+  template
+  <
+    class Iterator,
+    class Locals = qi::locals<std::string>,
+    class SpaceType = skipper<Iterator>
+    >
+  struct grammar : qi::grammar<Iterator, std::list<metast::topdecl>(), Locals, SpaceType>
+  {
+    template <class Spec = void()>
+    using rule = qi::rule<Iterator, Spec, Locals, SpaceType>;
 
-    static qi::_1_type          _1;
-    static qi::_2_type          _2;
-    static qi::_3_type          _3;
-    static qi::_4_type          _4;
-    static qi::_val_type        _val;
-    static qi::int_type         int_;
-    static qi::double_type      double_;
-    static qi::char_type        char_;
-    static qi::attr_type        attr;
-    static qi::lit_type         lit;
-    static qi::string_type      string;
-    static qi::alpha_type       alpha;
-    static qi::alnum_type       alnum;
-    static qi::lexeme_type      lexeme;
-    static qi::omit_type        omit;
-    static qi::raw_type         raw;
-    static boost::spirit::eol_type             eol;
-    static boost::spirit::ascii::space_type    space;
-    static boost::spirit::inf_type             inf;
-    static boost::spirit::repeat_type          repeat;
-    
-    //=====----------------------------------------------------------------------=====
-    //===== Tokens & Symbols
-    //=====----------------------------------------------------------------------=====
-    static qi::symbols<char, metast::opcode> list_op;
-    static qi::symbols<char, metast::opcode> assign_op;
-    static qi::symbols<char, metast::opcode> equality_op;
-    static qi::symbols<char, metast::opcode> relational_op;
-    static qi::symbols<char, metast::opcode> logical_op;
-    static qi::symbols<char, metast::opcode> additive_op;
-    static qi::symbols<char, metast::opcode> multiplicative_op;
-    static qi::symbols<char, metast::opcode> unary_op;
-    static qi::symbols<char, metast::constant> builtin_constant;
-    static qi::symbols<char> keywords;
-    static void init_symbols()
+    //======== symbols ========
+    qi::symbols<char, metast::opcode>
+    list_op,
+      assign_op,
+      equality_op,
+      relational_op,
+      logical_or_op,
+      logical_and_op,
+      additive_op,
+      multiplicative_op,
+      unary_op ;
+
+    qi::symbols<char, metast::cv>
+    builtin_constant ;
+
+    qi::symbols<char>
+    keywords ;
+
+    //======== Expression ========
+    rule< metast::expr() > expr;
+
+    rule< metast::expr() > prefix;
+    rule< metast::expr() > infix;
+    rule< metast::expr() > postfix;
+
+    rule< metast::expr() > dotted;
+
+    rule< metast::expr() > list;
+    rule< metast::expr() > assign;
+    rule< metast::expr() > logical_or;
+    rule< metast::expr() > logical_and;
+    rule< metast::expr() > equality;
+    rule< metast::expr() > relational;
+    rule< metast::expr() > additive;
+    rule< metast::expr() > multiplicative;
+    rule< metast::expr() > unary;
+
+    rule< metast::operand() > primary;
+
+    rule< metast::identifier() > identifier ;
+
+    rule< metast::nodector() > nodector;
+    rule< std::list<metast::expr>() > arglist;
+    rule<> prop;
+
+    rule< metast::identifier() > name;
+    rule< metast::string() > quote;
+
+    //======== Statements ========
+    rule< std::list<metast::topdecl>() > top;
+    rule< metast::stmts() > stmts;
+    rule< metast::stmt() > stmt;
+    rule< metast::decl() > decl;
+    rule< metast::proc() > proc;
+    rule< metast::type() > type;
+    rule< metast::speak() > speak;
+    rule< std::list<metast::param>() > params;
+    rule< metast::with() > with;
+    rule< metast::see() > see;
+    rule< metast::per() > per;
+    rule< metast::ret() > ret;
+    rule< metast::block > block;
+    qi::rule<Iterator, metast::string(), Locals> speak_source;
+
+    grammar() : grammar::base_type(top, "lyre")
     {
-      static bool called = false;
-      if (called) return;
-      called = true;
-      
+      using qi::as;
+      using qi::attr_cast;
+      using qi::on_error;
+      using qi::fail;
+      using boost::spirit::lazy;
+
+      using boost::phoenix::bind;
+      using boost::phoenix::construct;
+      using boost::phoenix::val;
+
+      boost::spirit::ascii::space_type    space;
+      boost::spirit::eoi_type             eoi;
+      boost::spirit::eol_type             eol;
+      boost::spirit::eps_type             eps; // eps[ error() ]
+      boost::spirit::inf_type             inf;
+      qi::_1_type          _1; // qi::labels
+      qi::_2_type          _2; // qi::labels
+      qi::_3_type          _3; // qi::labels
+      qi::_4_type          _4; // qi::labels
+      qi::_a_type          _a;
+      qi::_r1_type         _r1;
+      qi::_val_type        _val;
+      qi::alnum_type       alnum;
+      qi::alpha_type       alpha;
+      qi::attr_type        attr;
+      qi::char_type        char_;
+      qi::double_type      double_;
+      qi::int_type         int_;
+      qi::lexeme_type      lexeme;
+      qi::lit_type         lit;
+      qi::omit_type        omit;
+      qi::raw_type         raw;
+      qi::string_type      string;
+      boost::spirit::repeat_type          repeat;
+      boost::spirit::skip_type            skip;
+
+      as<metast::xblock> as_xblock;
+      as<metast::param> as_param;
+      as<metast::identifier> as_identifier;
+      as<std::list<metast::string>> as_string_list;
+      as<metast::string> as_string;
+      as<metast::expr> as_expr;
+      as<metast::op> as_op;
+
+      //========------------------------------------========
+      //======== Symbols
+      //========------------------------------------========
       list_op.add
         (",", metast::opcode::comma)
         ;
@@ -93,11 +168,14 @@ namespace lyre
         ("=", metast::opcode::set)
         ;
 
-      logical_op.add
-        ("&&", metast::opcode::a)
+      logical_or_op.add
         ("||", metast::opcode::o)
         ;
             
+      logical_and_op.add
+        ("&&", metast::opcode::a)
+        ;
+
       equality_op.add
         ("==", metast::opcode::eq)
         ("!=", metast::opcode::ne)
@@ -129,9 +207,9 @@ namespace lyre
         ;
 
       builtin_constant.add
-        ("null", metast::constant::null)
-        ("true", metast::constant::true_)
-        ("false", metast::constant::false_)
+        ("null", metast::cv::null)
+        ("true", metast::cv::true_)
+        ("false", metast::cv::false_)
         ;
 
       keywords =
@@ -146,238 +224,271 @@ namespace lyre
         "return",
         "true", "false", "null" // not really keywords, but special cases
         ;
-    }
 
-    //=====----------------------------------------------------------------------=====
-    //===== Expression Grammar
-    //=====----------------------------------------------------------------------=====
-    RULE(expression, metast::expression)
-    RULE(list_expression, metast::expression)
-    RULE(assign_expression, metast::expression)
-    RULE(logical_expression, metast::expression)
-    RULE(equality_expression, metast::expression)
-    RULE(relational_expression, metast::expression)
-    RULE(additive_expression, metast::expression)
-    RULE(multiplicative_expression, metast::expression)
-    RULE(unary_expression, metast::operand)
-    RULE(postfix_expression, metast::operand)
-    RULE(primary_expression, metast::operand)
-    RULE(identifier, metast::identifier)
-    RULE(quote, metast::string)
-
-    static auto const dashes = lexeme[ repeat(3, inf)[ '-' ] ] ;
-
-    static auto const idchar =  alnum | '_' ;
-
-    static auto const arglist =  expression % ',' ;
-
-    static auto const prop = ':'
-      >  identifier
-      > -( '(' > -arglist > ')' )
-      ;
-    
-    static auto const nodector = '{'
-      >  ( identifier > ':' > expression ) % ','
-      >  '}'
-      ;
-    
-    static auto const expression_def = 
-      list_expression
-      ;
-
-    static auto const list_expression_def = 
-      assign_expression >> *( list_op > assign_expression )
-      ;
-
-    static auto const assign_expression_def =
-      logical_expression >> *( assign_op > logical_expression )
-      ;
-
-    static auto const logical_expression_def =                      // ||, &&
-      equality_expression >> *( logical_op > equality_expression )
-      ;
-    
-    static auto const equality_expression_def =                     // ==, !=
-      relational_expression >> *( equality_op > relational_expression )
-      ;
-
-    static auto const relational_expression_def =                   // <, <=, >, >=
-      additive_expression >> *( relational_op > additive_expression )
-      ;
-
-    static auto const additive_expression_def =                     // +, -
-      multiplicative_expression
-      >> *( !dashes >> additive_op > multiplicative_expression )
-      ;
-
-    static auto const multiplicative_expression_def =               // *, /
-      unary_expression >> *( multiplicative_op > unary_expression )
-      ;
-
-    static auto const unary_expression_def =
-      postfix_expression | ( !dashes >> unary_op > unary_expression )
-      ;
-
-    static auto const postfix_expression_def =
-      primary_expression
-      >> *(
-           (omit['('] >> attr(metast::opcode::call) >> -expression > omit[')']) |
-           (omit['.'] >> attr(metast::opcode::attr) > postfix_expression) |
-           (omit["->"] >> attr(metast::opcode::select) > postfix_expression)
-           )
-      ;
-
-    static auto const primary_expression_def = '(' > expression > ')'
-      //|  builtin_constant
-      |  identifier
-      |  quote
-      //|  uint_ >> !char_('.')
-      //|  double_
-      //|  prop
-      //|  nodector
-      ;
-
-    static auto const identifier_def = !keywords
-      >> raw[lexeme[ ( alpha | '_' ) >> *(alnum | '_') /*idchar*/ ]]
-      ;
-
-    static auto const quote_def = (
-       ( '\'' >> raw[ *(char_ - '\'') ] >> '\'' ) |
-       ( '"' >> raw[ *(char_ - '"') ] >> '"' )
-       )
-      ;
-    
-    
-    //=====----------------------------------------------------------------------=====
-    //===== Statement Grammar
-    //=====----------------------------------------------------------------------=====
-    RULE(statement, metast::statement_list)
-    RULE(variable_declaration, metast::variable_declaration)
-    RULE(procedure_definition, metast::procedure_definition)
-    RULE(type_definition, metast::type_definition)
-    RULE(return_statement, metast::return_statement)
-    RULE(see_statement, metast::see_statement)
-    RULE(with_statement, metast::with_statement)
-    RULE(speak_statement, metast::speak_statement)
-
-    static auto const statement_list_def =
-      +(
-        variable_declaration
-        | procedure_definition
-        | type_definition
-        | return_statement
-        | see_statement
-        | with_statement
-        | speak_statement
-        |  ( expression > omit[ char_(';') ] )
-        |  ( attr(metast::none()) >> omit[ char_(';') ] ) // empty statement
-        )
-      ;
-
-    static auto const variable_declaration_def =
-      lexeme[ "decl" >> !(alnum | '_')/*expr.idchar*/ ]
-      >  (
-          (
-           identifier // [ boost::bind(&debug::a_id, _1) ]
-           >> -identifier
-           >> -( '=' > expression )
-           ) % ','
-          )
-      >  ';'
-      ;
-
-    static auto const block =
-      dashes
-      >> attr( std::string() ) > -statement
-      >  dashes
-      ;
-
-    static auto const params =  '('
-      >  -( ( identifier > omit[':'] > identifier ) % ',' )
-      >  ')'
-      ;
-    
-    static auto const procedure_definition_def =
-      lexeme[ "proc" >> !(alnum | '_')/*expr.idchar*/ ]
-      >  identifier
-      >  params
-      >  -identifier //>  -( omit[':'] > identifier )
-      >  block
-      ;
-
-    static auto const type_definition_def =
-      lexeme[ "type" >> !(alnum | '_')/*expr.idchar*/ ]
-      >  identifier
-      > -params
-      >  block
-      ;
-
-    static auto const return_statement_def =
-      lexeme[ "return" >> !(alnum | '_')/*expr.idchar*/ ]
-      >  -expression
-      >  ';'
-      ;
-
-    static auto const see_statement_def =
-      lexeme[ "see" >> !(alnum | '_')/*expr.idchar*/ ]
-      >  expression
-      //>  as_xblock[ dashes >> -( omit[ +char_('>') ] >> -( expression >> omit[ ':' ] ) ) >> stmts ]
-      //> *as_xblock[ dashes >> omit[ +char_('>') ] >> -( expression >> omit[ ':' ] ) >> stmts ]
-      >  ( dashes >> -( omit[ +char_('>') ] >> -( expression >> omit[ ':' ] ) ) >> statement )
-      > *( dashes >> omit[ +char_('>') ] >> -( expression >> omit[ ':' ] ) >> statement )
-      >  dashes
-      ;
-
-    static auto const with_statement_def =
-      lexeme[ "with" >> !(alnum | '_')/*expr.idchar*/ ]
-      >  expression
-      >  ( block | ';' )
-      ;
-
-    static auto const speak_stopper =
-      eol >> dashes
-      ;
-    static auto const speak_source = lexeme
-      [
-       dashes
-       >> -eol
-       >> *(char_ - speak_stopper)
-       >> speak_stopper
-      ]
-      ;
-    static auto const speak_statement_def =
-      lexeme[ "speak" >> !(alnum | '_')/*expr.idchar*/ ]
-      >  identifier % '>'
-      >  speak_source
-      ;
-
-    void init_rules()
-    {
-      init_symbols();
+      //========------------------------------------========
+      //======== Expression
+      //========------------------------------------========
+      auto dashes = lexeme[ repeat(3, inf)[ '-' ] ];
+      auto idchar = alnum | '_';
         
-      // Expressions
-      DEFINE(expression, expression_def);
-      DEFINE(list_expression, list_expression_def);
-      DEFINE(assign_expression, assign_expression_def);
-      DEFINE(logical_expression, logical_expression_def);
-      DEFINE(equality_expression, equality_expression_def);
-      DEFINE(relational_expression, relational_expression_def);
-      DEFINE(additive_expression, additive_expression_def);
-      DEFINE(multiplicative_expression, multiplicative_expression_def);
-      DEFINE(unary_expression, unary_expression_def);
-      DEFINE(postfix_expression, postfix_expression_def);
-      DEFINE(identifier, identifier_def);
-      DEFINE(quote, quote_def);
+      expr
+        %= list
+        ;
 
-      // Statements
-      DEFINE(statement, statement_list_def);
-      DEFINE(variable_declaration, variable_declaration_def);
-      DEFINE(procedure_definition, procedure_definition_def);
-      DEFINE(type_definition, type_definition_def);
-      DEFINE(return_statement, return_statement_def);
-      DEFINE(see_statement, see_statement_def);
-      DEFINE(with_statement, with_statement_def);
-      DEFINE(speak_statement, speak_statement_def);
+      list
+        =  assign
+        >> *(list_op > assign)
+        ;
+
+      assign
+        =  logical_or
+        >> *(assign_op > logical_or)
+        ;
+
+      logical_or  // ||
+        =  logical_and
+        >> *(logical_or_op > logical_and)
+        ;
+
+      logical_and // &&
+        =  equality
+        >> *(logical_and_op > equality)
+        ;
+
+      equality    // ==, !=
+        =  relational
+        >> *(equality_op > relational)
+        ;
+
+      relational  // <, <=, >, >=
+        =  additive
+        >> *(relational_op > additive)
+        ;
+
+      additive    // +, -
+        =  multiplicative
+        >> *(!dashes >> additive_op > multiplicative)
+        ;
+
+      multiplicative // *, /
+        =  unary
+        >> *(multiplicative_op > unary)
+        ;
+
+      unary
+        = postfix
+        | as_op[ !dashes >> unary_op > unary ]
+        ;
+
+      postfix
+        = primary
+        >> *(
+             (omit['('] >> attr(metast::opcode::call) >> -expr > omit[')']) |
+             (omit['.'] >> attr(metast::opcode::attr) > postfix)            |
+             (omit["->"] >> attr(metast::opcode::select) > postfix)
+             )
+        ;
+
+      primary
+        =  '(' > expr > ')'
+        |  builtin_constant
+        |  name
+        |  quote
+        |  int_ >> !char_('.')
+        |  double_
+        |  prop
+        |  nodector
+        ;
+
+      identifier
+        = !keywords
+        >> raw[lexeme[ ( alpha | '_' ) >> *idchar ]]
+        ;
+
+      name
+        = identifier
+        ;
+
+      quote
+        = (
+           ( omit[ '\'' ] >> raw[ *(char_ - '\'') ] >> omit[ '\'' ] ) |
+           ( omit[ '"' ] >> raw[ *(char_ - '"') ] >> omit[ '"' ] )
+           )
+        ;
+
+      prop
+        %= ':'
+        >  identifier
+        > -( '(' > -arglist > ')' )
+        ;
+
+      arglist
+        =  expr % ','
+        ;
+
+      nodector
+        %= '{'
+        >  ( identifier > ':' > expr ) % ','
+        >  '}'
+        ;
+
+
+      //========------------------------------------========
+      //======== Statements
+      //========------------------------------------========
+      top = *( decl | proc | type );
+
+      stmts
+        %= +stmt
+        ;
+
+      stmt
+        %= decl
+        |  proc
+        |  type
+        |  ret
+        |  see
+        |  with
+        |  speak
+        |  ( expr > omit[ char_(';') ] )
+        |  ( attr(metast::none()) >> omit[ char_(';') ] ) // empty statement
+        ;
+
+      block
+        =  omit[ dashes ]
+        > -stmts
+        >  omit[ dashes ]
+        ;
+
+      params
+        =  omit[ '(' ]
+        >  -( ( identifier > omit[':'] > identifier ) % ',' )
+        >  omit[ ')' ]
+        ;
+
+      decl
+        =  omit[ lexeme[ "decl" >> !idchar ] ]
+        >  (
+            (
+             identifier // [ boost::bind(&debug::a_id, _1) ]
+             >> -identifier
+             >> -( '=' > expr )
+             ) % ','
+            )
+        >  ';'
+        ;
+
+      proc
+        =  omit[ lexeme[ "proc" >> !idchar ] ]
+        >  identifier
+        >  params
+        >  -identifier //>  -( omit[':'] > identifier )
+        >  block
+        ;
+
+      type
+        =  omit[ lexeme[ "type" >> !idchar ] ]
+        >  identifier
+        > -params
+        >  block
+        ;
+
+      with
+        =  omit[ lexeme[ "with" >> !idchar ] ]
+        >  expr > ( block | omit[ ';' ] )
+        ;
+
+      see
+        =  omit[ lexeme[ "see" >> !idchar ] ]
+        >  expr
+        >  as_xblock[ dashes >> -( omit[ +char_('>') ] >> -( expr >> omit[ ':' ] ) ) >> stmts ]
+        > *as_xblock[ dashes >> omit[ +char_('>') ] >> -( expr >> omit[ ':' ] ) >> stmts ]
+        >  omit[ dashes ]
+        ;
+
+      per
+        =  omit[ lexeme[ "per" >> !idchar ] ]
+        ;
+
+      ret
+        =  omit[ lexeme[ "return" >> !idchar ] ]
+        >  -expr
+        >  ';'
+        ;
+
+      speak
+        =  omit[ lexeme[ "speak" >> !idchar ] ]
+        >  identifier % '>'
+        >  speak_source
+        ;
+
+      auto speak_stopper = eol >> dashes ;
+      speak_source = lexeme
+        [
+         omit[ dashes ]
+         >> -eol
+         >> *(char_ - speak_stopper)
+         >> omit[ speak_stopper ]
+         ]
+        ;
+
+      BOOST_SPIRIT_DEBUG_NODES(//== Expression
+                               (expr)
+                               (prefix)
+                               (infix)
+                               (postfix)
+                               (logical_or)
+                               (logical_and)
+                               (equality)
+                               (relational)
+                               (additive)
+                               (multiplicative)
+                               (unary)
+                               (primary)
+                               (name)
+                               (prop)
+                               (dotted)
+                               (nodector)
+                               (quote)
+                               (arglist)
+                               (assign)
+                               (list)
+                               //== Statements
+                               (stmts)
+                               (stmt)
+                               (decl)
+                               (proc)
+                               (type)
+                               (params)
+                               (speak)
+                               (speak_source)
+                               (with)
+                               (see)
+                               (per)
+                               (ret)
+                               (block)
+                               );
+
+      on_error<fail>
+        (
+         top, std::cout
+         << val("bad: ") << _4 << ", at: "
+         << construct<std::string>(_3, _2)
+         << std::endl
+         );
     }
-  } // end namespace parser
+  };
+} // end anonymous namespace
+
+namespace lyre
+{
+  const char *parse(std::list<metast::topdecl> & decls, const char *iter, const char * const end)
+  {
+    grammar<const char *> g;
+    skipper<const char *> skip;
+    const char * const beg = iter;
+    if (qi::phrase_parse(iter, end, g, skip, decls))
+      return iter;
+    return beg;
+  }
 } // end namespace lyre
