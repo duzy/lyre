@@ -28,4 +28,15 @@ proc main() int
   ---> 3:
     say("333");
   ----
+
+  with { name:"foobar" }
+  ----
+    say("This is $(.name)...");
+  ----
+
+  speak foo
+  -----
+blah, blah, blah...
+  -----
+  
 ---
