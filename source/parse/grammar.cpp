@@ -462,8 +462,8 @@ namespace
         >  dashes
         ;
 
-      see_block
-        = see_bare_block | see_cond_block | see_fork_block
+      see_block // The order here is significant!
+        = see_cond_block | see_fork_block | see_bare_block
         ;
 
       see_bare_block
@@ -472,12 +472,12 @@ namespace
         ;
 
       see_fork_block
-        = dashes >> omit[ +char_('>') ] >> stmts
+        = dashes >> omit[ +lit('>') ] >> stmts
                  >> -see_fork_block
         ;
 
       see_cond_block
-        = dashes >> omit[ +char_('>') ] >> expr >> omit[ ':' ] >> stmts 
+        = dashes >> omit[ +lit('>') ] >> expr >> omit[ lit(':') ] >> stmts 
                  >> -( see_cond_block | see_fork_block )
         ;
 
@@ -675,8 +675,9 @@ namespace
       std::clog<<indent()<<"see_bare_block: "<<std::endl;
       indent(4);
       for (auto stmt : s.stmts) boost::apply_visitor(*this, stmt);
-      if (s.fork) (*this)(boost::get<lyre::metast::see_fork_block>(s.fork));
       indent(-4);
+
+      if (s.fork) (*this)(boost::get<lyre::metast::see_fork_block>(s.fork));
     }
     
     void operator()(const lyre::metast::see_fork_block & s)
@@ -684,9 +685,10 @@ namespace
       std::clog<<indent()<<"see_fork_block: "<<std::endl;
       indent(4);
       for (auto stmt : s.stmts) boost::apply_visitor(*this, stmt);
-      if (s.fork) (*this)(boost::get<boost::recursive_wrapper<lyre::metast::see_fork_block>>(s.fork));
       indent(-4);
-    }    
+
+      if (s.fork) (*this)(boost::get<boost::recursive_wrapper<lyre::metast::see_fork_block>>(s.fork));
+    }
 
     void operator()(const lyre::metast::see_cond_block & s)
     {
@@ -694,8 +696,8 @@ namespace
       indent(4);
       (*this)(s.value);
       for (auto stmt : s.stmts) boost::apply_visitor(*this, stmt);
-      if (s.next) boost::apply_visitor(*this, boost::get<lyre::metast::see_block>(s.next));
       indent(-4);
+      if (s.next) boost::apply_visitor(*this, boost::get<lyre::metast::see_block>(s.next));
     }    
     
     void operator()(const lyre::metast::with_stmt & s)
