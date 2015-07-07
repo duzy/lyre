@@ -6,11 +6,7 @@ CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
 
 LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
-  -lpthread -ldl -lm -lz
-
-ifeq ($(pkg-config --exists tinfo && echo ok),ok)
-  LIBS += -ltinfo
-endif
+  -lpthread -ldl -lm -lz $(EXTRA_LIBS)
 
 LOADLIBS := 
 

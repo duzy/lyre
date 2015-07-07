@@ -5,6 +5,12 @@ LLVM_DIS := $(LLVM)/Debug+Asserts/bin/llvm-dis
 LLVMTableGen := $(LLVM)/Debug+Asserts/bin/llvm-tblgen -I$(LLVM_ROOT)/include
 LLI := $(LLVM)/Debug+Asserts/bin/lli
 
-BOOST_ROOT := /home/zxm/Tools/boost_1_58_0
+BOOST_ROOT := $(wildcard ~/Tools/boost_1_58_0)
 
 CXXSTD := c++1y
+
+EXTRA_LIBS :=
+
+ifeq ($(shell pkg-config --exists tinfo && echo ok),ok)
+  EXTRA_LIBS += -ltinfo
+endif
