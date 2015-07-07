@@ -1,6 +1,31 @@
 decl node1 = { name:123 };
 
-proc main()
------------
-say("blah...");
------------
+# comment
+
+proc main() int
+---
+  say("blah...");
+
+  see 1
+  ---
+    say("okay");
+  ---
+
+  see 0
+  ----
+    say("xxx");
+  --->
+    say("okay");
+  ----
+
+  see 0
+  ---> 0:
+    say("000");
+  ---> 1:
+    say("111");
+  ---> 2:
+    say("222");
+  ---> 3:
+    say("333");
+  ----
+---

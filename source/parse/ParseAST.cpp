@@ -10,28 +10,35 @@ using namespace llvm;
 
 namespace
 {
-  struct DeclHandler : lyre::TopDeclHandler
+  struct DeclHandler : lyre::TopLevelDeclHandler
   {
-    void HandleVariableDecl(const lyre::metast::decl & s) override;
-    void HandleProcedureDecl(const lyre::metast::proc & s) override;
-    void HandleTypeDecl(const lyre::metast::type & s) override;
+    lyre::sema::Sema &Sema;
+    
+    explicit DeclHandler(lyre::sema::Sema &S) : Sema(S) {}
+    
+    void HandleVariableDecls(const lyre::metast::variable_decls & s) override;
+    void HandleProcedureDecl(const lyre::metast::procedure_decl & s) override;
+    void HandleTypeDecl(const lyre::metast::type_decl & s) override;
     void HandleParseFailure(const char *iter, const char * const end) override;
+    void HandleSyntaxError(const char *tag, const char *iter, const char * const end) override;
   };
 } // end anonymous namespace
 
-void DeclHandler::HandleVariableDecl(const lyre::metast::decl & s)
+void DeclHandler::HandleVariableDecls(const lyre::metast::variable_decls & s)
 {
   llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+               << s.size() << "\n";
+}
+
+void DeclHandler::HandleProcedureDecl(const lyre::metast::procedure_decl & s)
+{
+  llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+               << s.name.string.c_str() << ", "
+               << s.block.size() << " stmts"
                << "\n";
 }
 
-void DeclHandler::HandleProcedureDecl(const lyre::metast::proc & s)
-{
-  llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
-               << "\n";
-}
-
-void DeclHandler::HandleTypeDecl(const lyre::metast::type & s)
+void DeclHandler::HandleTypeDecl(const lyre::metast::type_decl & s)
 {
   llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
                << "\n";
@@ -43,14 +50,25 @@ void DeclHandler::HandleParseFailure(const char *iter, const char * const end)
                << iter << "\n";
 }
 
+void DeclHandler::HandleSyntaxError(const char *tag, const char *pos, const char * const end)
+{
+  llvm::errs()
+    << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ":\n"
+    << "fail: expects '"
+    << tag
+    << "' here: \""
+    << std::string(pos, end)
+    << "\"\n"
+    ;
+}
+
 void lyre::ParseAST(sema::Sema & S, MemoryBuffer *Buffer,
                     bool PrintStats, bool SkipFunctionBodies)
 {
-  llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
-               << "TODO: " << "\n";
+  //llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+  //             << "\n";
+  //llvm::errs() << Buffer->getBuffer() << "\n";
 
-  llvm::errs() << Buffer->getBuffer() << "\n";
-
-  DeclHandler H;
+  DeclHandler H(S);
   parse(&H, Buffer->getBufferStart(), Buffer->getBufferEnd());
 }

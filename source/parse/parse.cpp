@@ -6,24 +6,24 @@ namespace
   {
     typedef void result_type;
     
-    lyre::TopDeclHandler *H;
+    lyre::TopLevelDeclHandler *H;
 
-    result_type operator()(const lyre::metast::decl & s) { H->HandleVariableDecl(s); }
-    result_type operator()(const lyre::metast::proc & s) { H->HandleProcedureDecl(s); }
-    result_type operator()(const lyre::metast::type & s) { H->HandleTypeDecl(s); }
+    result_type operator()(const lyre::metast::variable_decls & s) { H->HandleVariableDecls(s); }
+    result_type operator()(const lyre::metast::procedure_decl & s) { H->HandleProcedureDecl(s); }
+    result_type operator()(const lyre::metast::type_decl & s) { H->HandleTypeDecl(s); }
   };
 } // end anonymous namespace
 
 namespace lyre
 {
-  const char *parse(std::list<metast::topdecl> & decls, const char *iter, const char * const end);
+  const char *parse(metast::top_level_decls & decls, TopLevelDeclHandler *h,
+                    const char *iter, const char * const end);
   
-  void parse(TopDeclHandler *h, const char *iter, const char * const end)
+  void parse(TopLevelDeclHandler *h, const char *iter, const char * const end)
   {
-    std::list<metast::topdecl> decls;
-    iter = parse(decls, iter, end);
-    if (iter == end) {
-      converter conv{ h };
+    converter conv{ h };
+    metast::top_level_decls decls;
+    if ((iter = parse(decls, h, iter, end)) /*== end*/) {
       for (auto decl : decls) 
         boost::apply_visitor(conv, decl);
     } else {
