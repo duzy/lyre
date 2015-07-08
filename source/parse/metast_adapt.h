@@ -38,7 +38,7 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::with_stmt,
     (lyre::metast::expression, value)
-    (boost::optional<lyre::metast::stmts>, block)
+    (lyre::metast::with_clause, clause)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -70,12 +70,6 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::ret,
     (boost::optional<lyre::metast::expression>, expr)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::xblock,
-    (boost::optional<lyre::metast::expression>, value)
-    (lyre::metast::stmts, stmts)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(

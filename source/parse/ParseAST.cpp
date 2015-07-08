@@ -20,7 +20,7 @@ namespace
     void HandleProcedureDecl(const lyre::metast::procedure_decl & s) override;
     void HandleTypeDecl(const lyre::metast::type_decl & s) override;
     void HandleParseFailure(const char *iter, const char * const end) override;
-    void HandleSyntaxError(const char *tag, const char *iter, const char * const end) override;
+    void HandleSyntaxError(const char *tag, std::size_t line, std::size_t column, const char *pos, const char * const end) override;
   };
 } // end anonymous namespace
 
@@ -50,14 +50,23 @@ void DeclHandler::HandleParseFailure(const char *iter, const char * const end)
                << iter << "\n";
 }
 
-void DeclHandler::HandleSyntaxError(const char *tag, const char *pos, const char * const end)
+void DeclHandler::HandleSyntaxError(const char *tag, std::size_t line, std::size_t column, const char *pos, const char *end)
 {
+  std::string source;
+  if (80 < end - pos) {
+    source.assign(pos, pos + 77);
+    source += "...";
+  } else {
+    source.assign(pos, end);
+  }
+  
   llvm::errs()
     << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ":\n"
+    << "test/00.ly" << ":" << line << ":" << column << ": "
     << "fail: expects '"
     << tag
     << "' here: \""
-    << std::string(pos, end)
+    << source
     << "\"\n"
     ;
 }

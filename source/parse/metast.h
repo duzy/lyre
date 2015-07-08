@@ -22,15 +22,6 @@ namespace lyre
     struct expression;
     struct nodector;
     struct op;
-        
-    typedef boost::variant<
-      boost::recursive_wrapper<variable_decls>
-      , boost::recursive_wrapper<procedure_decl>
-      , boost::recursive_wrapper<type_decl>
-      >
-    top_level_decl;
-
-    struct top_level_decls : std::list<top_level_decl> {};
     
     typedef boost::variant<
       none
@@ -49,8 +40,16 @@ namespace lyre
     //struct stmts : std::list<stmt> {};
     typedef std::list<stmt> stmts;
     
+    //========------------------------------------========
+    //======== Expression
+    //========------------------------------------========
     typedef boost::iterator_range<const char *> range;
     typedef std::string string;
+
+    typedef boost::variant<
+      char, string, boost::recursive_wrapper<expression>
+      > quote_atom;
+    typedef std::list<quote_atom> quote;
     
     enum class constant : int
     {
@@ -126,8 +125,9 @@ namespace lyre
       //, int
       //, unsigned int
       , double
-      , string
       , identifier
+      , string
+      , quote
       , boost::recursive_wrapper<nodector>
       , boost::recursive_wrapper<expression>
       >
@@ -192,19 +192,34 @@ namespace lyre
       metast::stmts block;
     };
 
+    typedef boost::variant<
+      boost::recursive_wrapper<variable_decls>
+      , boost::recursive_wrapper<procedure_decl>
+      , boost::recursive_wrapper<type_decl>
+      >
+    top_level_decl;
+
+    struct top_level_decls : std::list<top_level_decl> {};
+
+    typedef boost::variant<
+      boost::recursive_wrapper<variable_decls>
+      , boost::recursive_wrapper<procedure_decl>
+      , boost::recursive_wrapper<type_decl>
+      >
+    class_level_decl;
+
+    struct class_level_decls : std::list<class_level_decl> {};
+
+    typedef boost::variant<
+      identifier
+      , boost::recursive_wrapper<speak_stmt>
+      , metast::stmts
+      > with_clause;
+    
     struct with_stmt
     {
       expression value;
-      boost::optional<metast::stmts> block;
-
-      explicit with_stmt(const expression& v) : value(v), block() {}
-      with_stmt() : value(), block() {}
-    };
-
-    struct xblock
-    {
-      boost::optional<expression> value;
-      metast::stmts stmts;
+      with_clause clause;
     };
 
     struct see_bare_block;
@@ -251,13 +266,13 @@ namespace lyre
         
     struct per
     {
-            
+      
     };
 
     struct ret
     {
       boost::optional<metast::expression> expr;
-    };
+    };    
   } // end namespace metast
 
   struct TopLevelDeclHandler
@@ -266,7 +281,7 @@ namespace lyre
     virtual void HandleVariableDecls(const metast::variable_decls & s) = 0;
     virtual void HandleProcedureDecl(const metast::procedure_decl & s) = 0;
     virtual void HandleParseFailure(const char *iter, const char * const end) = 0;
-    virtual void HandleSyntaxError(const char *tag, const char *pos, const char * const end) = 0;
+    virtual void HandleSyntaxError(const char *tag, std::size_t line, std::size_t column, const char *pos, const char * const end) = 0;
   };
 
   void parse(TopLevelDeclHandler *h, const char *iter, const char * const end);

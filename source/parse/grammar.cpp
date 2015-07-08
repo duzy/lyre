@@ -1,12 +1,18 @@
 #include <boost/config/warning_disable.hpp>
-#include <boost/spirit/include/qi.hpp>
-#include <boost/spirit/include/phoenix_core.hpp>
-#include <boost/spirit/include/phoenix_operator.hpp>
-#include <boost/spirit/include/phoenix_fusion.hpp>
-#include <boost/spirit/include/phoenix_stl.hpp>
-#include <boost/spirit/include/phoenix_object.hpp>
-#include <boost/spirit/include/phoenix_bind.hpp>
-//#include <boost/foreach.hpp>
+#include <boost/spirit/home/qi.hpp>
+#if 0
+#  include <boost/spirit/home/support/multi_pass.hpp>
+#  //include <boost/spirit/home/classic/iterator/multi_pass.hpp>
+#  include <boost/spirit/home/classic/iterator/position_iterator.hpp>
+#else
+#  include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
+#endif
+#include <boost/phoenix/core.hpp>
+#include <boost/phoenix/operator.hpp>
+#include <boost/phoenix/fusion.hpp>
+#include <boost/phoenix/stl.hpp>
+#include <boost/phoenix/object.hpp>
+#include <boost/phoenix/bind.hpp>
 #include <boost/bind.hpp>
 #include <iostream>
 #include "metast.h"
@@ -75,7 +81,9 @@ namespace
         << std::endl
         ;
       */
-      handler->HandleSyntaxError(what.tag.c_str(), err_pos, last);
+      std::size_t l = boost::spirit::get_line(err_pos);
+      std::size_t c = boost::spirit::get_column(err_pos, err_pos);
+      handler->HandleSyntaxError(what.tag.c_str(), l, c, err_pos.base(), last.base());
     }
   };
   
@@ -153,7 +161,9 @@ namespace
     rule< std::list<metast::expression>() > arglist;
     rule<> prop;
 
-    rule< metast::string() > quote;
+    rule_noskip< metast::string() > rawstring;
+    rule_noskip< metast::quote_atom() > quote_atom;
+    rule_noskip< metast::quote() > quote;
 
     rule_noskip<> dashes;
 
@@ -167,11 +177,12 @@ namespace
     rule< metast::speak_stmt() > speak_stmt;
     rule< metast::params() > params;
     rule< metast::with_stmt() > with_stmt;
+    rule< metast::with_clause() > with_clause;
     rule< metast::see_stmt() > see_stmt;
+    rule< metast::see_block() > see_block;
     rule< metast::see_bare_block() > see_bare_block;
     rule< metast::see_fork_block() > see_fork_block;
     rule< metast::see_cond_block() > see_cond_block;
-    rule< metast::see_block() > see_block;
     rule< metast::per() > per;
     rule< metast::ret() > ret;
     rule< metast::stmts() > block;
@@ -192,7 +203,10 @@ namespace
       using boost::phoenix::construct;
       using boost::phoenix::val;
 
-      boost::spirit::ascii::space_type    space;
+      using boost::spirit::ascii::space;
+      using boost::spirit::qi::hold;
+
+      //boost::spirit::ascii::space_type    space;
       boost::spirit::eoi_type             eoi;
       boost::spirit::eol_type             eol;
       boost::spirit::eps_type             eps; // eps[ error() ]
@@ -217,8 +231,8 @@ namespace
       qi::string_type      string;
       boost::spirit::repeat_type          repeat;
       boost::spirit::skip_type            skip;
+      boost::spirit::no_skip_type         noskip;
 
-      as<metast::xblock> as_xblock;
       as<metast::param> as_param;
       as<metast::identifier> as_identifier;
       as<std::list<metast::string>> as_string_list;
@@ -343,17 +357,18 @@ namespace
       postfix
         = primary
         >> *(
-             (omit['('] >> attr(metast::opcode::call) >> -expr > omit[')']) |
-             (omit['.'] >> attr(metast::opcode::attr) > postfix)            |
+             (omit['('] >> attr(metast::opcode::call) > -expr > omit[')']) |
+             (omit['.'] >> attr(metast::opcode::attr) > postfix)           |
              (omit["->"] >> attr(metast::opcode::select) > postfix)
-             )
+            )
         ;
 
       primary
-        =  '(' > expr > ')'
+        = omit['('] > expr > omit[')']
+        |  quote
+        |  rawstring
         |  builtin_constant
         |  identifier
-        |  quote
         //|  int_ >> !char_('.')
         |  double_
         |  prop
@@ -365,17 +380,30 @@ namespace
         >> raw[lexeme[ ( alpha | '_' ) >> *idchar ]]
         ;
 
+      rawstring
+        = lexeme[ omit[ '\'' ] >> raw[ *(char_ - '\'') ] >> omit[ '\'' ] ]
+        ;
+
       quote
-        = (
-           ( omit[ '\'' ] >> raw[ *(char_ - '\'') ] >> omit[ '\'' ] ) |
-           ( omit[ '"' ] >> raw[ *(char_ - '"') ] >> omit[ '"' ] )
-           )
+        = omit[ '"' ] > *quote_atom > omit[ '"' ]
+        ;
+
+      quote_atom
+        = raw
+        [
+         +( (char_ - char_("\"$"))
+          | (omit[ '$' ] >> char_('$'))
+          )
+        ]
+        |  omit[ "$(" >> *space ]
+        >> skip[ expr ] //*(char_ - ")")
+        >> omit[ *space >> ')' ]
         ;
 
       prop
         %= ':'
         >  identifier
-        > -( '(' > -arglist > ')' )
+        > -( omit[ '(' ] > -arglist > omit[ ')' ] )
         ;
 
       arglist
@@ -407,8 +435,8 @@ namespace
         |  see_stmt
         |  with_stmt
         |  speak_stmt
-        |  ( expr > omit[ char_(';') ] )
-        |  ( attr(metast::none()) >> omit[ char_(';') ] ) // empty statement
+        |  ( expr > lit(';') )
+        |  ( attr(metast::none()) >> lit(';') ) // empty statement
         ;
 
       block
@@ -452,7 +480,13 @@ namespace
 
       with_stmt
         =  omit[lexeme[ "with" >> !idchar ]]
-        >  expr > ( block | omit[ ';' ] )
+        >  expr > with_clause
+        ;
+
+      with_clause
+        = speak_stmt
+        | block
+        | ( identifier /*> omit[ lit(';') ]*/ )
         ;
 
       see_stmt
@@ -497,13 +531,12 @@ namespace
         >  speak_source
         ;
 
-      auto speak_stopper = eol >> dashes ;
-      speak_source = lexeme
+      speak_source
+        = lexeme
         [
-         dashes
-         >> -eol
-         >> *(char_ - speak_stopper)
-         >> omit[ speak_stopper ]
+         omit[ dashes >> *(space - eol) >> -eol ]
+         > *(char_ - (eol >> *space >> dashes)) 
+         > omit[ eol >> *space >> dashes ]
         ]
         ;
 
@@ -594,6 +627,21 @@ namespace
       std::clog<<indent()<<"(string) "<<v<<std::endl;
     }
 
+    void operator()(char c)
+    {
+      std::clog<<indent()<<"(char) "<<c<<std::endl;
+    }
+
+    void operator()(const lyre::metast::quote & v)
+    {
+      std::clog<<indent()<<"(quote) "<<v.size()<<" atoms"<<std::endl;
+      indent(4);
+      for (auto & atom : v) {
+        boost::apply_visitor(*this, atom);
+      }
+      indent(-4);
+    }
+    
     void operator()(const lyre::metast::identifier & v)
     {
       std::clog<<indent()<<"(identifier) "<<v.string<<std::endl;
@@ -703,11 +751,22 @@ namespace
     void operator()(const lyre::metast::with_stmt & s)
     {
       std::clog<<indent()<<"with_stmt: "<<std::endl;
+      indent(4);
+      (*this)(s.value);
+      boost::apply_visitor(*this, s.clause);
+      indent(-4);
     }
 
     void operator()(const lyre::metast::speak_stmt & s)
     {
-      std::clog<<indent()<<"speak_stmt: "<<std::endl;
+      std::string langs;
+      for (auto id : s.langs) {
+        if (langs.empty()) langs = id.string;
+        else langs += ", " + id.string;
+      }
+
+      std::clog<<indent()<<"speak_stmt: "<<langs<<std::endl;
+      std::clog<<indent()<<"    \""<<s.source<<"\""<<std::endl;
     }
 
     template <class T>
@@ -724,11 +783,24 @@ namespace lyre
   const char *parse(metast::top_level_decls & decls, TopLevelDeclHandler *h,
                     const char *iter, const char * const end)
   {
-    grammar<const char *> g(h);
-    skipper<const char *> skip;
-    const char * const beg = iter;
-    if (!qi::phrase_parse(iter, end, g, skip, decls)) {
-      if (iter == end) { /*...*/ }
+#if 0
+    typedef boost::spirit::multi_pass<const char*> forward_iterator;
+    typedef boost::spirit::classic::position_iterator<forward_iterator> position_iterator;
+    
+    forward_iterator fwd_begin = boost::spirit::make_default_multi_pass(iter);
+    forward_iterator fwd_end;
+    
+    position_iterator pos_beg(fwd_begin, fwd_end);
+    position_iterator pos_end;
+#else
+    typedef boost::spirit::line_pos_iterator<const char *> position_iterator;
+    position_iterator pos_beg(iter), pos_end(end);
+#endif
+    
+    grammar<position_iterator> g(h);
+    skipper<position_iterator> skip;
+    if (!qi::phrase_parse(pos_beg, pos_end, g, skip, decls)) {
+      if (pos_beg == pos_end) { /*...*/ }
     }
 
 #ifdef DUMP_AST

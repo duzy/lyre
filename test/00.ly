@@ -2,9 +2,14 @@ decl node1 = { name:123 };
 
 # comment
 
+proc foo()
+----
+----
+
 proc main() int
 ---
-  say("blah...");
+  say('blah...');
+  say(" blah blah $(foo()) $$ ... ");
 
   see 1
   ---
@@ -32,6 +37,13 @@ proc main() int
   with { name:"foobar" }
   ----
     say("This is $(.name)...");
+  ----
+
+  with { name:"foobar" } foo;
+
+  with { name:"foobar" } speak template
+  ----
+blah, blah, blah...
   ----
 
   speak foo
