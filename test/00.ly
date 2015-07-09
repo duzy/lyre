@@ -9,7 +9,7 @@ proc foo()
 proc main() int
 ---
   say('blah...');
-  say(" blah blah $(foo()) $$ ... ");
+  say("    blah blah    $(  foo()  )    $$    ...    ");
 
   see 1
   ---

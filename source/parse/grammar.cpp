@@ -57,6 +57,7 @@ namespace
   
   namespace metast = lyre::metast;
   namespace qi = boost::spirit::qi;
+  namespace phoenix = boost::phoenix;
 
   struct error_delegate_handler
   {
@@ -118,6 +119,9 @@ namespace
 
     template <class Spec = void()>
     using rule_noskip = qi::rule<Iterator, Spec, Locals>;
+
+    rule<> spaces;
+    //SpaceType spaces;
     
     //======== symbols ========
     qi::symbols<char, metast::opcode>
@@ -162,8 +166,9 @@ namespace
     rule<> prop;
 
     rule_noskip< metast::string() > rawstring;
-    rule_noskip< metast::quote_atom() > quote_atom;
-    rule_noskip< metast::quote() > quote;
+    rule_noskip< metast::string() > quote_raw;
+    rule< metast::expression() > quote_expr;
+    rule< metast::quote() > quote;
 
     rule_noskip<> dashes;
 
@@ -189,9 +194,15 @@ namespace
     rule_noskip<metast::string()> speak_source;
 
     boost::phoenix::function<error_delegate_handler> fail_handler;
+
+    //------------------
+
+    int quote_expr_count;
     
     grammar(lyre::TopLevelDeclHandler *h)
-      : grammar::base_type(top, "lyre"), fail_handler(error_delegate_handler(h))
+      : grammar::base_type(top, "lyre")
+      , fail_handler(error_delegate_handler(h))
+      , quote_expr_count(0)
     {
       using qi::as;
       using qi::attr_cast;
@@ -203,14 +214,12 @@ namespace
       using boost::phoenix::construct;
       using boost::phoenix::val;
 
-      using boost::spirit::ascii::space;
-      using boost::spirit::qi::hold;
-
-      //boost::spirit::ascii::space_type    space;
+      boost::spirit::ascii::space_type    space;
       boost::spirit::eoi_type             eoi;
       boost::spirit::eol_type             eol;
       boost::spirit::eps_type             eps; // eps[ error() ]
       boost::spirit::inf_type             inf;
+      qi::hold_type        hold;
       qi::_1_type          _1; // qi::labels
       qi::_2_type          _2; // qi::labels
       qi::_3_type          _3; // qi::labels
@@ -229,9 +238,9 @@ namespace
       qi::omit_type        omit;
       qi::raw_type         raw;
       qi::string_type      string;
-      boost::spirit::repeat_type          repeat;
-      boost::spirit::skip_type            skip;
-      boost::spirit::no_skip_type         noskip;
+      boost::spirit::repeat_type        repeat;
+      boost::spirit::skip_type          skip;
+      boost::spirit::no_skip_type       no_skip;
 
       as<metast::param> as_param;
       as<metast::identifier> as_identifier;
@@ -385,20 +394,40 @@ namespace
         ;
 
       quote
-        = omit[ '"' ] > *quote_atom > omit[ '"' ]
+        = lexeme[ lit('"') >> -quote_raw ]
+        > *( lexeme
+             [
+              // Ignore the right paren ')' of the last "$(...)".
+              // The rule 'quote_expr' will not eat ')' to keep
+              // consequence spaces. 
+              (
+               omit[ eps( phoenix::ref(quote_expr_count) > 0 ) ]
+               >> lit(')') >> quote_raw >> 
+               omit[ eps[ phoenix::ref(quote_expr_count) -= 1 ] ]
+              )
+              | quote_raw
+             ] 
+             | quote_expr 
+           )
+        > lit('"')
         ;
 
-      quote_atom
+      quote_raw
         = raw
         [
          +( (char_ - char_("\"$"))
           | (omit[ '$' ] >> char_('$'))
           )
         ]
-        |  omit[ "$(" >> *space ]
-        >> skip[ expr ] //*(char_ - ")")
-        >> omit[ *space >> ')' ]
         ;
+      quote_expr
+        =  lit("$(") >> expr >> &lit(')')
+        // Instead of eating the right paren ')', we simply add
+        // the counter to allow consequence process to discard ')'.
+        >> omit[ eps[ phoenix::ref(quote_expr_count) += 1 ] ]
+        ;
+
+      spaces = *space ;
 
       prop
         %= ':'
