@@ -36,6 +36,13 @@ BOOST_FUSION_ADAPT_STRUCT(
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::language_decl,
+    (lyre::metast::identifier, name)
+    (lyre::metast::attributes, attributes)
+    (lyre::metast::string, definition)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::with_stmt,
     (lyre::metast::expression, value)
     (lyre::metast::with_clause, clause)
@@ -84,12 +91,18 @@ BOOST_FUSION_ADAPT_STRUCT(
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::nodector,
-    (std::list<lyre::metast::nodefield>, list)
+    lyre::metast::bare_node,
+    (std::list<lyre::metast::name_value>, list)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::nodefield,
+    lyre::metast::attribute,
+    (lyre::metast::identifier, name)
+    (boost::optional<lyre::metast::arguments>, args)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::name_value,
     (lyre::metast::identifier, name)
     (lyre::metast::expression, value)
 )

@@ -96,6 +96,7 @@
 
 (defvar lyre-keyword-list
   '("decl"
+    "language"
     "speak"
     "type"
     "proc"

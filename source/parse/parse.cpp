@@ -10,6 +10,7 @@ namespace
 
     result_type operator()(const lyre::metast::variable_decls & s) { H->HandleVariableDecls(s); }
     result_type operator()(const lyre::metast::procedure_decl & s) { H->HandleProcedureDecl(s); }
+    result_type operator()(const lyre::metast::language_decl & s) { H->HandleLanguageDecl(s); }
     result_type operator()(const lyre::metast::type_decl & s) { H->HandleTypeDecl(s); }
   };
 } // end anonymous namespace

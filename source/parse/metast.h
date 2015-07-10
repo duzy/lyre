@@ -14,13 +14,15 @@ namespace lyre
     struct variable_decls;
     struct procedure_decl;
     struct type_decl;
+    struct language_decl;
     struct see_stmt;
     struct with_stmt;
     struct speak_stmt;
     struct per;
     struct ret;
     struct expression;
-    struct nodector;
+    struct bare_node;
+    struct arguments;
     struct op;
     
     typedef boost::variant<
@@ -61,57 +63,54 @@ namespace lyre
       nil,
 
       // get a reference to attribute
-        attr,
+      attr,
 
       // filtering children
-        select,
+      query,
 
       // call a procedure (function)
-        call,
+      call,
 
       // unary
-        unary_plus,
-        unary_minus,
-        unary_not,
-        unary_dot,
-        unary_arrow,
+      unary_plus,
+      unary_minus,
+      unary_not,
+      unary_dot,
+      unary_arrow,
 
       // multiplicative
-        mul,
-        div,
+      mul,
+      div,
 
       // additive
-        add,
-        sub,
+      add,
+      sub,
 
       // relational
-        lt, // less then
-        le, // less or equal
-        gt, // greater then
-        ge, // greater or equal
+      lt, // less then
+      le, // less or equal
+      gt, // greater then
+      ge, // greater or equal
 
       // equality
-        eq,
-        ne,
+      eq,
+      ne,
 
       ///< type equiplant
-        is,
+      is,
 
       // logical and/or/xor
-        a,
-        o,
-        xo,
+      a,
+      o,
+      xo,
 
       // assign
-        set,
+      set,
 
-      // list, tuple, etc.
-        comma,
+      br,   // conditional branch
+      swi,  // switch
 
-        br,   // conditional branch
-        swi,  // switch
-
-        unr,  // unreachable
+      unr,  // unreachable
     };
 
     struct identifier
@@ -122,13 +121,12 @@ namespace lyre
     typedef boost::variant<
       none
       , constant
-      //, int
-      //, unsigned int
       , double
       , identifier
       , string
       , quote
-      , boost::recursive_wrapper<nodector>
+      , boost::recursive_wrapper<bare_node>
+      , boost::recursive_wrapper<arguments>
       , boost::recursive_wrapper<expression>
       >
     operand;
@@ -149,16 +147,26 @@ namespace lyre
       explicit expression(const op & o) : first(), rest({ o }) {}
     };
 
-    struct nodefield
+    struct arguments : std::list<expression> {};
+
+    struct name_value
     {
       identifier name;
       metast::expression value;
     };
 
-    struct nodector
+    struct bare_node
     {
-      std::list<nodefield> list;
+      std::list<name_value> list;
     };
+
+    struct attribute
+    {
+      identifier name;
+      boost::optional<arguments> args;
+    };
+
+    typedef std::list<attribute> attributes;
 
     struct param
     {
@@ -167,6 +175,13 @@ namespace lyre
     };
 
     typedef std::list<param> params;
+
+    struct language_decl
+    {
+      identifier name;
+      metast::attributes attributes;
+      string definition;
+    };
     
     struct variable_decl
     {
@@ -195,6 +210,7 @@ namespace lyre
     typedef boost::variant<
       boost::recursive_wrapper<variable_decls>
       , boost::recursive_wrapper<procedure_decl>
+      , boost::recursive_wrapper<language_decl>
       , boost::recursive_wrapper<type_decl>
       >
     top_level_decl;
@@ -280,6 +296,7 @@ namespace lyre
     virtual void HandleTypeDecl(const metast::type_decl & s) = 0;
     virtual void HandleVariableDecls(const metast::variable_decls & s) = 0;
     virtual void HandleProcedureDecl(const metast::procedure_decl & s) = 0;
+    virtual void HandleLanguageDecl(const metast::language_decl & s) = 0;
     virtual void HandleParseFailure(const char *iter, const char * const end) = 0;
     virtual void HandleSyntaxError(const char *tag, std::size_t line, std::size_t column, const char *pos, const char * const end) = 0;
   };
