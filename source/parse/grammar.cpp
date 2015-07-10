@@ -483,7 +483,10 @@ namespace
 
       language_decl
         =  omit[lexeme[ "language" >> !idchar ]]
-        >  identifier >> *attribute // % ','
+        >  identifier 
+        >  omit[lexeme[ "with" >> !idchar ]]
+        >  identifier
+        //>> *attribute // % ','
         >  embedded_source
         ;
 
@@ -754,7 +757,10 @@ namespace
 
     void operator()(const lyre::metast::language_decl & v)
     {
-      std::clog<<indent()<<"language_decl: "<<v.name.string<<std::endl;
+      std::clog<<indent()
+               <<"language_decl: "<<v.name.string
+               <<", "<<v.spec.string
+               <<std::endl;
     }
     
     void operator()(const lyre::metast::type_decl & s)

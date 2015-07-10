@@ -178,8 +178,8 @@ namespace lyre
 
     struct language_decl
     {
-      identifier name;
-      metast::attributes attributes;
+      identifier name, spec;
+      //metast::attributes attributes;
       string definition;
     };
     

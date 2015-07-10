@@ -38,7 +38,8 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::language_decl,
     (lyre::metast::identifier, name)
-    (lyre::metast::attributes, attributes)
+    (lyre::metast::identifier, spec)
+    //(lyre::metast::attributes, attributes)
     (lyre::metast::string, definition)
 )
 

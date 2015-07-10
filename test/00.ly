@@ -57,7 +57,7 @@ blah, blah, blah...
 
 # ABNF: https://tools.ietf.org/html/rfc5234
 # EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
-language foolang
+language foolang with ABNF
 ------------------------------------------------
 digit excluding zero = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 digit                = "0" | digit excluding zero ;
