@@ -34,10 +34,6 @@ namespace
       std::clog<<id.string<<std::endl;
     }
 
-    void a_name(const std::string & s) {
-      std::clog<<"name: "<<s<<std::endl;
-    }
-
     void a_decl_id(const std::string & s) {
       std::clog<<"decl: "<<s<<std::endl;
     }
@@ -149,7 +145,7 @@ namespace
 
     rule< metast::expression() > dotted;
 
-    rule< metast::expression() > list;
+    //rule< metast::expression() > list;
     rule< metast::expression() > assign;
     rule< metast::expression() > logical;
     rule< metast::expression() > equality;
@@ -161,9 +157,9 @@ namespace
 
     rule< metast::identifier() > identifier ;
 
-    rule< metast::nodector() > nodector;
-    rule< std::list<metast::expression>() > arglist;
-    rule<> prop;
+    rule< metast::bare_node() > bare_node;
+    rule< metast::arguments() > arguments;
+    rule< metast::attribute() > attribute;
 
     rule_noskip< metast::string() > rawstring;
     rule_noskip< metast::string() > quote_raw;
@@ -179,6 +175,7 @@ namespace
     rule< metast::variable_decls() > decl;
     rule< metast::procedure_decl() > proc;
     rule< metast::type_decl() > type;
+    rule< metast::language_decl() > language_decl;
     rule< metast::speak_stmt() > speak_stmt;
     rule< metast::params() > params;
     rule< metast::with_stmt() > with_stmt;
@@ -189,9 +186,9 @@ namespace
     rule< metast::see_fork_block() > see_fork_block;
     rule< metast::see_cond_block() > see_cond_block;
     rule< metast::per() > per;
-    rule< metast::ret() > ret;
+    rule< metast::ret() > return_expr;
     rule< metast::stmts() > block;
-    rule_noskip<metast::string()> speak_source;
+    rule_noskip<metast::string()> embedded_source;
 
     boost::phoenix::function<error_delegate_handler> fail_handler;
 
@@ -252,9 +249,11 @@ namespace
       //========------------------------------------========
       //======== Symbols
       //========------------------------------------========
+      /*
       list_op.add
         (",", metast::opcode::comma)
         ;
+      */
 
       assign_op.add
         ("=", metast::opcode::set)
@@ -303,6 +302,7 @@ namespace
 
       keywords =
         "decl",  // declare variables, constants, fields
+        "language",
         "speak", // 
         "type",  // 
         "proc",  //
@@ -320,13 +320,15 @@ namespace
       auto idchar = lit('_') | alnum;
         
       expr
-        %= list
+        %= assign
         ;
 
+      /*
       list
         =  assign
         >> *(list_op > assign)
         ;
+      */
 
       assign
         =  logical
@@ -366,9 +368,9 @@ namespace
       postfix
         = primary
         >> *(
-             (omit['('] >> attr(metast::opcode::call) > -expr > omit[')']) |
-             (omit['.'] >> attr(metast::opcode::attr) > postfix)           |
-             (omit["->"] >> attr(metast::opcode::select) > postfix)
+             ('(' >> attr(metast::opcode::call) > -arguments > ')')  |
+             ('.' >> attr(metast::opcode::attr) > postfix)           |
+             ("->" >> attr(metast::opcode::query) > postfix)
             )
         ;
 
@@ -376,12 +378,11 @@ namespace
         = omit['('] > expr > omit[')']
         |  quote
         |  rawstring
+        |  bare_node
         |  builtin_constant
         |  identifier
         //|  int_ >> !char_('.')
         |  double_
-        |  prop
-        |  nodector
         ;
 
       identifier
@@ -429,19 +430,19 @@ namespace
 
       spaces = *space ;
 
-      prop
-        %= ':'
+      attribute
+        =  lit(':')
         >  identifier
-        > -( omit[ '(' ] > -arglist > omit[ ')' ] )
+        >> -( '(' >> -arguments > ')' )
         ;
 
-      arglist
+      arguments
         =  expr % ','
         ;
 
-      nodector
+      bare_node
         %= '{'
-        >  ( identifier > ':' > expr ) % ','
+        >> -( ( identifier > ':' > expr ) % ',' )
         >  '}'
         ;
 
@@ -450,17 +451,17 @@ namespace
       //========------------------------------------========
       //======== Statements
       //========------------------------------------========
-      top = *( decl | proc | type );
+      top = *( decl | proc | type | language_decl );
 
       stmts
         = *stmt
         ;
 
       stmt
-        %= decl
+        =  decl
         |  proc
         |  type
-        |  ret
+        |  return_expr
         |  see_stmt
         |  with_stmt
         |  speak_stmt
@@ -475,9 +476,18 @@ namespace
         ;
 
       params
-        =  omit[ '(' ]
-        >  -( ( identifier > omit[':'] > identifier ) % ',' )
-        >  omit[ ')' ]
+        =  '('
+        >  -( ( identifier > ':' > identifier ) % ',' )
+        >  ')'
+        ;
+
+      language_decl
+        =  omit[lexeme[ "language" >> !idchar ]]
+        >  identifier 
+        >  omit[lexeme[ "with" >> !idchar ]]
+        >  identifier
+        //>> *attribute // % ','
+        >  embedded_source
         ;
 
       decl
@@ -488,7 +498,7 @@ namespace
              >> -identifier
              >> -( '=' > expr )
              ) % ','
-            )
+           )
         >  ';'
         ;
 
@@ -548,7 +558,7 @@ namespace
         =  omit[lexeme[ "per" >> !idchar ]]
         ;
 
-      ret
+      return_expr
         =  omit[lexeme[ "return" >> !idchar ]]
         >  -expr
         >  ';'
@@ -557,10 +567,10 @@ namespace
       speak_stmt
         =  omit[lexeme[ "speak" >> !idchar ]]
         >  identifier % '>'
-        >  speak_source
+        >  embedded_source
         ;
 
-      speak_source
+      embedded_source
         = lexeme
         [
          omit[ dashes >> *(space - eol) >> -eol ]
@@ -582,27 +592,28 @@ namespace
                                (unary)
                                (primary)
                                (identifier)
-                               (prop)
+                               (attribute)
                                (dotted)
-                               (nodector)
+                               (bare_node)
                                (quote)
-                               (arglist)
+                               (arguments)
                                (assign)
-                               (list)
+                               //(list)
                                (dashes)
                                //== Statements
                                (stmts)
                                (stmt)
                                (decl)
+                               (language_decl)
                                (proc)
                                (type)
                                (params)
                                (speak_stmt)
-                               (speak_source)
+                               (embedded_source)
                                (with_stmt)
                                (see_stmt)
                                (per)
-                               (ret)
+                               (return_expr)
                                (block)
                                );
 
@@ -670,6 +681,17 @@ namespace
       }
       indent(-4);
     }
+
+    void operator()(const lyre::metast::bare_node & v)
+    {
+      std::clog<<indent()<<"(bare_node) "<<v.list.size()<<" fields"<<std::endl;
+      indent(4);
+      for (auto & nv : v.list) {
+        std::clog<<indent()<<nv.name.string<<": ";
+        (*this)(nv.value);
+      }
+      indent(-4);
+    }
     
     void operator()(const lyre::metast::identifier & v)
     {
@@ -733,6 +755,14 @@ namespace
       indent(-4);
     }
 
+    void operator()(const lyre::metast::language_decl & v)
+    {
+      std::clog<<indent()
+               <<"language_decl: "<<v.name.string
+               <<", "<<v.spec.string
+               <<std::endl;
+    }
+    
     void operator()(const lyre::metast::type_decl & s)
     {
       std::clog<<indent()<<"type_decl: "<<s.name.string<<std::endl;

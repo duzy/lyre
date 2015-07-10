@@ -9,11 +9,13 @@ else
   LLVMLIBS := interpreter nativecodegen option
 endif
 
+LLVM_INC := $(shell $(LLVM_CONFIG) --includedir)
+LLVM_CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
+
 TableGen := utils/TableGen/TableGen
 
 CXXFLAGS := -Iinclude -Isource -I$(BOOST_ROOT) -g -ggdb \
-  -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
-  $(shell $(LLVM_CONFIG) --cxxflags)
+  -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) $(LLVM_CXXFLAGS)
 
 LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
