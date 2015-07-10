@@ -10,6 +10,42 @@ namespace lyre
 {
   namespace metast
   {
+    /// This namespace is shared by ABNF, EBNF.
+    namespace BNF
+    {
+
+    struct alternative;
+    struct sequence;
+    struct optional;
+    struct repeat;
+
+    struct alternative
+    {
+    
+    };
+
+    struct sequence
+    {
+    };
+
+    struct optional
+    {
+    };
+
+    struct repeat
+    {
+    };
+
+    struct rule
+    {
+    };
+
+    struct rules : std::list<rule>
+    {
+    };
+  
+    } // end namespace BNF
+
     struct none {};
     struct variable_decls;
     struct procedure_decl;
@@ -180,7 +216,7 @@ namespace lyre
     {
       identifier name, spec;
       //metast::attributes attributes;
-      string definition;
+      BNF::rule definition;
     };
     
     struct variable_decl
@@ -288,7 +324,8 @@ namespace lyre
     struct ret
     {
       boost::optional<metast::expression> expr;
-    };    
+    };
+
   } // end namespace metast
 
   struct TopLevelDeclHandler

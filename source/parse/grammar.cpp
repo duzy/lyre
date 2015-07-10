@@ -52,6 +52,7 @@ namespace
   }
   
   namespace metast = lyre::metast;
+  namespace BNF = lyre::metast::BNF;
   namespace qi = boost::spirit::qi;
   namespace phoenix = boost::phoenix;
 
@@ -101,13 +102,39 @@ namespace
         ;
     }
   };
+
+  template
+  <
+    class Iterator,
+    class Locals = qi::locals<std::string>,
+    class SpaceType = skipper<Iterator>
+  >
+  struct ABNF_grammar : qi::grammar<Iterator, BNF::rules(), Locals, SpaceType>
+  {
+    ABNF_grammar() : ABNF_grammar::base_type(rules, "ABNF")
+    {
+    }
+  };
+
+  template
+  <
+    class Iterator,
+    class Locals = qi::locals<std::string>,
+    class SpaceType = skipper<Iterator>
+  >
+  struct EBNF_grammar : qi::grammar<Iterator, BNF::rules(), Locals, SpaceType>
+  {
+    EBNF_grammar() : EBNF_grammar::base_type(rules, "EBNF")
+    {
+    }
+  };
     
   template
   <
     class Iterator,
     class Locals = qi::locals<std::string>,
     class SpaceType = skipper<Iterator>
-    >
+  >
   struct grammar : qi::grammar<Iterator, metast::top_level_decls(), Locals, SpaceType>
   {
     template <class Spec = void()>
@@ -116,8 +143,7 @@ namespace
     template <class Spec = void()>
     using rule_noskip = qi::rule<Iterator, Spec, Locals>;
 
-    rule<> spaces;
-    //SpaceType spaces;
+    boost::phoenix::function<error_delegate_handler> fail_handler;
     
     //======== symbols ========
     qi::symbols<char, metast::opcode>
@@ -168,6 +194,9 @@ namespace
 
     rule_noskip<> dashes;
 
+    //------------------
+    int quote_expr_count;
+
     //======== Statements ========
     rule< metast::top_level_decls() > top;
     rule< metast::stmts() > stmts;
@@ -190,11 +219,9 @@ namespace
     rule< metast::stmts() > block;
     rule_noskip<metast::string()> embedded_source;
 
-    boost::phoenix::function<error_delegate_handler> fail_handler;
-
-    //------------------
-
-    int quote_expr_count;
+    //======== Language Specs ========
+    ABNF_grammar<Iterator, Locals, SpaceType> ABNF;
+    EBNF_grammar<Iterator, Locals, SpaceType> EBNF;
     
     grammar(lyre::TopLevelDeclHandler *h)
       : grammar::base_type(top, "lyre")
@@ -427,8 +454,6 @@ namespace
         // the counter to allow consequence process to discard ')'.
         >> omit[ eps[ phoenix::ref(quote_expr_count) += 1 ] ]
         ;
-
-      spaces = *space ;
 
       attribute
         =  lit(':')
