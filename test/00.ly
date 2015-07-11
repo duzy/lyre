@@ -58,11 +58,30 @@ blah, blah, blah...
 # ABNF: https://tools.ietf.org/html/rfc5234
 language foolang with ABNF
 ------------------------------------------------
+postal-address   = name-part street zip-part
 
+name-part        = *(personal-part SP) last-name [SP suffix] CRLF
+name-part        =/ personal-part CRLF
+
+personal-part    = first-name / (initial ".")
+first-name       = *ALPHA
+initial          = ALPHA
+last-name        = *ALPHA
+suffix           = ("Jr." / "Sr." / 1*("I" / "V" / "X"))
+
+street           = [apt SP] house-num SP street-name CRLF
+apt              = 1*4DIGIT
+house-num        = 1*8(DIGIT / ALPHA)
+street-name      = 1*VCHAR
+
+zip-part         = town-name "," SP state 1*2SP zip-code CRLF
+town-name        = 1*(ALPHA / SP)
+state            = 2ALPHA
+zip-code         = 5DIGIT ["-" 4DIGIT]
 ------------------------------------------------
 
 # EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
-language foolang with EBNF
+language barlang with EBNF
 ------------------------------------------------
 digit excluding zero = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 digit                = "0" | digit excluding zero ;

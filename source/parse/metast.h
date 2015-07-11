@@ -14,35 +14,39 @@ namespace lyre
     namespace BNF
     {
 
-    struct alternative;
-    struct sequence;
-    struct optional;
-    struct repeat;
+      struct alternative;
+      struct sequence;
+      struct optional;
+      struct repeat;
 
-    struct alternative
-    {
+      //struct and_predicate;
+      //struct difference;
+      //struct expect;
+      
+      struct alternative
+      {
     
-    };
+      };
 
-    struct sequence
-    {
-    };
+      struct sequence
+      {
+      };
 
-    struct optional
-    {
-    };
+      struct optional
+      {
+      };
 
-    struct repeat
-    {
-    };
+      struct repeat
+      {
+      };
 
-    struct rule
-    {
-    };
+      struct rule
+      {
+      };
 
-    struct rules : std::list<rule>
-    {
-    };
+      struct rules : std::list<rule>
+      {
+      };
   
     } // end namespace BNF
 
@@ -212,11 +216,18 @@ namespace lyre
 
     typedef std::list<param> params;
 
+    struct embedded_source
+    {
+      const char *begin;
+      const char *end;
+      string str() const { return string(begin, end); }
+    };
+    
     struct language_decl
     {
       identifier name, spec;
       //metast::attributes attributes;
-      BNF::rule definition;
+      embedded_source definition;
     };
     
     struct variable_decl
@@ -313,7 +324,7 @@ namespace lyre
     struct speak_stmt
     {
       std::list<identifier> langs;
-      string source;
+      embedded_source source;
     };
         
     struct per

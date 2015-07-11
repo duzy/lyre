@@ -43,7 +43,7 @@ void DeclHandler::HandleLanguageDecl(const lyre::metast::language_decl & s)
 {
   llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
                << s.name.string.c_str() << "\n--------\n"
-    //<< s.definition
+               << s.definition.str()
                << "\n--------\n";
 }
 

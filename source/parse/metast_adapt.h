@@ -26,7 +26,7 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::speak_stmt,
     (std::list<lyre::metast::identifier>, langs)
-    (lyre::metast::string, source)
+    (lyre::metast::embedded_source, source)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -36,11 +36,18 @@ BOOST_FUSION_ADAPT_STRUCT(
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::embedded_source,
+    (const char *, begin)
+    (const char *, end)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::language_decl,
     (lyre::metast::identifier, name)
     (lyre::metast::identifier, spec)
     //(lyre::metast::attributes, attributes)
-    (lyre::metast::string, definition)
+    //(lyre::metast::BNF::rules, definition)
+    (lyre::metast::embedded_source, definition)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(

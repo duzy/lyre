@@ -1,3 +1,4 @@
+#define BOOST_SPIRIT_NO_PREDEFINED_TERMINALS 1
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/home/qi.hpp>
 #if 0
@@ -17,6 +18,92 @@
 #include <iostream>
 #include "metast.h"
 #include "metast_adapt.h"
+
+// Define placeholders.
+namespace
+{
+  BOOST_SPIRIT_TERMINAL(tell_pos);
+  
+  // Define ABNF and EBNF placeholders.
+  BOOST_SPIRIT_TERMINAL(ABNF);
+  BOOST_SPIRIT_TERMINAL(EBNF);
+}
+
+// Implementation the enabler for ABNF, EBNF
+namespace boost { namespace spirit 
+{ 
+  // Enable usage as a terminal, and only for parser expressions (qi::domain).
+  template <> struct use_terminal<qi::domain, ::tag::tell_pos> : mpl::true_ {};
+
+  template <> struct use_terminal<qi::domain, ::tag::ABNF> : mpl::true_ {};
+  template <> struct use_terminal<qi::domain, ::tag::EBNF> : mpl::true_ {};
+
+  // Enable usage as a directive, and only for parser expressions (qi::domain).
+  //template <> struct use_directive<qi::domain, ::tag::ABNF> : mpl::true_ {};
+  //template <> struct use_directive<qi::domain, ::tag::EBNF> : mpl::true_ {};
+
+  namespace traits
+  {
+    template <typename Iterator>
+    inline void assign_to(line_pos_iterator<Iterator> const& it, Iterator& a) { a = it.base(); }
+  }
+}}
+
+// Implementation the parsers ABNF, EBNF
+namespace
+{
+  struct tell_pos_parser : boost::spirit::qi::primitive_parser<tell_pos_parser>
+  {
+    // Define the attribute type exposed by tell_pos_parser
+    template <typename Context, typename Iterator>
+    struct attribute { typedef Iterator type; };
+    
+    // This function is called during the actual parsing process
+    template <typename Iterator, typename Context, typename Skipper, typename Attribute>
+    bool parse(Iterator& first, Iterator const& last,
+               Context&, Skipper const& skipper, Attribute& attr) const
+    {
+      boost::spirit::qi::skip_over(first, last, skipper);
+      boost::spirit::traits::assign_to(first, attr);
+      return true;
+    }
+
+    // This function is called during error handling to create
+    // a human readable string for the error context.
+    template <typename Context>
+    boost::spirit::info what(Context&) const
+    { return boost::spirit::info("tell_pos"); }
+  };
+  
+  // struct ABNF_parser : boost::spirit::qi::primitive_parser<ABNF_parser>
+  // struct EBNF_parser : boost::spirit::qi::primitive_parser<EBNF_parser>
+}
+
+// Instantiation of the ABNF and EBNF parsers.
+namespace boost { namespace spirit { namespace qi
+{
+  // This is the factory function object invoked in order to create 
+  // an instance of our iter_pos_parser.
+  template <typename Modifiers> struct make_primitive<::tag::tell_pos, Modifiers>
+  {
+    typedef ::tell_pos_parser result_type;
+    result_type operator()(unused_type, unused_type) const { return result_type(); }
+  };
+
+#if 0
+  template <typename Modifiers> struct make_primitive<::tag::ABNF, Modifiers>
+  {
+    typedef ::ABNF_parser result_type;
+    result_type operator()(unused_type, unused_type) const { return result_type(); }
+  };
+
+  template <typename Modifiers> struct make_primitive<::tag::EBNF, Modifiers>
+  {
+    typedef ::EBNF_parser result_type;
+    result_type operator()(unused_type, unused_type) const { return result_type(); }
+  };
+#endif
+}}}
 
 namespace 
 {
@@ -109,9 +196,33 @@ namespace
     class Locals = qi::locals<std::string>,
     class SpaceType = skipper<Iterator>
   >
-  struct ABNF_grammar : qi::grammar<Iterator, BNF::rules(), Locals, SpaceType>
+  struct BNF_grammar : qi::grammar<Iterator, BNF::rules(), Locals, SpaceType>
   {
-    ABNF_grammar() : ABNF_grammar::base_type(rules, "ABNF")
+    typedef BNF_grammar base;
+    
+    template <class Spec = void()>
+    using rule = qi::rule<Iterator, Spec, Locals, SpaceType>;
+
+    template <class Spec = void()>
+    using rule_noskip = qi::rule<Iterator, Spec, Locals>;
+
+    rule< BNF::rules() > rules;
+    
+  protected:
+    explicit BNF_grammar(const char * const name) : BNF_grammar::base_type(rules, name)
+    {
+    }
+  };
+  
+  template
+  <
+    class Iterator,
+    class Locals = qi::locals<std::string>,
+    class SpaceType = skipper<Iterator>
+  >
+  struct ABNF_grammar : BNF_grammar<Iterator, Locals, SpaceType>
+  {
+    ABNF_grammar() : ABNF_grammar::base("ABNF")
     {
     }
   };
@@ -122,9 +233,9 @@ namespace
     class Locals = qi::locals<std::string>,
     class SpaceType = skipper<Iterator>
   >
-  struct EBNF_grammar : qi::grammar<Iterator, BNF::rules(), Locals, SpaceType>
+  struct EBNF_grammar : BNF_grammar<Iterator, Locals, SpaceType>
   {
-    EBNF_grammar() : EBNF_grammar::base_type(rules, "EBNF")
+    EBNF_grammar() : EBNF_grammar::base("EBNF")
     {
     }
   };
@@ -217,7 +328,7 @@ namespace
     rule< metast::per() > per;
     rule< metast::ret() > return_expr;
     rule< metast::stmts() > block;
-    rule_noskip<metast::string()> embedded_source;
+    rule_noskip<metast::embedded_source()> embedded_source;
 
     //======== Language Specs ========
     ABNF_grammar<Iterator, Locals, SpaceType> ABNF;
@@ -266,6 +377,8 @@ namespace
       boost::spirit::skip_type          skip;
       boost::spirit::no_skip_type       no_skip;
 
+      ::tell_pos_type tell_pos;
+      
       as<metast::param> as_param;
       as<metast::identifier> as_identifier;
       as<std::list<metast::string>> as_string_list;
@@ -599,7 +712,9 @@ namespace
         = lexeme
         [
          omit[ dashes >> *(space - eol) >> -eol ]
-         > *(char_ - (eol >> *space >> dashes)) 
+         >> tell_pos
+         > omit[ *(char_ - (eol >> *space >> dashes)) ]
+         >> tell_pos
          > omit[ eol >> *space >> dashes ]
         ]
         ;
@@ -850,7 +965,7 @@ namespace
       }
 
       std::clog<<indent()<<"speak_stmt: "<<langs<<std::endl;
-      std::clog<<indent()<<"    \""<<s.source<<"\""<<std::endl;
+      std::clog<<indent()<<"    \""<<s.source.str()<<"\""<<std::endl;
     }
 
     template <class T>
