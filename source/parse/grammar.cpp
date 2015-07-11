@@ -142,6 +142,7 @@ namespace
   namespace BNF = lyre::metast::BNF;
   namespace qi = boost::spirit::qi;
   namespace phoenix = boost::phoenix;
+  namespace fusion = boost::fusion;
 
   struct error_delegate_handler
   {
@@ -330,6 +331,8 @@ namespace
     rule< metast::stmts() > block;
     rule_noskip<metast::embedded_source()> embedded_source;
 
+    boost::phoenix::function<std::function<void(const std::string &, const std::string &)>> spec_f;
+    
     //======== Language Specs ========
     ABNF_grammar<Iterator, Locals, SpaceType> ABNF;
     EBNF_grammar<Iterator, Locals, SpaceType> EBNF;
@@ -620,11 +623,9 @@ namespace
         ;
 
       language_decl
-        =  omit[lexeme[ "language" >> !idchar ]]
-        >  identifier 
-        >  omit[lexeme[ "with" >> !idchar ]]
-        >  identifier
-        //>> *attribute // % ','
+        =  omit[lexeme[ "language" >> !idchar ]] > identifier 
+        //>  omit[lexeme[ "with" >> !idchar ]] >  identifier
+        >  *( attribute/*[ spec_f(fusion::at_c<0>(_1), fusion::at_c<1>(_1)) ]*/ )
         >  embedded_source
         ;
 
@@ -897,10 +898,12 @@ namespace
 
     void operator()(const lyre::metast::language_decl & v)
     {
-      std::clog<<indent()
-               <<"language_decl: "<<v.name.string
-               <<", "<<v.spec.string
-               <<std::endl;
+      std::clog
+        <<indent()
+        <<"language_decl: "<<v.name.string
+        //<<", "<<v.spec.string
+        <<std::endl
+        ;
     }
     
     void operator()(const lyre::metast::type_decl & s)

@@ -85,7 +85,6 @@ namespace lyre
     //========------------------------------------========
     //======== Expression
     //========------------------------------------========
-    typedef boost::iterator_range<const char *> range;
     typedef std::string string;
 
     typedef boost::variant<
@@ -225,8 +224,8 @@ namespace lyre
     
     struct language_decl
     {
-      identifier name, spec;
-      //metast::attributes attributes;
+      identifier name; //, spec;
+      metast::attributes attributes;
       embedded_source definition;
     };
     

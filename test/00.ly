@@ -56,7 +56,7 @@ blah, blah, blah...
 ---
 
 # ABNF: https://tools.ietf.org/html/rfc5234
-language foolang with ABNF
+language FooLang :spec(ABNF) :start("postal-address")
 ------------------------------------------------
 postal-address   = name-part street zip-part
 
@@ -81,7 +81,7 @@ zip-code         = 5DIGIT ["-" 4DIGIT]
 ------------------------------------------------
 
 # EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
-language barlang with EBNF
+language BarLang :spec(EBNF)
 ------------------------------------------------
 digit excluding zero = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 digit                = "0" | digit excluding zero ;
@@ -94,3 +94,8 @@ twelve thousand two hundred one = twelve, two hundred one ;
 natural number = digit excluding zero, { digit } ;
 integer        = "0" | [ "-" ], natural number ;
 ------------------------------------------------
+
+semantics FooSema :lang(FooLang)
+--------------------------------
+
+--------------------------------
