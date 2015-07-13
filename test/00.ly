@@ -80,9 +80,18 @@ state            = 2ALPHA
 zip-code         = 5DIGIT ["-" 4DIGIT]
 ------------------------------------------------
 
-# EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
-language BarLang :spec(EBNF)
+semantics FooSema :lang(FooLang)
 ------------------------------------------------
+------------------------------------------------
+
+type BarAST
+---------------
+  decl value uint :component('natural number');
+---------------
+
+# EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
+language BarLang :spec(EBNF) :ast('digit', uint)
+----------------------------------------------------------
 digit excluding zero = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 digit                = "0" | digit excluding zero ;
 
@@ -93,9 +102,17 @@ twelve thousand two hundred one = twelve, two hundred one ;
 
 natural number = digit excluding zero, { digit } ;
 integer        = "0" | [ "-" ], natural number ;
-------------------------------------------------
+----------------------------------------------------------
 
-semantics FooSema :lang(FooLang)
---------------------------------
+semantics BarSema :lang(BarLang)
+---------------------------------
+  'digit excluding zero'
+  -----------------------
+    
+  -----------------------
 
---------------------------------
+  'integer' :a(Foo)
+  -----------------------
+    
+  -----------------------
+---------------------------------

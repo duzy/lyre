@@ -259,7 +259,6 @@ namespace
     
     //======== symbols ========
     qi::symbols<char, metast::opcode>
-    list_op,
       assign_op,
       equality_op,
       relational_op,
@@ -283,7 +282,6 @@ namespace
 
     rule< metast::expression() > dotted;
 
-    //rule< metast::expression() > list;
     rule< metast::expression() > assign;
     rule< metast::expression() > logical;
     rule< metast::expression() > equality;
@@ -310,13 +308,18 @@ namespace
     int quote_expr_count;
 
     //======== Statements ========
-    rule< metast::top_level_decls() > top;
+    rule< metast::top_level_decls() > top_level_decls;
     rule< metast::stmts() > stmts;
     rule< metast::stmt() > stmt;
-    rule< metast::variable_decls() > decl;
-    rule< metast::procedure_decl() > proc;
-    rule< metast::type_decl() > type;
+    rule< metast::variable_decls() > variable_decls;
+    rule< metast::procedure_decl() > procedure_decl;
+    rule< metast::in_type_decls() > in_type_decls;
+    rule< metast::type_decl() > type_decl;
     rule< metast::language_decl() > language_decl;
+    rule< metast::in_semantics_decls() > in_semantics_decls;
+    rule< metast::semantic_action_name() > semantic_action_name;
+    rule< metast::semantic_action_decl() > semantic_action_decl;
+    rule< metast::semantics_decl() > semantics_decl;
     rule< metast::speak_stmt() > speak_stmt;
     rule< metast::params() > params;
     rule< metast::with_stmt() > with_stmt;
@@ -338,7 +341,7 @@ namespace
     EBNF_grammar<Iterator, Locals, SpaceType> EBNF;
     
     grammar(lyre::TopLevelDeclHandler *h)
-      : grammar::base_type(top, "lyre")
+      : grammar::base_type(top_level_decls, "lyre")
       , fail_handler(error_delegate_handler(h))
       , quote_expr_count(0)
     {
@@ -392,12 +395,6 @@ namespace
       //========------------------------------------========
       //======== Symbols
       //========------------------------------------========
-      /*
-      list_op.add
-        (",", metast::opcode::comma)
-        ;
-      */
-
       assign_op.add
         ("=", metast::opcode::set)
         ;
@@ -592,16 +589,101 @@ namespace
       //========------------------------------------========
       //======== Statements
       //========------------------------------------========
-      top = *( decl | proc | type | language_decl );
+      top_level_decls
+        = *( variable_decls
+           | procedure_decl
+           | type_decl
+           | language_decl
+           | semantics_decl
+           )
+        ;
+      
+      variable_decls
+        =  omit[lexeme[ "decl" >> !idchar ]]
+        >  (
+            (
+             identifier // [ boost::bind(&debug::a_id, _1) ]
+             >> -identifier >> *( attribute )
+             >> -( '=' > expr )
+            ) % ','
+           )
+        >  ';'
+        ;
+      
+      procedure_decl
+        =  omit[lexeme[ "proc" >> !idchar ]]
+        >  identifier
+        >  params
+        >  -identifier //>  -( omit[':'] > identifier )
+        >  block
+        ;
+      
+      auto check_attribute = [this] (const metast::attribute & a) {
+        std::clog << a.name.string << std::endl;
+      };
+      
+      language_decl
+        =  omit[lexeme[ "language" >> !idchar ]]
+        >  identifier > *( attribute[ check_attribute ] )
+        >  embedded_source
+        ;
 
+      semantics_decl
+        =  omit[lexeme[ "semantics" >> !idchar ]]
+        >  identifier > *( attribute )
+        >  dashes
+        >  in_semantics_decls
+        >  dashes
+        ;
+
+      semantic_action_decl
+        = semantic_action_name
+        > *( attribute )
+        >  block
+        ;
+
+      semantic_action_name
+        = rawstring
+        | quote
+        | identifier
+        ;
+
+      in_semantics_decls
+        = *( variable_decls
+           | procedure_decl
+           | semantic_action_decl
+           )
+        ;
+      
+      type_decl
+        =  omit[lexeme[ "type" >> !idchar ]]
+        >  identifier > -params
+        >  dashes
+        >  in_type_decls
+        >  dashes
+        ;
+
+      in_type_decls
+        = *( variable_decls
+           | procedure_decl
+           | type_decl
+           )
+        ;
+
+      params
+        =  '('
+        >  -( ( identifier > ':' > identifier ) % ',' )
+        >  ')'
+        ;
+      
       stmts
         = *stmt
         ;
 
       stmt
-        =  decl
-        |  proc
-        |  type
+        =  variable_decls
+        |  procedure_decl
+        |  type_decl
         |  return_expr
         |  see_stmt
         |  with_stmt
@@ -614,46 +696,6 @@ namespace
         =  dashes
         >  stmts
         >  dashes
-        ;
-
-      params
-        =  '('
-        >  -( ( identifier > ':' > identifier ) % ',' )
-        >  ')'
-        ;
-
-      language_decl
-        =  omit[lexeme[ "language" >> !idchar ]] > identifier 
-        //>  omit[lexeme[ "with" >> !idchar ]] >  identifier
-        >  *( attribute/*[ spec_f(fusion::at_c<0>(_1), fusion::at_c<1>(_1)) ]*/ )
-        >  embedded_source
-        ;
-
-      decl
-        =  omit[lexeme[ "decl" >> !idchar ]]
-        >  (
-            (
-             identifier // [ boost::bind(&debug::a_id, _1) ]
-             >> -identifier
-             >> -( '=' > expr )
-             ) % ','
-           )
-        >  ';'
-        ;
-
-      proc
-        =  omit[lexeme[ "proc" >> !idchar ]]
-        >  identifier
-        >  params
-        >  -identifier //>  -( omit[':'] > identifier )
-        >  block
-        ;
-
-      type
-        =  omit[lexeme[ "type" >> !idchar ]]
-        >  identifier
-        > -params
-        >  block
         ;
 
       with_stmt
@@ -739,15 +781,17 @@ namespace
                                (quote)
                                (arguments)
                                (assign)
-                               //(list)
                                (dashes)
                                //== Statements
                                (stmts)
                                (stmt)
-                               (decl)
+                               (variable_decls)
                                (language_decl)
-                               (proc)
-                               (type)
+                               (semantics_decl)
+                               (procedure_decl)
+                               (type_decl)
+                               (in_semantics_decls)
+                               (in_type_decls)
                                (params)
                                (speak_stmt)
                                (embedded_source)
@@ -758,7 +802,7 @@ namespace
                                (block)
                                );
 
-      on_error<fail>(top, fail_handler(_4, _3, _2));
+      on_error<fail>(top_level_decls, fail_handler(_4, _3, _2));
     }
   };
 
@@ -886,6 +930,15 @@ namespace
     {
       std::clog<<indent()<<"variable_decl: "<<s.id.string<<std::endl;
     }
+
+    void operator()(const lyre::metast::attribute & s)
+    {
+      std::clog<<indent()<<"attribute: "<<s.name.string<<std::endl;
+      indent(4);
+      if (s.args) for (auto & a : boost::get<lyre::metast::arguments>(s.args))
+                    (*this)(a);
+      indent(-4);
+    }
     
     void operator()(const lyre::metast::procedure_decl & s)
     {
@@ -904,6 +957,29 @@ namespace
         //<<", "<<v.spec.string
         <<std::endl
         ;
+    }
+
+    void operator()(const lyre::metast::semantics_decl & v)
+    {
+      std::clog
+        <<indent()
+        <<"semantics_decl: " <<v.name.string
+        <<std::endl
+        ;
+      indent(4);
+      for (auto & a : v.attributes) (*this)(a);
+      for (auto & d : v.decls) boost::apply_visitor(*this, d);
+      indent(-4);
+    }
+    
+    void operator()(const lyre::metast::semantic_action_decl & v)
+    {
+      std::clog<<indent()<<"semantic_action_decl: ";
+      boost::apply_visitor(*this, v.name);
+      indent(4);
+      for (auto & a : v.attributes) (*this)(a);
+      for (auto & d : v.stmts) boost::apply_visitor(*this, d);
+      indent(-4);
     }
     
     void operator()(const lyre::metast::type_decl & s)
@@ -948,7 +1024,7 @@ namespace
       for (auto stmt : s.stmts) boost::apply_visitor(*this, stmt);
       indent(-4);
       if (s.next) boost::apply_visitor(*this, boost::get<lyre::metast::see_block>(s.next));
-    }    
+    }
     
     void operator()(const lyre::metast::with_stmt & s)
     {

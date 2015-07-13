@@ -19,6 +19,7 @@ namespace
     void HandleVariableDecls(const lyre::metast::variable_decls & s) override;
     void HandleProcedureDecl(const lyre::metast::procedure_decl & s) override;
     void HandleLanguageDecl(const lyre::metast::language_decl & s) override;
+    void HandleSemanticsDecl(const lyre::metast::semantics_decl & s) override;
     void HandleTypeDecl(const lyre::metast::type_decl & s) override;
     void HandleParseFailure(const char *iter, const char * const end) override;
     void HandleSyntaxError(const char *tag, std::size_t line, std::size_t column, const char *pos, const char * const end) override;
@@ -42,9 +43,20 @@ void DeclHandler::HandleProcedureDecl(const lyre::metast::procedure_decl & s)
 void DeclHandler::HandleLanguageDecl(const lyre::metast::language_decl & s)
 {
   llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
-               << s.name.string.c_str() << "\n--------\n"
-               << s.definition.str()
-               << "\n--------\n";
+               << s.name.string.c_str()
+    /*
+      << "\n--------\n"
+      << s.definition.str()
+      << "\n--------"
+    */
+               << "\n" ;
+}
+
+void DeclHandler::HandleSemanticsDecl(const lyre::metast::semantics_decl & s)
+{
+  llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+               << s.name.string.c_str()
+               << "\n";
 }
 
 void DeclHandler::HandleTypeDecl(const lyre::metast::type_decl & s)

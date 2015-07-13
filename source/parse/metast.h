@@ -55,6 +55,7 @@ namespace lyre
     struct procedure_decl;
     struct type_decl;
     struct language_decl;
+    struct semantics_decl;
     struct see_stmt;
     struct with_stmt;
     struct speak_stmt;
@@ -215,24 +216,11 @@ namespace lyre
 
     typedef std::list<param> params;
 
-    struct embedded_source
-    {
-      const char *begin;
-      const char *end;
-      string str() const { return string(begin, end); }
-    };
-    
-    struct language_decl
-    {
-      identifier name; //, spec;
-      metast::attributes attributes;
-      embedded_source definition;
-    };
-    
     struct variable_decl
     {
       identifier id;
       boost::optional<identifier> type;
+      metast::attributes attributes;
       boost::optional<metast::expression> value;
     };
 
@@ -246,32 +234,74 @@ namespace lyre
       metast::stmts block;
     };
 
+    typedef boost::variant<
+      variable_decls
+      , procedure_decl
+      , boost::recursive_wrapper<type_decl>
+      >
+    in_type_decl;
+
+    struct in_type_decls : std::list<in_type_decl> {};
+
     struct type_decl
     {
       identifier name;
       boost::optional<metast::params> params;
-      metast::stmts block;
+      in_type_decls decls;
+    };
+
+    struct embedded_source
+    {
+      const char *begin;
+      const char *end;
+      string str() const { return string(begin, end); }
+    };
+    
+    struct language_decl
+    {
+      identifier name; //, spec;
+      metast::attributes attributes;
+      embedded_source definition;
+    };
+
+    typedef boost::variant<string, quote, identifier> semantic_action_name;
+
+    struct semantic_action_decl
+    {
+      semantic_action_name name;
+      metast::attributes attributes;
+      metast::stmts stmts;
     };
 
     typedef boost::variant<
-      boost::recursive_wrapper<variable_decls>
-      , boost::recursive_wrapper<procedure_decl>
-      , boost::recursive_wrapper<language_decl>
-      , boost::recursive_wrapper<type_decl>
+      variable_decls
+      , procedure_decl
+      , semantic_action_decl
+      >
+    in_semantics_decl;
+
+    struct in_semantics_decls : std::list<in_semantics_decl> {};
+
+    struct semantics_decl
+    {
+      identifier name;
+      metast::attributes attributes;
+      in_semantics_decls decls;
+    };
+
+    typedef boost::variant<
+      variable_decls
+      , procedure_decl
+      , language_decl
+      , semantics_decl
+      , type_decl
       >
     top_level_decl;
 
     struct top_level_decls : std::list<top_level_decl> {};
 
-    typedef boost::variant<
-      boost::recursive_wrapper<variable_decls>
-      , boost::recursive_wrapper<procedure_decl>
-      , boost::recursive_wrapper<type_decl>
-      >
-    class_level_decl;
-
-    struct class_level_decls : std::list<class_level_decl> {};
-
+    //--------------------------------------------------
+    
     typedef boost::variant<
       identifier
       , boost::recursive_wrapper<speak_stmt>
@@ -344,6 +374,7 @@ namespace lyre
     virtual void HandleVariableDecls(const metast::variable_decls & s) = 0;
     virtual void HandleProcedureDecl(const metast::procedure_decl & s) = 0;
     virtual void HandleLanguageDecl(const metast::language_decl & s) = 0;
+    virtual void HandleSemanticsDecl(const metast::semantics_decl & s) = 0;
     virtual void HandleParseFailure(const char *iter, const char * const end) = 0;
     virtual void HandleSyntaxError(const char *tag, std::size_t line, std::size_t column, const char *pos, const char * const end) = 0;
   };

@@ -5,6 +5,7 @@ BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::variable_decl,
     (lyre::metast::identifier, id)
     (boost::optional<lyre::metast::identifier>, type)
+    (lyre::metast::attributes, attributes)
     (boost::optional<lyre::metast::expression>, value)
 )
 
@@ -17,22 +18,16 @@ BOOST_FUSION_ADAPT_STRUCT(
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::type_decl,
-    (lyre::metast::identifier, name)
-    (boost::optional<std::list<lyre::metast::param>>, params)
-    (lyre::metast::stmts, block)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::speak_stmt,
-    (std::list<lyre::metast::identifier>, langs)
-    (lyre::metast::embedded_source, source)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::param,
     (lyre::metast::identifier, name)
     (boost::optional<lyre::metast::identifier>, type)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::type_decl,
+    (lyre::metast::identifier, name)
+    (boost::optional<std::list<lyre::metast::param>>, params)
+    (lyre::metast::in_type_decls, decls)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -44,10 +39,23 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::language_decl,
     (lyre::metast::identifier, name)
-    //(lyre::metast::identifier, spec)
     (lyre::metast::attributes, attributes)
     //(lyre::metast::BNF::rules, definition)
     (lyre::metast::embedded_source, definition)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::semantics_decl,
+    (lyre::metast::identifier, name)
+    (lyre::metast::attributes, attributes)
+    (lyre::metast::in_semantics_decls, decls)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::semantic_action_decl,
+    (lyre::metast::semantic_action_name, name)
+    (lyre::metast::attributes, attributes)
+    (lyre::metast::stmts, stmts)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -80,6 +88,12 @@ BOOST_FUSION_ADAPT_STRUCT(
     (lyre::metast::expression, value)
     (lyre::metast::stmts, stmts)
     (boost::optional<lyre::metast::see_block>, next)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::speak_stmt,
+    (std::list<lyre::metast::identifier>, langs)
+    (lyre::metast::embedded_source, source)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
