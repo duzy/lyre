@@ -189,6 +189,20 @@ namespace lyre
 
     struct arguments : std::list<expression> {};
 
+    template
+    <
+      typename A, 
+      typename T = typename boost::remove_const<A>::type, 
+      typename Ptr = T*
+    >
+    struct primary_expr_visitor
+    {
+      typedef Ptr result_type;
+      template<typename Other> Ptr operator()(const Other &) { return nullptr; }
+      Ptr operator()(const expression &e) { return boost::apply_visitor(*this, e.first); }
+      Ptr operator()(const T &t) { return const_cast<T*>(&t); }
+    };
+
     struct name_value
     {
       identifier name;

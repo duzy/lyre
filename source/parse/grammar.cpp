@@ -172,6 +172,30 @@ namespace
       handler->HandleSyntaxError(what.tag.c_str(), l, c, err_pos.base(), last.base());
     }
   };
+
+  struct name_constant_visitor : boost::static_visitor<bool>
+  {
+    template<typename O> bool operator()(const O &) { return false; }
+    bool operator()(const metast::expression &e) { return boost::apply_visitor(*this, e.first); }
+    bool operator()(const metast::identifier &i) { value = i.string; return true; }
+    bool operator()(const metast::string &s) { value = s; return true; }
+    std::string value;
+  };
+  
+  template<class T>
+  struct is_visitor
+  {
+    typedef bool result_type;
+    template<class A> bool operator()(const A &) { return false; }
+    bool operator()(const T &) { return true; }
+  };
+
+  template<class T, class V>
+  inline bool is(const V & v)
+  {
+    is_visitor<T> visitor;
+    return boost::apply_visitor(visitor, v);
+  }
   
   template < class Iterator >
   struct skipper : qi::grammar<Iterator>
@@ -194,18 +218,17 @@ namespace
   template
   <
     class Iterator,
-    class Locals = qi::locals<std::string>,
     class SpaceType = skipper<Iterator>
   >
-  struct BNF_grammar : qi::grammar<Iterator, BNF::rules(), Locals, SpaceType>
+  struct BNF_grammar : qi::grammar<Iterator, BNF::rules(), SpaceType>
   {
     typedef BNF_grammar base;
     
     template <class Spec = void()>
-    using rule = qi::rule<Iterator, Spec, Locals, SpaceType>;
+    using rule = qi::rule<Iterator, Spec, SpaceType>;
 
     template <class Spec = void()>
-    using rule_noskip = qi::rule<Iterator, Spec, Locals>;
+    using rule_noskip = qi::rule<Iterator, Spec>;
 
     rule< BNF::rules() > rules;
     
@@ -218,10 +241,9 @@ namespace
   template
   <
     class Iterator,
-    class Locals = qi::locals<std::string>,
     class SpaceType = skipper<Iterator>
   >
-  struct ABNF_grammar : BNF_grammar<Iterator, Locals, SpaceType>
+  struct ABNF_grammar : BNF_grammar<Iterator, SpaceType>
   {
     ABNF_grammar() : ABNF_grammar::base("ABNF")
     {
@@ -231,10 +253,9 @@ namespace
   template
   <
     class Iterator,
-    class Locals = qi::locals<std::string>,
     class SpaceType = skipper<Iterator>
   >
-  struct EBNF_grammar : BNF_grammar<Iterator, Locals, SpaceType>
+  struct EBNF_grammar : BNF_grammar<Iterator, SpaceType>
   {
     EBNF_grammar() : EBNF_grammar::base("EBNF")
     {
@@ -244,18 +265,21 @@ namespace
   template
   <
     class Iterator,
-    class Locals = qi::locals<std::string>,
     class SpaceType = skipper<Iterator>
   >
-  struct grammar : qi::grammar<Iterator, metast::top_level_decls(), Locals, SpaceType>
+  struct grammar : qi::grammar<Iterator, metast::top_level_decls(), SpaceType>
   {
     template <class Spec = void()>
-    using rule = qi::rule<Iterator, Spec, Locals, SpaceType>;
+    using rule = qi::rule<Iterator, Spec, SpaceType>;
 
     template <class Spec = void()>
-    using rule_noskip = qi::rule<Iterator, Spec, Locals>;
+    using rule_noskip = qi::rule<Iterator, Spec>;
 
+    std::string language_decl_spec;
+    boost::phoenix::function<std::function<bool(const std::string &s)>> is_spec;
     boost::phoenix::function<error_delegate_handler> fail_handler;
+
+    bool is_language_spec(const std::string & spec) { return language_decl_spec == spec; }
     
     //======== symbols ========
     qi::symbols<char, metast::opcode>
@@ -315,7 +339,7 @@ namespace
     rule< metast::procedure_decl() > procedure_decl;
     rule< metast::in_type_decls() > in_type_decls;
     rule< metast::type_decl() > type_decl;
-    rule< metast::language_decl() > language_decl;
+    qi::rule<Iterator, metast::language_decl(), qi::locals<metast::attribute>, SpaceType > language_decl;
     rule< metast::in_semantics_decls() > in_semantics_decls;
     rule< metast::semantic_action_name() > semantic_action_name;
     rule< metast::semantic_action_decl() > semantic_action_decl;
@@ -337,11 +361,12 @@ namespace
     boost::phoenix::function<std::function<void(const std::string &, const std::string &)>> spec_f;
     
     //======== Language Specs ========
-    ABNF_grammar<Iterator, Locals, SpaceType> ABNF;
-    EBNF_grammar<Iterator, Locals, SpaceType> EBNF;
+    ABNF_grammar<Iterator, SpaceType> ABNF;
+    EBNF_grammar<Iterator, SpaceType> EBNF;
     
     grammar(lyre::TopLevelDeclHandler *h)
       : grammar::base_type(top_level_decls, "lyre")
+      , is_spec([this] (const std::string & s) { return is_language_spec(s); })
       , fail_handler(error_delegate_handler(h))
       , quote_expr_count(0)
     {
@@ -354,6 +379,7 @@ namespace
       using boost::phoenix::bind;
       using boost::phoenix::construct;
       using boost::phoenix::val;
+      using boost::phoenix::ref;
 
       boost::spirit::ascii::space_type    space;
       boost::spirit::eoi_type             eoi;
@@ -366,6 +392,9 @@ namespace
       qi::_3_type          _3; // qi::labels
       qi::_4_type          _4; // qi::labels
       qi::_a_type          _a;
+      qi::_b_type          _b;
+      qi::_c_type          _c;
+      qi::_d_type          _d;
       qi::_r1_type         _r1;
       qi::_val_type        _val;
       qi::alnum_type       alnum;
@@ -390,6 +419,7 @@ namespace
       as<std::list<metast::string>> as_string_list;
       as<metast::string> as_string;
       as<metast::expression> as_expr;
+      as<metast::attribute> as_attr;
       as<metast::op> as_op;
 
       //========------------------------------------========
@@ -542,9 +572,9 @@ namespace
               // The rule 'quote_expr' will not eat ')' to keep
               // consequence spaces. 
               (
-               omit[ eps( phoenix::ref(quote_expr_count) > 0 ) ]
+               omit[ eps( ref(quote_expr_count) > 0 ) ]
                >> lit(')') >> quote_raw >> 
-               omit[ eps[ phoenix::ref(quote_expr_count) -= 1 ] ]
+               omit[ eps[ ref(quote_expr_count) -= 1 ] ]
               )
               | quote_raw
              ] 
@@ -618,14 +648,35 @@ namespace
         >  block
         ;
       
-      auto check_attribute = [this] (const metast::attribute & a) {
-        std::clog << a.name.string << std::endl;
+      auto reset_language_spec = [this] { language_decl_spec.clear(); };
+      auto check_language_spec = [this] (const metast::attribute & a) {
+        if (a.name.string == "spec") {
+          language_decl_spec.clear();
+          if (a.args) {
+            auto &args = boost::get<metast::arguments>(a.args);
+            if (!args.empty()) {
+              name_constant_visitor visitor;
+              if (boost::apply_visitor(visitor, args.front().first)) 
+                language_decl_spec = visitor.value;
+            }
+          }
+        }
+        return a;
       };
-      
+
+      boost::phoenix::function<decltype(check_language_spec)>
+        check_spec(check_language_spec);
+
       language_decl
-        =  omit[lexeme[ "language" >> !idchar ]]
-        >  identifier > *( attribute[ check_attribute ] )
-        >  embedded_source
+        =  omit[lexeme[ "language" >> !idchar ][ reset_language_spec ]]
+        ///>  identifier > *( attribute[ check_language_spec ] )
+        >  identifier > *( omit[attribute[ _a = check_spec(_1) ]] >> attr(_a) )
+        >  ( hold
+           [ eps(is_spec(val(""))) >> embedded_source ]
+           | eps(is_spec(val("ABNF"))) >> embedded_source
+           | eps(is_spec(val("EBNF"))) >> embedded_source
+           )
+        //>> omit[eps[ ref(language_decl_spec) = "" ]]
         ;
 
       semantics_decl
@@ -807,15 +858,7 @@ namespace
   };
 
 #define DUMP_AST 1
-#ifdef DUMP_AST
-  template<class T>
-  struct is
-  {
-    typedef bool result_type;
-    bool operator()(const T &) { return true; }
-    template<class A> bool operator()(const A &) { return false; }
-  };
-  
+#ifdef DUMP_AST 
   struct stmt_dumper
   {
     typedef void result_type;
@@ -885,7 +928,7 @@ namespace
 
     void operator()(const lyre::metast::expression & e)
     {
-      is<lyre::metast::none> isNone;
+      is_visitor<lyre::metast::none> isNone;
       auto isFirstNone = boost::apply_visitor(isNone, e.first);
 
       if (isFirstNone && e.rest.size() == 0) {
@@ -957,6 +1000,9 @@ namespace
         //<<", "<<v.spec.string
         <<std::endl
         ;
+      indent(4);
+      for (auto & a : v.attributes) (*this)(a);
+      indent(-4);
     }
 
     void operator()(const lyre::metast::semantics_decl & v)

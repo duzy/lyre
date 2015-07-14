@@ -35,7 +35,7 @@ void DeclHandler::HandleVariableDecls(const lyre::metast::variable_decls & s)
 void DeclHandler::HandleProcedureDecl(const lyre::metast::procedure_decl & s)
 {
   llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
-               << s.name.string.c_str() << ", "
+               << s.name.string << ", "
                << s.block.size() << " stmts"
                << "\n";
 }
@@ -43,7 +43,7 @@ void DeclHandler::HandleProcedureDecl(const lyre::metast::procedure_decl & s)
 void DeclHandler::HandleLanguageDecl(const lyre::metast::language_decl & s)
 {
   llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
-               << s.name.string.c_str()
+               << s.name.string
     /*
       << "\n--------\n"
       << s.definition.str()
@@ -62,6 +62,7 @@ void DeclHandler::HandleSemanticsDecl(const lyre::metast::semantics_decl & s)
 void DeclHandler::HandleTypeDecl(const lyre::metast::type_decl & s)
 {
   llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
+               << s.name.string.c_str()
                << "\n";
 }
 
