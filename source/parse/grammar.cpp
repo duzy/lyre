@@ -276,10 +276,10 @@ namespace
     using rule_noskip = qi::rule<Iterator, Spec>;
 
     std::string language_decl_spec;
-    boost::phoenix::function<std::function<bool(const std::string &s)>> is_spec;
-    boost::phoenix::function<error_delegate_handler> fail_handler;
-
     bool is_language_spec(const std::string & spec) { return language_decl_spec == spec; }
+
+    phoenix::function<std::function<bool(const std::string &s)>> is_spec;
+    phoenix::function<error_delegate_handler> fail_handler;
     
     //======== symbols ========
     qi::symbols<char, metast::opcode>
@@ -358,7 +358,7 @@ namespace
     rule< metast::stmts() > block;
     rule_noskip<metast::embedded_source()> embedded_source;
 
-    boost::phoenix::function<std::function<void(const std::string &, const std::string &)>> spec_f;
+    phoenix::function<std::function<void(const std::string &, const std::string &)>> spec_f;
     
     //======== Language Specs ========
     ABNF_grammar<Iterator, SpaceType> ABNF;
@@ -376,10 +376,10 @@ namespace
       using qi::fail;
       using boost::spirit::lazy;
 
-      using boost::phoenix::bind;
-      using boost::phoenix::construct;
-      using boost::phoenix::val;
-      using boost::phoenix::ref;
+      using phoenix::bind;
+      using phoenix::construct;
+      using phoenix::val;
+      using phoenix::ref;
 
       boost::spirit::ascii::space_type    space;
       boost::spirit::eoi_type             eoi;
@@ -664,7 +664,7 @@ namespace
         return a;
       };
 
-      boost::phoenix::function<decltype(check_language_spec)>
+      phoenix::function<decltype(check_language_spec)>
         check_spec(check_language_spec);
 
       language_decl
