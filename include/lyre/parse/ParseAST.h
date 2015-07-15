@@ -9,14 +9,16 @@ class MemoryBuffer;
 
 namespace lyre
 {
-namespace sema { class Sema; }
+  class FrontendInputFile;
+  
+  namespace sema { class Sema; }
 
 #if 0
-// Corresponding to llvm::parseIR in llvm/IRReader/IRReader.h.
-void ParseAST(sema::Sema & S, bool PrintStats = false, bool SkipFunctionBodies = false);
+  // Corresponding to llvm::parseIR in llvm/IRReader/IRReader.h.
+  void ParseAST(sema::Sema & S, bool PrintStats = false, bool SkipFunctionBodies = false);
 #else
-void ParseAST(sema::Sema & S, llvm::MemoryBuffer *Buffer,
-              bool PrintStats = false, bool SkipFunctionBodies = false);
+  void ParseAST(sema::Sema & S, const FrontendInputFile &InputFile, llvm::MemoryBuffer *Buffer,
+                bool PrintStats = false, bool SkipFunctionBodies = false);
 #endif
 
 } // end namespace lyre

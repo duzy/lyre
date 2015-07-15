@@ -11,21 +11,35 @@ namespace lyre
   namespace metast
   {
     /// This namespace is shared by ABNF, EBNF.
-    namespace BNF
+    namespace langspec
     {
-
+      enum class ABNFCoreRule : unsigned char
+      {
+        ALPHA,    //    %x41-5A / %x61-7A                               Upper- and lower-case ASCII letters (A–Z, a–z)
+          DIGIT,  //    %x30-39                                         Decimal digits (0–9)
+          HEXDIG, //    DIGIT / "A" / "B" / "C" / "D" / "E" / "F"       Hexadecimal digits (0–9, A–F)
+          DQUOTE, //    %x22                                            Double Quote
+          SP,     //    %x20                                            space
+          HTAB,   //    %x09                                            horizontal tab
+          WSP,    //    SP / HTAB                                       space and horizontal tab
+          LWSP,   //    *(WSP / CRLF WSP)                               linear white space (past newline)
+          VCHAR,  //    %x21-7E                                         visible (printing) characters
+          CHAR,   //    %x01-7F                                         any ASCII character, excluding NUL
+          OCTET,  //    %x00-FF                                         8 bits of data
+          CTL,    //    %x00-1F / %x7F                                  controls
+          CR,     //    %x0D                                            carriage return
+          LF,     //    %x0A                                            linefeed
+          CRLF,   //    CR LF                                           Internet standard newline
+          BIT,    //    "0" / "1"                                       binary digit
+      };
+      
       struct alternative;
       struct sequence;
       struct optional;
       struct repeat;
 
-      //struct and_predicate;
-      //struct difference;
-      //struct expect;
-      
       struct alternative
       {
-    
       };
 
       struct sequence
@@ -44,11 +58,13 @@ namespace lyre
       {
       };
 
-      struct rules : std::list<rule>
+      struct rules : std::list<rule> {};
+      
+      struct spec
       {
+        langspec::rules rules;
       };
-  
-    } // end namespace BNF
+    } // end namespace langspec
 
     struct none {};
     struct variable_decls;
@@ -275,7 +291,7 @@ namespace lyre
     {
       identifier name; //, spec;
       metast::attributes attributes;
-      embedded_source definition;
+      langspec::spec spec;
     };
 
     typedef boost::variant<string, quote, identifier> semantic_action_name;

@@ -40,8 +40,7 @@ BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::language_decl,
     (lyre::metast::identifier, name)
     (lyre::metast::attributes, attributes)
-    //(lyre::metast::BNF::rules, definition)
-    (lyre::metast::embedded_source, definition)
+    (lyre::metast::langspec::spec, spec)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(

@@ -332,7 +332,7 @@ void ASTAction::ExecuteAction()
   const FileEntry *File = FM.getFile(getCurrentFile());
   if (time_t ModTime = File->getModificationTime()) {
     llvm::MemoryBuffer *Buffer = SM.getMemoryBufferForFile(File);
-    ParseAST(C.getSema(), Buffer, false, false);
+    ParseAST(C.getSema(), getCurrentInput(), Buffer, false, false);
   } else {
     assert(0 < ModTime && "Missing current input file!");
   }

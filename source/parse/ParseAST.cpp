@@ -1,6 +1,7 @@
 #include "lyre/parse/ParseAST.h"
 #include "lyre/ast/AST.h"
 #include "lyre/base/SourceManager.h"
+#include "lyre/frontend/FrontendOptions.h"
 #include "lyre/sema/Sema.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -13,8 +14,10 @@ namespace
   struct DeclHandler : lyre::TopLevelDeclHandler
   {
     lyre::sema::Sema &Sema;
+    const lyre::FrontendInputFile &InputFile;
     
-    explicit DeclHandler(lyre::sema::Sema &S) : Sema(S) {}
+    explicit DeclHandler(lyre::sema::Sema &S, const lyre::FrontendInputFile &IF)
+      : Sema(S), InputFile(IF) {}
     
     void HandleVariableDecls(const lyre::metast::variable_decls & s) override;
     void HandleProcedureDecl(const lyre::metast::procedure_decl & s) override;
@@ -84,7 +87,7 @@ void DeclHandler::HandleSyntaxError(const char *tag, std::size_t line, std::size
   
   llvm::errs()
     << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ":\n"
-    << "test/00.ly" << ":" << line << ":" << column << ": "
+    << InputFile.getFile() << ":" << line << ":" << column << ": "
     << "fail: expects '"
     << tag
     << "' here: \""
@@ -93,13 +96,13 @@ void DeclHandler::HandleSyntaxError(const char *tag, std::size_t line, std::size
     ;
 }
 
-void lyre::ParseAST(sema::Sema & S, MemoryBuffer *Buffer,
+void lyre::ParseAST(sema::Sema & S, const FrontendInputFile &InputFile, MemoryBuffer *Buffer,
                     bool PrintStats, bool SkipFunctionBodies)
 {
   //llvm::errs() << __FILE__ << ":" << __LINE__ << ": " << __FUNCTION__ << ": "
   //             << "\n";
   //llvm::errs() << Buffer->getBuffer() << "\n";
 
-  DeclHandler H(S);
+  DeclHandler H(S, InputFile);
   parse(&H, Buffer->getBufferStart(), Buffer->getBufferEnd());
 }

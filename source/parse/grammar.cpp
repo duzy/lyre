@@ -139,7 +139,7 @@ namespace
   }
   
   namespace metast = lyre::metast;
-  namespace BNF = lyre::metast::BNF;
+  namespace langspec = metast::langspec;
   namespace qi = boost::spirit::qi;
   namespace phoenix = boost::phoenix;
   namespace fusion = boost::fusion;
@@ -220,66 +220,412 @@ namespace
     class Iterator,
     class SpaceType = skipper<Iterator>
   >
-  struct BNF_grammar : qi::grammar<Iterator, BNF::rules(), SpaceType>
-  {
-    typedef BNF_grammar base;
-    
-    template <class Spec = void()>
-    using rule = qi::rule<Iterator, Spec, SpaceType>;
-
-    template <class Spec = void()>
-    using rule_noskip = qi::rule<Iterator, Spec>;
-
-    rule< BNF::rules() > rules;
-    
-  protected:
-    explicit BNF_grammar(const char * const name) : BNF_grammar::base_type(rules, name)
-    {
-    }
-  };
-  
-  template
-  <
-    class Iterator,
-    class SpaceType = skipper<Iterator>
-  >
-  struct ABNF_grammar : BNF_grammar<Iterator, SpaceType>
-  {
-    ABNF_grammar() : ABNF_grammar::base("ABNF")
-    {
-    }
-  };
-
-  template
-  <
-    class Iterator,
-    class SpaceType = skipper<Iterator>
-  >
-  struct EBNF_grammar : BNF_grammar<Iterator, SpaceType>
-  {
-    EBNF_grammar() : EBNF_grammar::base("EBNF")
-    {
-    }
-  };
-    
-  template
-  <
-    class Iterator,
-    class SpaceType = skipper<Iterator>
-  >
-  struct grammar : qi::grammar<Iterator, metast::top_level_decls(), SpaceType>
+  struct DefaultLangSpec_grammar : qi::grammar<Iterator, langspec::spec(), SpaceType>
   {
     template <class Spec = void()>
     using rule = qi::rule<Iterator, Spec, SpaceType>;
 
     template <class Spec = void()>
     using rule_noskip = qi::rule<Iterator, Spec>;
+
+    rule_noskip<> dashes;
+    rule< langspec::spec() > spec;
+
+    DefaultLangSpec_grammar() : DefaultLangSpec_grammar::base_type(spec, "DefaultLangSpec")
+    {
+      qi::alnum_type       alnum;
+      qi::alpha_type       alpha;
+      qi::digit_type       digit;
+      qi::lexeme_type      lexeme;
+      qi::lit_type         lit;
+      qi::omit_type        omit;
+      qi::raw_type         raw;
+      qi::string_type      string;
+      qi::char_type        char_;
+      boost::spirit::ascii::space_type  space;
+      boost::spirit::repeat_type        repeat;
+      boost::spirit::skip_type          skip;
+      boost::spirit::no_skip_type       no_skip;
+      boost::spirit::inf_type           inf;
+
+      dashes = lexeme[ repeat(3, inf)[ lit('-') ] ];
+    }
+  };
+
+  template
+  <
+    class Iterator,
+    class SpaceType = skipper<Iterator>
+  >
+  struct ABNF_grammar : qi::grammar<Iterator, langspec::spec(), SpaceType>
+  { // Ref: https://tools.ietf.org/html/rfc5234
+    /**
+       ALPHA    %x41-5A / %x61-7A                               Upper- and lower-case ASCII letters (A–Z, a–z)
+       DIGIT    %x30-39                                         Decimal digits (0–9)
+       HEXDIG   DIGIT / "A" / "B" / "C" / "D" / "E" / "F"       Hexadecimal digits (0–9, A–F)
+       DQUOTE   %x22                                            Double Quote
+       SP       %x20                                            space
+       HTAB     %x09                                            horizontal tab
+       WSP      SP / HTAB                                       space and horizontal tab
+       LWSP     *(WSP / CRLF WSP)                               linear white space (past newline)
+       VCHAR    %x21-7E                                         visible (printing) characters
+       CHAR     %x01-7F                                         any ASCII character, excluding NUL
+       OCTET    %x00-FF                                         8 bits of data
+       CTL      %x00-1F / %x7F                                  controls
+       CR       %x0D                                            carriage return
+       LF       %x0A                                            linefeed
+       CRLF     CR LF                                           Internet standard newline
+       BIT      "0" / "1"                                       binary digit
+    */
+    /**
+         rulelist       =  1*( rule / (*c-wsp c-nl) )
+
+         rule           =  rulename defined-as elements c-nl
+                                ; continues if next line starts
+                                ;  with white space
+
+         rulename       =  ALPHA *(ALPHA / DIGIT / "-")
+
+         defined-as     =  *c-wsp ("=" / "=/") *c-wsp
+                                ; basic rules definition and
+                                ;  incremental alternatives
+
+         elements       =  alternation *c-wsp
+
+         c-wsp          =  WSP / (c-nl WSP)
+
+         c-nl           =  comment / CRLF
+                                ; comment or newline
+
+         comment        =  ";" *(WSP / VCHAR) CRLF
+
+         alternation    =  concatenation
+                           *(*c-wsp "/" *c-wsp concatenation)
+
+         concatenation  =  repetition *(1*c-wsp repetition)
+
+         repetition     =  [repeat] element
+
+         repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
+
+         element        =  rulename / group / option /
+                           char-val / num-val / prose-val
+
+         group          =  "(" *c-wsp alternation *c-wsp ")"
+
+         option         =  "[" *c-wsp alternation *c-wsp "]"
+
+         char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
+                                ; quoted string of SP and VCHAR
+                                ;  without DQUOTE
+
+         num-val        =  "%" (bin-val / dec-val / hex-val)
+
+         bin-val        =  "b" 1*BIT
+                           [ 1*("." 1*BIT) / ("-" 1*BIT) ]
+                                ; series of concatenated bit values
+                                ;  or single ONEOF range
+
+         dec-val        =  "d" 1*DIGIT
+                           [ 1*("." 1*DIGIT) / ("-" 1*DIGIT) ]
+
+         hex-val        =  "x" 1*HEXDIG
+                           [ 1*("." 1*HEXDIG) / ("-" 1*HEXDIG) ]
+
+         prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
+                                ; bracketed string of SP and VCHAR
+                                ;  without angles
+                                ; prose description, to be used as
+                                ;  last resort
+     */
+
+    template <class Spec = void()>
+    using rule = qi::rule<Iterator, Spec, SpaceType>;
+
+    template <class Spec = void()>
+    using rule_noskip = qi::rule<Iterator, Spec>;
+
+    qi::symbols<char, langspec::ABNFCoreRule> corerule;
+    
+    rule< langspec::spec() > spec;
+    rule_noskip<> dashes;
+    rule_noskip<> rulelist;
+    rule_noskip<> ruledef;
+    rule_noskip<> rulename;
+    rule_noskip<> define_as;
+    rule_noskip<> elements;
+    rule_noskip<> c_wsp;
+    rule_noskip<> c_nl;
+    rule_noskip<> comment;
+    rule_noskip<> alternation;
+    rule_noskip<> concatenation;
+    rule_noskip<> repetition;
+    rule_noskip<> rep; // repeat
+    rule_noskip<> element;
+    rule_noskip<> group;
+    rule_noskip<> option;
+    rule_noskip<> char_val;
+    rule_noskip<> num_val;
+    rule_noskip<> bin_val;
+    rule_noskip<> dec_val;
+    rule_noskip<> hex_val;
+    rule_noskip<> prose_val;
+    
+    ABNF_grammar() : ABNF_grammar::base_type(spec, "ABNF")
+    {
+      qi::alnum_type       alnum;
+      qi::alpha_type       alpha;
+      qi::digit_type       digit;
+      qi::lexeme_type      lexeme;
+      qi::lit_type         lit;
+      qi::omit_type        omit;
+      qi::raw_type         raw;
+      qi::string_type      string;
+      qi::char_type        char_;
+      boost::spirit::ascii::space_type  space;
+      boost::spirit::repeat_type        repeat;
+      boost::spirit::skip_type          skip;
+      boost::spirit::no_skip_type       no_skip;
+      boost::spirit::inf_type           inf;
+      
+      corerule.add
+        ("ALPHA", langspec::ABNFCoreRule::ALPHA)
+        ("DIGIT", langspec::ABNFCoreRule::DIGIT)
+        ("HEXDIG", langspec::ABNFCoreRule::HEXDIG)
+        ("DQUOTE", langspec::ABNFCoreRule::DQUOTE)
+        ("SP", langspec::ABNFCoreRule::SP)
+        ("HTAB", langspec::ABNFCoreRule::HTAB)
+        ("WSP", langspec::ABNFCoreRule::WSP)
+        ("LWSP", langspec::ABNFCoreRule::LWSP)
+        ("VCHAR", langspec::ABNFCoreRule::VCHAR)
+        ("CHAR", langspec::ABNFCoreRule::CHAR)
+        ("OCTET", langspec::ABNFCoreRule::OCTET)
+        ("CTL", langspec::ABNFCoreRule::CTL)
+        ("CR", langspec::ABNFCoreRule::CR)
+        ("LF", langspec::ABNFCoreRule::LF)
+        ("CRLF", langspec::ABNFCoreRule::CRLF)
+        ("BIT", langspec::ABNFCoreRule::BIT)
+        ;
+
+      auto ALPHA = char_("\x41-\x5A\x61-\x7A");
+      auto DIGIT = char_("\x30-\x39");
+      auto HEXDIG = DIGIT | char_("ABCDEF");
+      auto DQUOTE = char_(0x22);
+      auto SP = char_(0x20);
+      auto HTAB = char_(0x09);
+      auto WSP = char_("\x20\x09");
+      auto LWSP = *( WSP | char_("\x0A\x0D") >> WSP);
+      auto VCHAR = char_(0x21, 0x7E);
+      auto CHAR = char_(0x01, 0x7F);
+      auto OCTET = char_(0x00, 0xFF);
+      auto CTL = char_("\x00-\x1F\x7F");
+      auto CR = char_(0x0D);
+      auto LF = char_(0x0A);
+      auto CRLF = char_("\x0A\x0D");
+      auto BIT = char_("01");
+
+      dashes = lexeme[ repeat(3, inf)[ lit('-') ] ];
+      
+      spec
+        = rulelist
+        ;
+      
+      rulelist
+        = +( ruledef | ( *c_wsp > c_nl ) )
+        ;
+
+      ruledef
+        = rulename > define_as > elements > c_nl
+        ;
+
+      rulename
+        = ALPHA > *( ALPHA | DIGIT | '-')
+        ;
+
+      define_as
+        = *c_wsp > (lit("=") | "=/") > *c_wsp
+        ;
+      
+      elements
+        = alternation > *c_wsp
+        ;
+
+      c_wsp
+        = WSP | (c_nl >> WSP)
+        ;
+
+      c_nl
+        = comment | CRLF
+        ;
+
+      comment
+        = ';' >> *( WSP | VCHAR ) >> CRLF
+        ;
+
+      alternation
+        = concatenation >> *(lit('|') >> concatenation)
+        ;
+
+      concatenation
+        = repetition >> *(+c_wsp >> repetition)
+        ;
+
+      repetition
+        = -rep > element
+        ;
+
+      rep
+        = +DIGIT | (*DIGIT >> "*" >> *DIGIT)
+        ;
+
+      element
+        = rulename
+        | group
+        | option
+        | char_val
+        | num_val
+        | prose_val
+        ;
+      
+      group
+        = "(" > alternation > ")"
+        ;
+
+      option
+        = "[" > alternation > "]"
+        ;
+      
+      char_val
+        = lexeme
+        [ omit[ DQUOTE ]
+        > raw[ *( char_(0x20, 0x21) | char_(0x23, 0x7E) ) ]
+        > omit[ DQUOTE ]
+        ]
+        ;
+
+      num_val
+        = '%' >> (bin_val | dec_val | hex_val)
+        ;
+
+      bin_val
+        = 'b' >> +BIT >> -( +('.' >> +BIT) | ('-' >> +BIT) )
+        ;
+
+      dec_val
+        = 'd' >> +DIGIT >> -( +('.' >> +DIGIT) | ('-' >> +DIGIT) )
+        ;
+
+      hex_val
+        = 'x' >> +HEXDIG >> -( +('.' >> +HEXDIG) | ('-' >> +HEXDIG) )
+        ;
+
+      prose_val
+        = "<" >> *char_("\x20-\x3D\x3F-\x7E") >> ">"
+        ;
+    }
+  };
+
+  template
+  <
+    class Iterator,
+    class SpaceType = skipper<Iterator>
+  >
+  struct EBNF_grammar : qi::grammar<Iterator, langspec::spec(), SpaceType>
+  { // https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
+    /**
+       definition              =
+       concatenation           ,
+       termination             ;
+       termination             .
+       alternation             |
+       option                  [ ... ]
+       repetition              { ... }
+       grouping                ( ... )
+       terminal string         " ... "
+       terminal string         ' ... '
+       comment                 (* ... *)
+       special sequence        ? ... ?
+       exception               -
+     */
+    /**
+       letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
+              | "H" | "I" | "J" | "K" | "L" | "M" | "N"
+              | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
+              | "V" | "W" | "X" | "Y" | "Z" ;
+       digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+       symbol = "[" | "]" | "{" | "}" | "(" | ")" | "<" | ">"
+              | "'" | '"' | "=" | "|" | "." | "," | ";" ;
+       character = letter | digit | symbol | "_" ;
+
+       identifier = letter , { letter | digit | "_" } ;
+       terminal = "'" , character , { character } , "'" 
+                | '"' , character , { character } , '"' ;
+ 
+       lhs = identifier ;
+       rhs = identifier
+            | terminal
+            | "[" , rhs , "]"
+            | "{" , rhs , "}"
+            | "(" , rhs , ")"
+            | rhs , "|" , rhs
+            | rhs , "," , rhs ;
+
+       rule = lhs , "=" , rhs , ";" ;
+       grammar = { rule } ;
+     */
+
+    template <class Spec = void()>
+    using rule = qi::rule<Iterator, Spec, SpaceType>;
+
+    template <class Spec = void()>
+    using rule_noskip = qi::rule<Iterator, Spec>;
+
+    rule_noskip<> dashes;
+    rule< langspec::spec() > spec;
+    
+    EBNF_grammar() : EBNF_grammar::base_type(spec, "EBNF")
+    {
+      qi::alnum_type       alnum;
+      qi::alpha_type       alpha;
+      qi::digit_type       digit;
+      qi::lexeme_type      lexeme;
+      qi::lit_type         lit;
+      qi::omit_type        omit;
+      qi::raw_type         raw;
+      qi::string_type      string;
+      qi::char_type        char_;
+      boost::spirit::ascii::space_type  space;
+      boost::spirit::repeat_type        repeat;
+      boost::spirit::skip_type          skip;
+      boost::spirit::no_skip_type       no_skip;
+      boost::spirit::inf_type           inf;
+
+      dashes = lexeme[ repeat(3, inf)[ lit('-') ] ];
+    }
+  };
+
+  template
+  <
+    class Iterator,
+    class SpaceType = skipper<Iterator>,
+    class TopLocals = qi::unused_type
+  >
+  struct grammar : qi::grammar<Iterator, metast::top_level_decls(), SpaceType, TopLocals>
+  {
+    template <class Spec = void(), class Locals = qi::unused_type>
+    using rule = qi::rule<Iterator, Spec, SpaceType, Locals>;
+
+    template <class Spec = void(), class Locals = qi::unused_type>
+    using rule_noskip = qi::rule<Iterator, Spec, Locals>;
 
     std::string language_decl_spec;
-    bool is_language_spec(const std::string & spec) { return language_decl_spec == spec; }
+    bool is_language_spec(const std::string & spec) const {
+      return language_decl_spec == spec; }
 
     phoenix::function<std::function<bool(const std::string &s)>> is_spec;
     phoenix::function<error_delegate_handler> fail_handler;
+
+    int quote_expr_count;
     
     //======== symbols ========
     qi::symbols<char, metast::opcode>
@@ -292,20 +638,17 @@ namespace
       unary_op ;
 
     qi::symbols<char, metast::constant>
-    builtin_constant ;
+      builtin_constant ;
 
     qi::symbols<char>
-    keywords ;
+      keywords ;
 
     //======== Expression ========
     rule< metast::expression() > expr;
-
     rule< metast::expression() > prefix;
     rule< metast::expression() > infix;
     rule< metast::expression() > postfix;
-
     rule< metast::expression() > dotted;
-
     rule< metast::expression() > assign;
     rule< metast::expression() > logical;
     rule< metast::expression() > equality;
@@ -314,22 +657,15 @@ namespace
     rule< metast::expression() > multiplicative;
     rule< metast::expression() > unary;
     rule< metast::operand() > primary;
-
-    rule< metast::identifier() > identifier ;
-
+    rule< metast::identifier() > identifier;
     rule< metast::bare_node() > bare_node;
     rule< metast::arguments() > arguments;
     rule< metast::attribute() > attribute;
-
-    rule_noskip< metast::string() > rawstring;
-    rule_noskip< metast::string() > quote_raw;
     rule< metast::expression() > quote_expr;
     rule< metast::quote() > quote;
-
+    rule_noskip< metast::string() > quote_raw;
+    rule_noskip< metast::string() > rawstring;
     rule_noskip<> dashes;
-
-    //------------------
-    int quote_expr_count;
 
     //======== Statements ========
     rule< metast::top_level_decls() > top_level_decls;
@@ -339,7 +675,7 @@ namespace
     rule< metast::procedure_decl() > procedure_decl;
     rule< metast::in_type_decls() > in_type_decls;
     rule< metast::type_decl() > type_decl;
-    qi::rule<Iterator, metast::language_decl(), qi::locals<metast::attribute>, SpaceType > language_decl;
+    rule< metast::language_decl(), qi::locals<metast::attribute> > language_decl;
     rule< metast::in_semantics_decls() > in_semantics_decls;
     rule< metast::semantic_action_name() > semantic_action_name;
     rule< metast::semantic_action_decl() > semantic_action_decl;
@@ -356,13 +692,13 @@ namespace
     rule< metast::per() > per;
     rule< metast::ret() > return_expr;
     rule< metast::stmts() > block;
+    
     rule_noskip<metast::embedded_source()> embedded_source;
 
-    phoenix::function<std::function<void(const std::string &, const std::string &)>> spec_f;
-    
     //======== Language Specs ========
-    ABNF_grammar<Iterator, SpaceType> ABNF;
-    EBNF_grammar<Iterator, SpaceType> EBNF;
+    DefaultLangSpec_grammar<Iterator, SpaceType> langspec_Default;
+    ABNF_grammar<Iterator, SpaceType> langspec_ABNF;
+    EBNF_grammar<Iterator, SpaceType> langspec_EBNF;
     
     grammar(lyre::TopLevelDeclHandler *h)
       : grammar::base_type(top_level_decls, "lyre")
@@ -616,6 +952,12 @@ namespace
 
       dashes = lexeme[ repeat(3, inf)[ lit('-') ] ];
 
+      /*
+      langspec_Default.dashes = dashes;
+      langspec_ABNF.dashes = dashes;
+      langspec_EBNF.dashes = dashes;
+      */
+
       //========------------------------------------========
       //======== Statements
       //========------------------------------------========
@@ -672,11 +1014,10 @@ namespace
         ///>  identifier > *( attribute[ check_language_spec ] )
         >  identifier > *( omit[attribute[ _a = check_spec(_1) ]] >> attr(_a) )
         >  ( hold
-           [ eps(is_spec(val(""))) >> embedded_source ]
-           | eps(is_spec(val("ABNF"))) >> embedded_source
-           | eps(is_spec(val("EBNF"))) >> embedded_source
+           [ eps(is_spec(val(""))) >> langspec_Default ]
+           | eps(is_spec(val("ABNF"))) >> langspec_ABNF
+           | eps(is_spec(val("EBNF"))) >> langspec_EBNF
            )
-        //>> omit[eps[ ref(language_decl_spec) = "" ]]
         ;
 
       semantics_decl
