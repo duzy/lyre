@@ -246,9 +246,6 @@ namespace
       boost::spirit::repeat_type        repeat;
       boost::spirit::skip_type          skip;
       boost::spirit::no_skip_type       no_skip;
-      boost::spirit::inf_type           inf;
-
-      dashes = lexeme[ repeat(3, inf)[ lit('-') ] ];
     }
   };
 
@@ -339,37 +336,38 @@ namespace
                                 ;  last resort
      */
 
-    template <class Spec = void()>
+    template < class Spec = void() >
     using rule = qi::rule<Iterator, Spec, SpaceType>;
 
-    template <class Spec = void()>
+    template < class Spec = void() >
     using rule_noskip = qi::rule<Iterator, Spec>;
 
-    qi::symbols<char, langspec::ABNFCoreRule> corerule;
+    qi::symbols<char, langspec::ABNF::CoreRule> corerule;
+    qi::symbols<char, langspec::ABNF::define_type> define_type;
     
     rule< langspec::spec() > spec;
-    rule_noskip<> dashes;
-    rule_noskip<> rulelist;
-    rule_noskip<> ruledef;
-    rule_noskip<> rulename;
-    rule_noskip<> define_as;
-    rule_noskip<> elements;
+    rule_noskip< langspec::ABNF::rules > rulelist;
+    rule_noskip< langspec::ABNF::rule > ruledef;
+    rule_noskip< langspec::ABNF::string > rulename;
+    rule_noskip< langspec::ABNF::define_type > define_as;
+    rule_noskip< langspec::ABNF::alternation> elements;
+    rule_noskip< langspec::ABNF::alternation > alternation;
+    rule_noskip< langspec::ABNF::concatenation > concatenation;
+    rule_noskip< langspec::ABNF::repetition > repetition;
+    rule_noskip< langspec::ABNF::repeat > rep; // repeat
+    rule_noskip< langspec::ABNF::element > element;
+    rule_noskip< langspec::ABNF::alternation > group;
+    rule_noskip< langspec::ABNF::alternation > option;
+    rule_noskip< langspec::ABNF::string > char_val;
+    rule_noskip< langspec::ABNF::string > num_val;
+    rule_noskip< langspec::ABNF::string > bin_val;
+    rule_noskip< langspec::ABNF::string > dec_val;
+    rule_noskip< langspec::ABNF::string > hex_val;
+    rule_noskip< langspec::ABNF::string > prose_val;
     rule_noskip<> c_wsp;
     rule_noskip<> c_nl;
     rule_noskip<> comment;
-    rule_noskip<> alternation;
-    rule_noskip<> concatenation;
-    rule_noskip<> repetition;
-    rule_noskip<> rep; // repeat
-    rule_noskip<> element;
-    rule_noskip<> group;
-    rule_noskip<> option;
-    rule_noskip<> char_val;
-    rule_noskip<> num_val;
-    rule_noskip<> bin_val;
-    rule_noskip<> dec_val;
-    rule_noskip<> hex_val;
-    rule_noskip<> prose_val;
+    rule_noskip<> dashes;
     
     ABNF_grammar() : ABNF_grammar::base_type(spec, "ABNF")
     {
@@ -382,56 +380,60 @@ namespace
       qi::raw_type         raw;
       qi::string_type      string;
       qi::char_type        char_;
+      qi::uint_type        uint_;
       boost::spirit::ascii::space_type  space;
-      boost::spirit::repeat_type        repeat;
       boost::spirit::skip_type          skip;
       boost::spirit::no_skip_type       no_skip;
-      boost::spirit::inf_type           inf;
       
       corerule.add
-        ("ALPHA", langspec::ABNFCoreRule::ALPHA)
-        ("DIGIT", langspec::ABNFCoreRule::DIGIT)
-        ("HEXDIG", langspec::ABNFCoreRule::HEXDIG)
-        ("DQUOTE", langspec::ABNFCoreRule::DQUOTE)
-        ("SP", langspec::ABNFCoreRule::SP)
-        ("HTAB", langspec::ABNFCoreRule::HTAB)
-        ("WSP", langspec::ABNFCoreRule::WSP)
-        ("LWSP", langspec::ABNFCoreRule::LWSP)
-        ("VCHAR", langspec::ABNFCoreRule::VCHAR)
-        ("CHAR", langspec::ABNFCoreRule::CHAR)
-        ("OCTET", langspec::ABNFCoreRule::OCTET)
-        ("CTL", langspec::ABNFCoreRule::CTL)
-        ("CR", langspec::ABNFCoreRule::CR)
-        ("LF", langspec::ABNFCoreRule::LF)
-        ("CRLF", langspec::ABNFCoreRule::CRLF)
-        ("BIT", langspec::ABNFCoreRule::BIT)
+        ("ALPHA",       langspec::ABNF::CoreRule::ALPHA)
+        ("DIGIT",       langspec::ABNF::CoreRule::DIGIT)
+        ("HEXDIG",      langspec::ABNF::CoreRule::HEXDIG)
+        ("DQUOTE",      langspec::ABNF::CoreRule::DQUOTE)
+        ("SP",          langspec::ABNF::CoreRule::SP)
+        ("HTAB",        langspec::ABNF::CoreRule::HTAB)
+        ("WSP",         langspec::ABNF::CoreRule::WSP)
+        ("LWSP",        langspec::ABNF::CoreRule::LWSP)
+        ("VCHAR",       langspec::ABNF::CoreRule::VCHAR)
+        ("CHAR",        langspec::ABNF::CoreRule::CHAR)
+        ("OCTET",       langspec::ABNF::CoreRule::OCTET)
+        ("CTL",         langspec::ABNF::CoreRule::CTL)
+        ("CR",          langspec::ABNF::CoreRule::CR)
+        ("LF",          langspec::ABNF::CoreRule::LF)
+        ("CRLF",        langspec::ABNF::CoreRule::CRLF)
+        ("BIT",         langspec::ABNF::CoreRule::BIT)
         ;
 
-      auto ALPHA = char_("\x41-\x5A\x61-\x7A");
-      auto DIGIT = char_("\x30-\x39");
-      auto HEXDIG = DIGIT | char_("ABCDEF");
-      auto DQUOTE = char_(0x22);
-      auto SP = char_(0x20);
-      auto HTAB = char_(0x09);
-      auto WSP = char_("\x20\x09");
-      auto LWSP = *( WSP | char_("\x0A\x0D") >> WSP);
-      auto VCHAR = char_(0x21, 0x7E);
-      auto CHAR = char_(0x01, 0x7F);
-      auto OCTET = char_(0x00, 0xFF);
-      auto CTL = char_("\x00-\x1F\x7F");
-      auto CR = char_(0x0D);
-      auto LF = char_(0x0A);
-      auto CRLF = char_("\x0A\x0D");
-      auto BIT = char_("01");
+      define_type.add
+        ("=/",  langspec::ABNF::define_as_replace)
+        ("=",   langspec::ABNF::define_as_increment)
+        ;
 
-      dashes = lexeme[ repeat(3, inf)[ lit('-') ] ];
+      auto ALPHA        = char_("\x41-\x5A\x61-\x7A");
+      auto DIGIT        = char_("\x30-\x39");
+      auto HEXDIG       = DIGIT | char_("ABCDEF");
+      auto DQUOTE       = char_(0x22);
+      auto SP           = char_(0x20);
+      auto HTAB         = char_(0x09);
+      auto WSP          = char_("\x20\x09");
+      auto LWSP         = *( WSP | char_("\x0A\x0D") >> WSP);
+      auto VCHAR        = char_(0x21, 0x7E);
+      auto CHAR         = char_(0x01, 0x7F);
+      auto OCTET        = char_(0x00, 0xFF);
+      auto CTL          = char_("\x00-\x1F\x7F");
+      auto CR           = char_(0x0D);
+      auto LF           = char_(0x0A);
+      auto CRLF         = char_("\x0A\x0D");
+      auto BIT          = char_("01");
       
       spec
-        = rulelist
+        = dashes
+        > rulelist
+        > dashes
         ;
       
       rulelist
-        = +( ruledef | ( *c_wsp > c_nl ) )
+        = +( !(*WSP >> dashes) >> ( ruledef | ( *c_wsp >> c_nl ) ) )
         ;
 
       ruledef
@@ -439,15 +441,16 @@ namespace
         ;
 
       rulename
-        = ALPHA > *( ALPHA | DIGIT | '-')
+        = ALPHA >> *( ALPHA | DIGIT | '-')
         ;
 
       define_as
-        = *c_wsp > (lit("=") | "=/") > *c_wsp
+        //= *c_wsp > (lit("=/") | lit("=") >> !lit('/')) > *c_wsp
+        = omit[*c_wsp] > define_type > omit[*c_wsp]
         ;
       
       elements
-        = alternation > *c_wsp
+        = alternation >> *c_wsp
         ;
 
       c_wsp
@@ -463,19 +466,21 @@ namespace
         ;
 
       alternation
-        = concatenation >> *(lit('|') >> concatenation)
+        = concatenation
+        >> *( omit[*c_wsp >> '/' >> *c_wsp] >> concatenation )
         ;
 
       concatenation
-        = repetition >> *(+c_wsp >> repetition)
+        = repetition >> *( +c_wsp >> repetition )
         ;
 
       repetition
-        = -rep > element
+        = -rep >> element
         ;
 
       rep
-        = +DIGIT | (*DIGIT >> "*" >> *DIGIT)
+        //= ( *DIGIT >> "*" >> *DIGIT ) | +DIGIT
+        = ( -uint_ >> '*' >> -uint_ ) | uint_
         ;
 
       element
@@ -504,7 +509,7 @@ namespace
         ;
 
       num_val
-        = '%' >> (bin_val | dec_val | hex_val)
+        = '%' >> ( bin_val | dec_val | hex_val )
         ;
 
       bin_val
@@ -520,8 +525,32 @@ namespace
         ;
 
       prose_val
-        = "<" >> *char_("\x20-\x3D\x3F-\x7E") >> ">"
+        = '<' >> *char_("\x20-\x3D\x3F-\x7E") >> '>'
         ;
+
+      BOOST_SPIRIT_DEBUG_NODES((spec)
+                               (rulelist)
+                               (ruledef)
+                               (rulename)
+                               (define_as)
+                               (elements)
+                               (c_wsp)
+                               (c_nl)
+                               (comment)
+                               (alternation)
+                               (concatenation)
+                               (repetition)
+                               (rep)
+                               (element)
+                               (group)
+                               (option)
+                               (char_val)
+                               (num_val)
+                               (bin_val)
+                               (dec_val)
+                               (hex_val)
+                               (prose_val)
+                               )
     }
   };
 
@@ -598,9 +627,8 @@ namespace
       boost::spirit::repeat_type        repeat;
       boost::spirit::skip_type          skip;
       boost::spirit::no_skip_type       no_skip;
-      boost::spirit::inf_type           inf;
-
-      dashes = lexeme[ repeat(3, inf)[ lit('-') ] ];
+      
+      
     }
   };
 
@@ -952,11 +980,9 @@ namespace
 
       dashes = lexeme[ repeat(3, inf)[ lit('-') ] ];
 
-      /*
       langspec_Default.dashes = dashes;
       langspec_ABNF.dashes = dashes;
       langspec_EBNF.dashes = dashes;
-      */
 
       //========------------------------------------========
       //======== Statements

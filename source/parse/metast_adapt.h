@@ -78,7 +78,6 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::see_fork_block,
     (lyre::metast::stmts, stmts)
-    //(boost::optional<lyre::metast::see_block>, fork)
     (boost::optional<boost::recursive_wrapper<lyre::metast::see_fork_block>>, fork)
 )
 
@@ -132,6 +131,37 @@ BOOST_FUSION_ADAPT_STRUCT(
     lyre::metast::op,
     (lyre::metast::opcode, opcode)
     (lyre::metast::operand, operand)
+)
+
+// ABNF
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::ABNF::rule,
+    (lyre::metast::ABNF::string, name)
+    (lyre::metast::ABNF::define_type, type)
+    (lyre::metast::ABNF::alternation, elements)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::ABNF::alternation,
+    (std::list<lyre::metast::ABNF::concatenation>, list)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::ABNF::concatenation,
+    (std::list<lyre::metast::ABNF::repetition>, list)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::ABNF::repetition,
+    (std::list<lyre::metast::ABNF::repeat>, rep)
+    (std::list<lyre::metast::ABNF::element>, ele)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::ABNF::repeat_range,
+    (boost::optional<unsigned int>, lo)
+    (boost::optional<unsigned int>, hi)
 )
 
 /*

@@ -89,6 +89,7 @@ type BarAST
   decl value uint :component('natural number');
 ---------------
 
+#*****
 # EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
 language BarLang :spec(EBNF) :ast('digit', uint)
 ----------------------------------------------------------
@@ -112,9 +113,9 @@ letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
        | "V" | "W" | "X" | "Y" | "Z" ;
 digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 symbol = "[" | "]" | "{" | "}" | "(" | ")" | "<" | ">"
-       | "'" | '"' | "=" | "|" | "." | "," | ";" ;
+       | "'" | '"' | "=" | "|" | "." | "," | ";" ; '
 character = letter | digit | symbol | "_" ;
- 
+
 identifier = letter , { letter | digit | "_" } ;
 terminal = "'" , character , { character } , "'" 
          | '"' , character , { character } , '"' ;
@@ -144,3 +145,4 @@ semantics BarSema :lang(BarLang)
     
   -----------------------
 ---------------------------------
+*****#

@@ -10,12 +10,17 @@ namespace lyre
 {
   namespace metast
   {
+    typedef std::string string;
+    
     /// This namespace is shared by ABNF, EBNF.
     namespace langspec
     {
-      enum class ABNFCoreRule : unsigned char
+      namespace ABNF
       {
-        ALPHA,    //    %x41-5A / %x61-7A                               Upper- and lower-case ASCII letters (A–Z, a–z)
+        using metast::string;
+        
+        enum CoreRule {
+          ALPHA,  //    %x41-5A / %x61-7A                               Upper- and lower-case ASCII letters (A–Z, a–z)
           DIGIT,  //    %x30-39                                         Decimal digits (0–9)
           HEXDIG, //    DIGIT / "A" / "B" / "C" / "D" / "E" / "F"       Hexadecimal digits (0–9, A–F)
           DQUOTE, //    %x22                                            Double Quote
@@ -31,38 +36,54 @@ namespace lyre
           LF,     //    %x0A                                            linefeed
           CRLF,   //    CR LF                                           Internet standard newline
           BIT,    //    "0" / "1"                                       binary digit
-      };
-      
-      struct alternative;
-      struct sequence;
-      struct optional;
-      struct repeat;
+        };
 
-      struct alternative
-      {
-      };
+        enum define_type {
+          define_as_replace,
+          define_as_increment,
+        };
 
-      struct sequence
-      {
-      };
+        struct repeat_range
+        {
+          boost::optional<unsigned int> lo;
+          boost::optional<unsigned int> hi;
+        };
 
-      struct optional
-      {
-      };
+        typedef boost::variant<unsigned int, repeat_range> repeat;
 
-      struct repeat
-      {
-      };
+        struct alternation;
+        typedef boost::variant<string, boost::recursive_wrapper<alternation>> element;
 
-      struct rule
-      {
-      };
+        struct repetition
+        {
+          repeat rep;
+          element ele;
+        };
 
-      struct rules : std::list<rule> {};
-      
+        struct concatenation
+        {
+          std::list<repetition> list;
+        };
+
+        struct alternation
+        {
+          std::list<concatenation> list;
+        };
+
+        struct rule
+        {
+          string name;
+          define_type type;
+          alternation elements;
+        };
+
+        struct rules : std::list<rule> {};
+              
+      } // end namespace ABNF
+
       struct spec
       {
-        langspec::rules rules;
+        langspec::ABNF::rules ABNF;
       };
     } // end namespace langspec
 
@@ -102,8 +123,6 @@ namespace lyre
     //========------------------------------------========
     //======== Expression
     //========------------------------------------========
-    typedef std::string string;
-
     typedef boost::variant<
       char, string, boost::recursive_wrapper<expression>
       > quote_atom;
