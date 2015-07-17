@@ -136,32 +136,42 @@ BOOST_FUSION_ADAPT_STRUCT(
 // ABNF
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::ABNF::rule,
-    (lyre::metast::ABNF::string, name)
-    (lyre::metast::ABNF::define_type, type)
-    (lyre::metast::ABNF::alternation, elements)
+    lyre::metast::langspec::ABNF::rule,
+    (lyre::metast::langspec::ABNF::string, name)
+    (lyre::metast::langspec::ABNF::define_type, type)
+    (lyre::metast::langspec::ABNF::alternation, elements)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::ABNF::alternation,
-    (std::list<lyre::metast::ABNF::concatenation>, list)
+    lyre::metast::langspec::ABNF::alternation,
+    (std::list<lyre::metast::langspec::ABNF::concatenation>, list)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::ABNF::concatenation,
-    (std::list<lyre::metast::ABNF::repetition>, list)
+    lyre::metast::langspec::ABNF::concatenation,
+    (std::list<lyre::metast::langspec::ABNF::repetition>, list)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::ABNF::repetition,
-    (std::list<lyre::metast::ABNF::repeat>, rep)
-    (std::list<lyre::metast::ABNF::element>, ele)
+    lyre::metast::langspec::ABNF::repetition,
+    (boost::optional<lyre::metast::langspec::ABNF::repeat>, rep)
+    (lyre::metast::langspec::ABNF::element, ele)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    lyre::metast::ABNF::repeat_range,
+    lyre::metast::langspec::ABNF::repeat_range,
     (boost::optional<unsigned int>, lo)
     (boost::optional<unsigned int>, hi)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::langspec::ABNF::num_val, (unsigned, val)
+    (boost::optional<lyre::metast::langspec::ABNF::num_val_rest>, rest)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    lyre::metast::langspec::spec,
+    (lyre::metast::langspec::ABNF::rules, ABNF)
 )
 
 /*

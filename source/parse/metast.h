@@ -10,7 +10,7 @@ namespace lyre
 {
   namespace metast
   {
-    typedef std::string string;
+    using std::string;
     
     /// This namespace is shared by ABNF, EBNF.
     namespace langspec
@@ -50,13 +50,26 @@ namespace lyre
         };
 
         typedef boost::variant<unsigned int, repeat_range> repeat;
-
+        typedef boost::variant<unsigned, std::vector<unsigned>> num_val_rest;
+        
+        // Concatenated numeric values
+        //      %d13.10
+        // Numeric value ranges
+        //      %x01-Da
+        struct num_val
+        {
+          unsigned val;
+          boost::optional<num_val_rest> rest;
+        };
+        
         struct alternation;
-        typedef boost::variant<string, boost::recursive_wrapper<alternation>> element;
+        typedef boost::variant<
+          string, num_val, boost::recursive_wrapper<alternation>
+          > element;
 
         struct repetition
         {
-          repeat rep;
+          boost::optional<repeat> rep;
           element ele;
         };
 
@@ -78,7 +91,6 @@ namespace lyre
         };
 
         struct rules : std::list<rule> {};
-              
       } // end namespace ABNF
 
       struct spec

@@ -144,31 +144,23 @@ namespace
   namespace phoenix = boost::phoenix;
   namespace fusion = boost::fusion;
 
+  template <typename Iterator>
   struct error_delegate_handler
   {
     template <typename, typename, typename>
     struct result { typedef void type; };
 
     lyre::TopLevelDeclHandler *handler;
+    Iterator base_pos;
 
-    explicit error_delegate_handler(lyre::TopLevelDeclHandler *h) : handler(h) {}
+    explicit error_delegate_handler(lyre::TopLevelDeclHandler *h, Iterator bp)
+      : handler(h), base_pos(bp) {}
 
     // see: <spirit/home/support/info.hpp>
-    template <typename Iterator>
     void operator()(qi::info const& what, Iterator err_pos, Iterator last) const
     {
-      /*
-      std::cout
-        << "fail: expects "
-        << what                         // what failed?
-        << " here: \""
-        << std::string(err_pos, last)   // iterators to error-pos, end
-        << "\""
-        << std::endl
-        ;
-      */
       std::size_t l = boost::spirit::get_line(err_pos);
-      std::size_t c = boost::spirit::get_column(err_pos, err_pos);
+      std::size_t c = boost::spirit::get_column(base_pos, err_pos);
       handler->HandleSyntaxError(what.tag.c_str(), l, c, err_pos.base(), last.base());
     }
   };
@@ -215,21 +207,14 @@ namespace
     }
   };
 
-  template
-  <
-    class Iterator,
-    class SpaceType = skipper<Iterator>
-  >
-  struct DefaultLangSpec_grammar : qi::grammar<Iterator, langspec::spec(), SpaceType>
+  template < class Iterator >
+  struct DefaultLangSpec_grammar : qi::grammar<Iterator, langspec::spec()>
   {
-    template <class Spec = void()>
-    using rule = qi::rule<Iterator, Spec, SpaceType>;
-
     template <class Spec = void()>
     using rule_noskip = qi::rule<Iterator, Spec>;
 
+    rule_noskip< langspec::spec() > spec;
     rule_noskip<> dashes;
-    rule< langspec::spec() > spec;
 
     DefaultLangSpec_grammar() : DefaultLangSpec_grammar::base_type(spec, "DefaultLangSpec")
     {
@@ -249,12 +234,8 @@ namespace
     }
   };
 
-  template
-  <
-    class Iterator,
-    class SpaceType = skipper<Iterator>
-  >
-  struct ABNF_grammar : qi::grammar<Iterator, langspec::spec(), SpaceType>
+  template < class Iterator >
+  struct ABNF_grammar : qi::grammar<Iterator, langspec::spec()>
   { // Ref: https://tools.ietf.org/html/rfc5234
     /**
        ALPHA    %x41-5A / %x61-7A                               Upper- and lower-case ASCII letters (A–Z, a–z)
@@ -337,53 +318,63 @@ namespace
      */
 
     template < class Spec = void() >
-    using rule = qi::rule<Iterator, Spec, SpaceType>;
-
-    template < class Spec = void() >
     using rule_noskip = qi::rule<Iterator, Spec>;
 
-    qi::symbols<char, langspec::ABNF::CoreRule> corerule;
-    qi::symbols<char, langspec::ABNF::define_type> define_type;
-    
-    rule< langspec::spec() > spec;
-    rule_noskip< langspec::ABNF::rules > rulelist;
-    rule_noskip< langspec::ABNF::rule > ruledef;
-    rule_noskip< langspec::ABNF::string > rulename;
-    rule_noskip< langspec::ABNF::define_type > define_as;
-    rule_noskip< langspec::ABNF::alternation> elements;
-    rule_noskip< langspec::ABNF::alternation > alternation;
-    rule_noskip< langspec::ABNF::concatenation > concatenation;
-    rule_noskip< langspec::ABNF::repetition > repetition;
-    rule_noskip< langspec::ABNF::repeat > rep; // repeat
-    rule_noskip< langspec::ABNF::element > element;
-    rule_noskip< langspec::ABNF::alternation > group;
-    rule_noskip< langspec::ABNF::alternation > option;
-    rule_noskip< langspec::ABNF::string > char_val;
-    rule_noskip< langspec::ABNF::string > num_val;
-    rule_noskip< langspec::ABNF::string > bin_val;
-    rule_noskip< langspec::ABNF::string > dec_val;
-    rule_noskip< langspec::ABNF::string > hex_val;
-    rule_noskip< langspec::ABNF::string > prose_val;
+    rule_noskip< langspec::spec() > spec;
+    rule_noskip< langspec::ABNF::rules() > rulelist;
+    rule_noskip< langspec::ABNF::rule() > ruledef;
+    rule_noskip< langspec::ABNF::define_type() > define_as;
+    rule_noskip< langspec::ABNF::alternation() > elements;
+    rule_noskip< langspec::ABNF::alternation() > alternation;
+    rule_noskip< langspec::ABNF::alternation() > group;
+    rule_noskip< langspec::ABNF::alternation() > option;
+    rule_noskip< langspec::ABNF::concatenation() > concatenation;
+    rule_noskip< langspec::ABNF::repetition() > repetition;
+    rule_noskip< langspec::ABNF::repeat() > repeat;
+    rule_noskip< langspec::ABNF::element() > element;
+    rule_noskip< langspec::ABNF::string() > rulename;
+    rule_noskip< langspec::ABNF::string() > char_val;
+    rule_noskip< langspec::ABNF::string() > prose_val;
+    rule_noskip< langspec::ABNF::num_val() > num_val;
+    rule_noskip< langspec::ABNF::num_val() > bin_val;
+    rule_noskip< langspec::ABNF::num_val() > dec_val;
+    rule_noskip< langspec::ABNF::num_val() > hex_val;
     rule_noskip<> c_wsp;
     rule_noskip<> c_nl;
     rule_noskip<> comment;
     rule_noskip<> dashes;
     
+    qi::symbols<char, langspec::ABNF::CoreRule> corerule;
+    qi::symbols<char, langspec::ABNF::define_type> define_type;
+    
     ABNF_grammar() : ABNF_grammar::base_type(spec, "ABNF")
     {
-      qi::alnum_type       alnum;
-      qi::alpha_type       alpha;
-      qi::digit_type       digit;
-      qi::lexeme_type      lexeme;
-      qi::lit_type         lit;
-      qi::omit_type        omit;
-      qi::raw_type         raw;
-      qi::string_type      string;
-      qi::char_type        char_;
-      qi::uint_type        uint_;
-      boost::spirit::ascii::space_type  space;
-      boost::spirit::skip_type          skip;
-      boost::spirit::no_skip_type       no_skip;
+      qi::alnum_type    alnum;
+      qi::alpha_type    alpha;
+      qi::digit_type    digit;
+      qi::lexeme_type   lexeme;
+      qi::lit_type      lit;
+      qi::omit_type     omit;
+      qi::raw_type      raw;
+      qi::string_type   string;
+      qi::char_type     char_;
+      qi::uint_type     uint_;
+      qi::hold_type     hold;
+      qi::_1_type       _1; // qi::labels
+      qi::_2_type       _2; // qi::labels
+      qi::_3_type       _3; // qi::labels
+      qi::_4_type       _4; // qi::labels
+      qi::_a_type       _a;
+      qi::_b_type       _b;
+      qi::_c_type       _c;
+      qi::_d_type       _d;
+      qi::_r1_type      _r1;
+      qi::_val_type     _val;
+
+      qi::uint_parser<unsigned, 2> bin;
+      qi::uint_parser<unsigned, 8> oct;
+      qi::uint_parser<unsigned, 10> dec;
+      qi::uint_parser<unsigned, 16> hex;
       
       corerule.add
         ("ALPHA",       langspec::ABNF::CoreRule::ALPHA)
@@ -433,7 +424,9 @@ namespace
         ;
       
       rulelist
-        = +( !(*WSP >> dashes) >> ( ruledef | ( *c_wsp >> c_nl ) ) )
+        = +(
+            !(*WSP >> dashes) >> ( ruledef | omit[ *c_wsp >> c_nl ] )
+           )
         ;
 
       ruledef
@@ -445,12 +438,11 @@ namespace
         ;
 
       define_as
-        //= *c_wsp > (lit("=/") | lit("=") >> !lit('/')) > *c_wsp
-        = omit[*c_wsp] > define_type > omit[*c_wsp]
+        = omit[*c_wsp] > define_type >> omit[*c_wsp]
         ;
       
       elements
-        = alternation >> *c_wsp
+        = alternation[ _val = _1 ] >> omit[ *c_wsp ]
         ;
 
       c_wsp
@@ -471,14 +463,14 @@ namespace
         ;
 
       concatenation
-        = repetition >> *( +c_wsp >> repetition )
+        = repetition >> *( omit[ +c_wsp ] >> repetition )
         ;
 
       repetition
-        = -rep >> element
+        = -repeat >> element
         ;
 
-      rep
+      repeat
         //= ( *DIGIT >> "*" >> *DIGIT ) | +DIGIT
         = ( -uint_ >> '*' >> -uint_ ) | uint_
         ;
@@ -493,11 +485,11 @@ namespace
         ;
       
       group
-        = "(" > alternation > ")"
+        = '(' > alternation[ _val = _1 ] > ')'
         ;
 
       option
-        = "[" > alternation > "]"
+        = '[' > alternation[ _val = _1 ] > ']'
         ;
       
       char_val
@@ -509,19 +501,22 @@ namespace
         ;
 
       num_val
-        = '%' >> ( bin_val | dec_val | hex_val )
+        = '%' >> ( hold[bin_val] | dec_val | hex_val )
         ;
 
       bin_val
-        = 'b' >> +BIT >> -( +('.' >> +BIT) | ('-' >> +BIT) )
+        //= 'b' >> +BIT >> -( +('.' >> +BIT) | ('-' >> +BIT) )
+        = 'b' >> bin >> -( +('.' >> bin) | ('-' >> bin) )
         ;
 
       dec_val
-        = 'd' >> +DIGIT >> -( +('.' >> +DIGIT) | ('-' >> +DIGIT) )
+        //= 'd' >> +DIGIT >> -( +('.' >> +DIGIT) | ('-' >> +DIGIT) )
+        = 'd' >> dec >> -( +('.' >> dec) | ('-' >> dec) )
         ;
 
       hex_val
-        = 'x' >> +HEXDIG >> -( +('.' >> +HEXDIG) | ('-' >> +HEXDIG) )
+        //= 'x' >> +HEXDIG >> -( +('.' >> +HEXDIG) | ('-' >> +HEXDIG) )
+        = 'x' >> hex >> -( +('.' >> hex) | ('-' >> hex) )
         ;
 
       prose_val
@@ -533,6 +528,8 @@ namespace
                                (ruledef)
                                (rulename)
                                (define_as)
+                               (define_type)
+                               (corerule)
                                (elements)
                                (c_wsp)
                                (c_nl)
@@ -540,7 +537,7 @@ namespace
                                (alternation)
                                (concatenation)
                                (repetition)
-                               (rep)
+                               (repeat)
                                (element)
                                (group)
                                (option)
@@ -554,12 +551,8 @@ namespace
     }
   };
 
-  template
-  <
-    class Iterator,
-    class SpaceType = skipper<Iterator>
-  >
-  struct EBNF_grammar : qi::grammar<Iterator, langspec::spec(), SpaceType>
+  template < class Iterator >
+  struct EBNF_grammar : qi::grammar<Iterator, langspec::spec()>
   { // https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
     /**
        definition              =
@@ -604,13 +597,10 @@ namespace
      */
 
     template <class Spec = void()>
-    using rule = qi::rule<Iterator, Spec, SpaceType>;
-
-    template <class Spec = void()>
     using rule_noskip = qi::rule<Iterator, Spec>;
 
+    rule_noskip< langspec::spec() > spec;
     rule_noskip<> dashes;
-    rule< langspec::spec() > spec;
     
     EBNF_grammar() : EBNF_grammar::base_type(spec, "EBNF")
     {
@@ -651,7 +641,7 @@ namespace
       return language_decl_spec == spec; }
 
     phoenix::function<std::function<bool(const std::string &s)>> is_spec;
-    phoenix::function<error_delegate_handler> fail_handler;
+    phoenix::function<error_delegate_handler<Iterator>> fail_handler;
 
     int quote_expr_count;
     
@@ -724,14 +714,14 @@ namespace
     rule_noskip<metast::embedded_source()> embedded_source;
 
     //======== Language Specs ========
-    DefaultLangSpec_grammar<Iterator, SpaceType> langspec_Default;
-    ABNF_grammar<Iterator, SpaceType> langspec_ABNF;
-    EBNF_grammar<Iterator, SpaceType> langspec_EBNF;
+    DefaultLangSpec_grammar<Iterator> langspec_Default;
+    ABNF_grammar<Iterator> langspec_ABNF;
+    EBNF_grammar<Iterator> langspec_EBNF;
     
-    grammar(lyre::TopLevelDeclHandler *h)
+    grammar(lyre::TopLevelDeclHandler *h, Iterator bp)
       : grammar::base_type(top_level_decls, "lyre")
       , is_spec([this] (const std::string & s) { return is_language_spec(s); })
-      , fail_handler(error_delegate_handler(h))
+      , fail_handler(error_delegate_handler<Iterator>(h, bp))
       , quote_expr_count(0)
     {
       using qi::as;
@@ -1039,11 +1029,17 @@ namespace
         =  omit[lexeme[ "language" >> !idchar ][ reset_language_spec ]]
         ///>  identifier > *( attribute[ check_language_spec ] )
         >  identifier > *( omit[attribute[ _a = check_spec(_1) ]] >> attr(_a) )
+#if 0
+        >  langspec_ABNF
+#elif 0
+        >  eps(is_spec("ABNF")) > langspec_ABNF
+#else
         >  ( hold
-           [ eps(is_spec(val(""))) >> langspec_Default ]
-           | eps(is_spec(val("ABNF"))) >> langspec_ABNF
-           | eps(is_spec(val("EBNF"))) >> langspec_EBNF
+           [ eps(is_spec(val("")))     > langspec_Default ]
+           | eps(is_spec(val("ABNF"))) > langspec_ABNF
+           | eps(is_spec(val("EBNF"))) > langspec_EBNF
            )
+#endif
         ;
 
       semantics_decl
@@ -1488,7 +1484,7 @@ namespace lyre
     position_iterator pos_beg(iter), pos_end(end);
 #endif
     
-    grammar<position_iterator> g(h);
+    grammar<position_iterator> g(h, pos_beg);
     skipper<position_iterator> skip;
     if (!qi::phrase_parse(pos_beg, pos_end, g, skip, decls)) {
       if (pos_beg == pos_end) { /*...*/ }
