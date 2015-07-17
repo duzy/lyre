@@ -1,0 +1,37 @@
+<class name = "ev" >
+
+  <state name = "waiting">
+
+    <event name = "signin">
+      <action name = "transit" state = "verifying" />
+    </event>
+
+    <event name = "signout">
+      <action name = "transit" state = "clearing_session" />
+    </event>
+
+  </state><!-- waiting -->
+
+  <state name = "error">
+  </state><!-- error -->
+
+  <state name = "verifying">
+    
+  </state><!-- verifying -->
+
+  <state name = "clearing_session">
+    
+  </state><!-- clearing_session -->
+
+  <state name = "session_alive">
+    <event name = "get_recent">
+      <action name = "transit" />
+    </event>
+
+    <event name = "get_category">
+      <action name = "transit" />
+    </event>
+
+  </state><!-- session_alive -->
+
+</class>
