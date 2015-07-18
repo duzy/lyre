@@ -1,29 +1,27 @@
-CXXFLAGS := -g -ggdb -std=c++11 -I.
-LOADLIBES := 
-LDLIBS := -lzmq -lboost_thread -lboost_system -lpthread
+include ../../utils/build/common.mk
 
-MOROOT := $(dir $(PWD))mo/gen/parrot
-MO := parrot -I$(MOROOT) -L$(MOROOT) $(MOROOT)/mo.pbc
+LLVMLIBS := TableGen Support
 
-GENERATOR := m2
+CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
 
-all : prototype/example prototype/test gen/example_test
+LIBS := \
+  $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
+  -lpthread -ldl -lm -lz $(EXTRA_LIBS)
 
-prototype/test : prototype/test.o
-prototype/test.o : *.inc
+LOADLIBS := 
 
-prototype/example : prototype/example.o
-prototype/example prototype/test gen/example_test :
-	$(LINK.cc) $^ $(LOADLIBES) $(LDLIBS) -o $@
+OBJECTS = MessagingGen.o \
+  LyreMessagingDriverEmitter.o \
 
-gen/example_test : gen/example_test.o
-gen/example_test.o: gen/example_test.cpp gen/example.inc
-gen/example_test.cpp: gen/example.inc
-gen/example.inc : example.xml generator/$(GENERATOR).mo gen
-	$(MO) example.xml generator/$(GENERATOR).mo
+MessagingGen: $(OBJECTS)
+	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
 
-gen : ; @mkdir -p $@
-test : gen/example_test ; $<
-test-gen : generator/$(GENERATOR).mo example.xml gen
-	@ulimit 10000000000
-	$(MO) example.xml $<
+%.o: %.cpp
+	$(COMPILE.cc) $< -o $@
+
+%.d: %.cpp
+	$(CXX) -MM -MF $@ -MT $(@:%.d=%.o) $(CXXFLAGS) $<
+
+-include $(OBJECTS:%.o=%.d)
+
+.PHONY: 
