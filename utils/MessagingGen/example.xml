@@ -1,0 +1,89 @@
+<component
+    name="example"
+    >
+
+  <message name = "nothing" id = "0" />
+
+  <message name = "ping" id = "1">
+    <field name = "text" type = "string">Optional text</field>
+  </message>
+  <message name = "pong" id = "2">
+    <field name = "text" type = "string">Optional text</field>
+  </message>
+
+  <message name = "hello" id = "3">
+    <field name = "token" type = "string">text</field>
+  </message>
+  <message name = "welcome" id = "4">
+    <field name = "token" type = "string">text</field>
+    <field name = "time" type = "uint32">text</field>
+  </message>
+
+  <test q="ping"    p="pong" />
+  <test q="hello"   p="welcome" />
+
+  <component
+      name = "server"
+      type = "REP"
+      >
+
+    <bind targets = "inproc://example" />
+
+    <state name = "alive">
+      <state name = "receiving" orth = "working">
+        <event name = "enter">
+          <action name = "receive_message" />
+          <action name = "post" event = "send" />
+        </event>
+        <event name = "send">
+          <action name = "transit" state = "sending" />
+        </event>
+      </state>
+      <state name = "sending" orth = "working">
+        <event name = "enter">
+          <action name = "send_message" />
+          <action name = "post" event = "receive" />
+        </event>
+        <event name = "receive" action = "transit" state = "receiving" />
+      </state>
+    </state>
+
+  </component>
+
+  <component
+      name = "client"
+      type = "REQ"
+      >
+
+    <connect targets = "inproc://example" />
+
+    <state name = "alive">
+      <state name = "waiting" orth = "working">
+        <event name = "send">
+          <field name = "message" type = "message" />
+          <action name = "queue" field = "message" />
+          <action name = "transit" state = "sending" />
+        </event>
+      </state>
+      <state name = "sending" orth = "working">
+        <event name = "enter">
+          <action name = "send_message" />
+          <action name = "post" event = "receive" />
+        </event>
+        <event name = "receive" action = "transit" state = "receiving" />
+      </state>
+      <state name = "receiving" orth = "working">
+        <event name = "enter">
+          <action name = "receive_message" />
+          <action name = "post" event = "send" />
+        </event>
+        <event name = "wait" action = "transit" state = "waiting" />
+      </state>
+    </state>
+
+    <test event = "send" message = "ping"  result = "pong" />
+    <test event = "send" message = "hello" result = "welcome" />
+
+  </component>
+
+</component>
