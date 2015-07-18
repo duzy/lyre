@@ -161,6 +161,7 @@ namespace
     {
       std::size_t l = boost::spirit::get_line(err_pos);
       std::size_t c = boost::spirit::get_column(base_pos, err_pos);
+      c -= 1; // step back for once
       handler->HandleSyntaxError(what.tag.c_str(), l, c, err_pos.base(), last.base());
     }
   };
@@ -622,6 +623,21 @@ namespace
     }
   };
 
+#if 0
+  template < class Iterator >
+  struct template_grammar : qi::grammar<Iterator, langspec::spec()>
+  {
+    template <class Spec = void()> 
+    using rule_noskip = qi::rule<Iterator, Spec>;
+
+    rule_noskip< langspec::spec() > spec;
+    
+    template_grammar() : template_grammar::base_type(spec, "template")
+    {
+    }
+  };
+#endif
+  
   template
   <
     class Iterator,
@@ -984,6 +1000,7 @@ namespace
            | language_decl
            | semantics_decl
            )
+        > eoi
         ;
       
       variable_decls
@@ -1031,7 +1048,7 @@ namespace
         >  identifier > *( omit[attribute[ _a = check_spec(_1) ]] >> attr(_a) )
 #if 0
         >  langspec_ABNF
-#elif 0
+#elif 1
         >  eps(is_spec("ABNF")) > langspec_ABNF
 #else
         >  ( hold

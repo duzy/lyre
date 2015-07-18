@@ -102,9 +102,9 @@ namespace lyre
     struct none {};
     struct variable_decls;
     struct procedure_decl;
-    struct type_decl;
     struct language_decl;
     struct semantics_decl;
+    struct type_decl;
     struct see_stmt;
     struct with_stmt;
     struct speak_stmt;
