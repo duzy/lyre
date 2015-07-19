@@ -24,4 +24,14 @@ MessagingGen: $(OBJECTS)
 
 -include $(OBJECTS:%.o=%.d)
 
+test:
+	@$(LLVMTableGen) -print-records example.td
+
+example: example.cc
+#	$(CXX) -std=c++1y -I$(BOOST_ROOT) -o $@ $^
+	$(CXX) -std=c++1y -o $@ $^ -lboost-system
+
+example.cc: example.td MessagingGen
+	./MessagingGen -o $@ $<
+
 .PHONY: 

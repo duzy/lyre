@@ -13,6 +13,7 @@
 #include <boost/statechart/exception_translator.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/noncopyable.hpp>
+#include <cstdint>
 #include <thread>
 #include <chrono>
 #include <memory>
@@ -29,6 +30,17 @@ namespace { static std::mutex logmux; }
 
 namespace meta = boost::mpl;
 namespace sc = boost::statechart;
+
+namespace {
+typedef std::int8_t     Int8;
+typedef std::int16_t    Int16;
+typedef std::int32_t    Int32;
+typedef std::int64_t    Int64;
+typedef std::uint8_t    Uint8;
+typedef std::uint16_t   Uint16;
+typedef std::uint32_t   Uint32;
+typedef std::uint64_t   Uint64;
+typedef std::string     String;
 
 namespace messaging
 {
@@ -55,7 +67,7 @@ namespace messaging
         ~frame() { zmq_msg_close (&_msg); }
 
         std::size_t size () { return zmq_msg_size (&_msg); }
-        uint8_t *data () { return (uint8_t*) zmq_msg_data (&_msg); }
+        Uint8 *data () { return (Uint8*) zmq_msg_data (&_msg); }
 
         int copy (frame & dest) { return zmq_msg_copy (&dest._msg, &_msg); }
         int move (frame & dest) { return zmq_msg_move (&dest._msg, &_msg); }
@@ -533,58 +545,58 @@ namespace messaging
 
         // friend typename codec::accessor;
 
-        std::size_t field_size (uint8_t ) const { return sizeof (uint8_t ); }
-        std::size_t field_size (uint16_t) const { return sizeof (uint16_t); }
-        std::size_t field_size (uint32_t) const { return sizeof (uint32_t); }
-        std::size_t field_size (uint64_t) const { return sizeof (uint64_t); }
+        std::size_t field_size (Uint8 ) const { return sizeof (Uint8 ); }
+        std::size_t field_size (Uint16) const { return sizeof (Uint16); }
+        std::size_t field_size (Uint32) const { return sizeof (Uint32); }
+        std::size_t field_size (Uint64) const { return sizeof (Uint64); }
         std::size_t field_size (const std::string & s, bool longstr = false) const {
-            return (longstr ? sizeof(uint32_t) : sizeof(uint8_t)) + s.size();
+            return (longstr ? sizeof(Uint32) : sizeof(Uint8)) + s.size();
         }
 
-        void put (uint8_t v)
+        void put (Uint8 v)
         {
-            // DBG (__FUNCTION__<<": uint8_t: "<<int(v));
+            // DBG (__FUNCTION__<<": Uint8: "<<int(v));
             assert (_cur != NULL);
             *_cur = v;
             _cur++;
         }
 
-        void put (uint16_t v)
+        void put (Uint16 v)
         {
-            // DBG (__FUNCTION__<<": uint16_t: "<<int(v));
+            // DBG (__FUNCTION__<<": Uint16: "<<int(v));
             assert (_cur != NULL);
-            _cur [0] = uint8_t(((v >> 8)  & 0xFF));
-            _cur [1] = uint8_t(((v)       & 0xFF)) ;
+            _cur [0] = Uint8(((v >> 8)  & 0xFF));
+            _cur [1] = Uint8(((v)       & 0xFF)) ;
             _cur += 2;
         }
 
-        void put (uint32_t v)
+        void put (Uint32 v)
         {
-            // DBG (__FUNCTION__<<": uint32_t: "<<int(v));
+            // DBG (__FUNCTION__<<": Uint32: "<<int(v));
             assert (_cur != NULL);
-            _cur [0] = uint8_t(((v >> 24) & 0xFF));
-            _cur [1] = uint8_t(((v >> 16) & 0xFF));
-            _cur [2] = uint8_t(((v >> 8)  & 0xFF));
-            _cur [3] = uint8_t(((v)       & 0xFF));
+            _cur [0] = Uint8(((v >> 24) & 0xFF));
+            _cur [1] = Uint8(((v >> 16) & 0xFF));
+            _cur [2] = Uint8(((v >> 8)  & 0xFF));
+            _cur [3] = Uint8(((v)       & 0xFF));
             _cur += 4;
         }
 
-        void put (uint64_t v)
+        void put (Uint64 v)
         {
-            // DBG (__FUNCTION__<<": uint64_t: "<<int(v));
+            // DBG (__FUNCTION__<<": Uint64: "<<int(v));
             assert (_cur != NULL);
-            _cur [0] = uint8_t(((v >> 56) & 0xFF));
-            _cur [1] = uint8_t(((v >> 48) & 0xFF));
-            _cur [2] = uint8_t(((v >> 40) & 0xFF));
-            _cur [3] = uint8_t(((v >> 32) & 0xFF));
-            _cur [4] = uint8_t(((v >> 24) & 0xFF));
-            _cur [5] = uint8_t(((v >> 16) & 0xFF));
-            _cur [6] = uint8_t(((v >> 8)  & 0xFF));
-            _cur [7] = uint8_t(((v)       & 0xFF));
+            _cur [0] = Uint8(((v >> 56) & 0xFF));
+            _cur [1] = Uint8(((v >> 48) & 0xFF));
+            _cur [2] = Uint8(((v >> 40) & 0xFF));
+            _cur [3] = Uint8(((v >> 32) & 0xFF));
+            _cur [4] = Uint8(((v >> 24) & 0xFF));
+            _cur [5] = Uint8(((v >> 16) & 0xFF));
+            _cur [6] = Uint8(((v >> 8)  & 0xFF));
+            _cur [7] = Uint8(((v)       & 0xFF));
             _cur += 8;
         }
 
-        int get (uint8_t & v)
+        int get (Uint8 & v)
         {
             if (_end < _cur + 1) return -1;
             assert (_cur != NULL);
@@ -593,40 +605,40 @@ namespace messaging
             return 1;
         }
 
-        int get (uint16_t & v)
+        int get (Uint16 & v)
         {
             if (_end < _cur + 2) return -1;
             assert (_cur != NULL);
-            v = ((uint16_t) (_cur [0]) << 8)
-              + ((uint16_t) (_cur [1])) ;
+            v = ((Uint16) (_cur [0]) << 8)
+              + ((Uint16) (_cur [1])) ;
             _cur += 2;
             return 2;
         }
 
-        int get (uint32_t & v)
+        int get (Uint32 & v)
         {
             if (_end < _cur + 4) return -1;
             assert (_cur != NULL);
-            v = ((uint32_t) (_cur [0]) << 24)
-              + ((uint32_t) (_cur [1]) << 16)
-              + ((uint32_t) (_cur [2]) << 8)
-              +  (uint32_t) (_cur [3]) ;
+            v = ((Uint32) (_cur [0]) << 24)
+              + ((Uint32) (_cur [1]) << 16)
+              + ((Uint32) (_cur [2]) << 8)
+              +  (Uint32) (_cur [3]) ;
             _cur += 4;
             return 4;
         }
 
-        int get (uint64_t & v)
+        int get (Uint64 & v)
         {
             if (_end < _cur + 8) return -1;
             assert (_cur != NULL);
-            v = ((uint64_t) (_cur [0]) << 56)
-              + ((uint64_t) (_cur [1]) << 48)
-              + ((uint64_t) (_cur [2]) << 40)
-              + ((uint64_t) (_cur [3]) << 32)
-              + ((uint64_t) (_cur [4]) << 24)
-              + ((uint64_t) (_cur [5]) << 16)
-              + ((uint64_t) (_cur [6]) << 8)
-              +  (uint64_t) (_cur [7]) ;
+            v = ((Uint64) (_cur [0]) << 56)
+              + ((Uint64) (_cur [1]) << 48)
+              + ((Uint64) (_cur [2]) << 40)
+              + ((Uint64) (_cur [3]) << 32)
+              + ((Uint64) (_cur [4]) << 24)
+              + ((Uint64) (_cur [5]) << 16)
+              + ((Uint64) (_cur [6]) << 8)
+              +  (Uint64) (_cur [7]) ;
             _cur += 8;
             return 8;
         }
@@ -634,14 +646,14 @@ namespace messaging
         void put (const std::string & s, bool longstr = false)
         {
             std::size_t size = s.size();
-            longstr ? put(uint32_t(size)) : put(uint8_t(size));
+            longstr ? put(Uint32(size)) : put(Uint8(size));
             memcpy (_cur, &s[0], size);
             _cur += size;
         }
 
         int get (std::string & s, bool longstr = false)
         {
-            std::size_t size = std::size_t( longstr ? get<uint32_t>() : get<uint8_t>() );
+            std::size_t size = std::size_t( longstr ? get<Uint32>() : get<Uint8>() );
             if (_end < _cur + size) return -1;
             s.resize( size );
             assert (_cur != NULL);
@@ -650,14 +662,14 @@ namespace messaging
             return size;
         }
 
-        void put (uint8_t *data, std::size_t size)
+        void put (Uint8 *data, std::size_t size)
         {
             assert (_cur != NULL);
             memcpy (_cur, data, size);
             _cur += size;
         }
 
-        int get (uint8_t *data, std::size_t size)
+        int get (Uint8 *data, std::size_t size)
         {
             if (_end < _cur + size) return -1;
             assert (_cur != NULL);
@@ -699,8 +711,8 @@ namespace messaging
         std::mutex _sockmux;
         socket _socket;
         message _message;
-        uint8_t *_cur;
-        uint8_t *_end;
+        Uint8 *_cur;
+        Uint8 *_end;
     };
 
     namespace actors
@@ -715,4 +727,4 @@ namespace messaging
             virtual void receive() = 0;
         };
     }
-}
+}}
