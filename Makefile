@@ -30,9 +30,9 @@ LOADLIBS :=
 lyre: source/main.o source/compiler.o source/parse.o source/gc/lygc.o
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
 
-source/main.o: source/main.cpp source/parse.h source/ast.h source/compiler.h
-source/compiler.o: source/compiler.cpp source/ast.h source/compiler.h
-source/parse.o: source/parse.cpp source/parse.h source/grammar.h source/ast.h
+source/main.o: source/main.cpp source/parse.h source/metast.h source/compiler.h
+source/compiler.o: source/compiler.cpp source/metast.h source/compiler.h
+source/parse.o: source/parse.cpp source/parse.h source/grammar.h source/metast.h
 source/gc/lygc.o: source/gc/lygc.cpp
 
 source/compiler.cpp: source/cc.ipp

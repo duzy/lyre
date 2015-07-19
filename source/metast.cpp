@@ -2,7 +2,7 @@
 
 namespace lyre
 {
-    namespace ast
+    namespace metast
     {
         /**
          *  AllocaInst - an instruction to allocate memory on the stack

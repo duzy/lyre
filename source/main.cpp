@@ -45,14 +45,14 @@ struct stmt_dumper
         std::clog<<indent()<<"(string) "<<v<<std::endl;
     }
 
-    void operator()(const lyre::ast::identifier & v)
+    void operator()(const lyre::metast::identifier & v)
     {
         std::clog<<indent()<<"(identifier) "<<v.string<<std::endl;
     }
 
-    void operator()(const lyre::ast::expr & e)
+    void operator()(const lyre::metast::expr & e)
     {
-        is<lyre::ast::none> isNone;
+        is<lyre::metast::none> isNone;
         if (e.operators.size() == 0 && boost::apply_visitor(isNone, e.operand)) {
             std::clog<<indent()<<"expr: none"<<std::endl;
             return;
@@ -69,37 +69,37 @@ struct stmt_dumper
         indent(-4);
     }
 
-    void operator()(const lyre::ast::none &)
+    void operator()(const lyre::metast::none &)
     {
         std::clog<<indent()<<"none:"<<std::endl;
     }
 
-    void operator()(const lyre::ast::decl & s)
+    void operator()(const lyre::metast::decl & s)
     {
         std::clog<<indent()<<"decl: "<<std::endl;
     }
 
-    void operator()(const lyre::ast::proc & s)
+    void operator()(const lyre::metast::proc & s)
     {
         std::clog<<indent()<<"proc: "<<s.name.string<<std::endl;
     }
 
-    void operator()(const lyre::ast::type & s)
+    void operator()(const lyre::metast::type & s)
     {
         std::clog<<indent()<<"type: "<<s.name.string<<std::endl;
     }
 
-    void operator()(const lyre::ast::see & s)
+    void operator()(const lyre::metast::see & s)
     {
         std::clog<<indent()<<"see: "<<std::endl;
     }
 
-    void operator()(const lyre::ast::with & s)
+    void operator()(const lyre::metast::with & s)
     {
         std::clog<<indent()<<"with: "<<std::endl;
     }
 
-    void operator()(const lyre::ast::speak & s)
+    void operator()(const lyre::metast::speak & s)
     {
         std::clog<<indent()<<"speak: "<<std::endl;
     }

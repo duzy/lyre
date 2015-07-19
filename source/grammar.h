@@ -24,7 +24,7 @@ namespace lyre
             std::clog<<s<<std::endl;
         }
 
-        void a_id(const ast::identifier & id) {
+        void a_id(const metast::identifier & id) {
             std::clog<<id.string<<std::endl;
         }
 
@@ -68,7 +68,7 @@ namespace lyre
     };
 
     template < class Iterator, class Locals, class SpaceType >
-    struct expression : boost::spirit::qi::grammar<Iterator, ast::expr(), Locals, SpaceType>
+    struct expression : boost::spirit::qi::grammar<Iterator, metast::expr(), Locals, SpaceType>
     {
         expression() : expression::base_type(expr, "expression")
         {
@@ -100,59 +100,59 @@ namespace lyre
             boost::spirit::inf_type             inf;
             boost::spirit::repeat_type          repeat;
 
-            as<ast::expr> as_expr;
-            as<ast::op> as_op;
+            as<metast::expr> as_expr;
+            as<metast::op> as_op;
 
             list_op.add
-                (",", ast::opcode::comma)
+                (",", metast::opcode::comma)
                 ;
 
             assign_op.add
-                ("=", ast::opcode::set)
+                ("=", metast::opcode::set)
                 ;
 
             logical_or_op.add
-                ("||", ast::opcode::o)
+                ("||", metast::opcode::o)
                 ;
             
             logical_and_op.add
-                ("&&", ast::opcode::a)
+                ("&&", metast::opcode::a)
                 ;
 
             equality_op.add
-                ("==", ast::opcode::eq)
-                ("!=", ast::opcode::ne)
+                ("==", metast::opcode::eq)
+                ("!=", metast::opcode::ne)
                 ;
 
             relational_op.add
-                ("<",  ast::opcode::lt)
-                ("<=", ast::opcode::le)
-                (">",  ast::opcode::gt)
-                (">=", ast::opcode::ge)
+                ("<",  metast::opcode::lt)
+                ("<=", metast::opcode::le)
+                (">",  metast::opcode::gt)
+                (">=", metast::opcode::ge)
                 ;
 
             additive_op.add
-                ("+", ast::opcode::add)
-                ("-", ast::opcode::sub)
+                ("+", metast::opcode::add)
+                ("-", metast::opcode::sub)
                 ;
             
             multiplicative_op.add
-                ("*", ast::opcode::mul)
-                ("/", ast::opcode::div)
+                ("*", metast::opcode::mul)
+                ("/", metast::opcode::div)
                 ;
 
             unary_op.add
-                ("+", ast::opcode::unary_plus)
-                ("-", ast::opcode::unary_minus)
-                ("!", ast::opcode::unary_not)
-                (".", ast::opcode::unary_dot)
-                ("->", ast::opcode::unary_arrow)
+                ("+", metast::opcode::unary_plus)
+                ("-", metast::opcode::unary_minus)
+                ("!", metast::opcode::unary_not)
+                (".", metast::opcode::unary_dot)
+                ("->", metast::opcode::unary_arrow)
                 ;
 
             builtin_constant.add
-                ("null", ast::cv::null)
-                ("true", ast::cv::true_)
-                ("false", ast::cv::false_)
+                ("null", metast::cv::null)
+                ("true", metast::cv::true_)
+                ("false", metast::cv::false_)
                 ;
 
             keywords =
@@ -221,9 +221,9 @@ namespace lyre
             postfix
                 = primary
                 >> *(
-                    (omit['('] >> attr(ast::opcode::call) >> -expr > omit[')']) |
-                    (omit['.'] >> attr(ast::opcode::attr) > postfix)            |
-                    (omit["->"] >> attr(ast::opcode::select) > postfix)
+                    (omit['('] >> attr(metast::opcode::call) >> -expr > omit[')']) |
+                    (omit['.'] >> attr(metast::opcode::attr) > postfix)            |
+                    (omit["->"] >> attr(metast::opcode::select) > postfix)
                     )
                 ;
 
@@ -313,39 +313,39 @@ namespace lyre
         template <class Spec = void()>
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
-        rule< ast::expr() > expr;
+        rule< metast::expr() > expr;
 
-        rule< ast::expr() > prefix;
-        rule< ast::expr() > infix;
-        rule< ast::expr() > postfix;
+        rule< metast::expr() > prefix;
+        rule< metast::expr() > infix;
+        rule< metast::expr() > postfix;
 
-        rule< ast::expr() > dotted;
+        rule< metast::expr() > dotted;
 
-        rule< ast::expr() > list;
-        rule< ast::expr() > assign;
-        rule< ast::expr() > logical_or;
-        rule< ast::expr() > logical_and;
-        rule< ast::expr() > equality;
-        rule< ast::expr() > relational;
-        rule< ast::expr() > additive;
-        rule< ast::expr() > multiplicative;
-        rule< ast::expr() > unary;
+        rule< metast::expr() > list;
+        rule< metast::expr() > assign;
+        rule< metast::expr() > logical_or;
+        rule< metast::expr() > logical_and;
+        rule< metast::expr() > equality;
+        rule< metast::expr() > relational;
+        rule< metast::expr() > additive;
+        rule< metast::expr() > multiplicative;
+        rule< metast::expr() > unary;
 
-        rule< ast::operand() > primary;
+        rule< metast::operand() > primary;
 
-        rule< ast::identifier() > identifier ;
+        rule< metast::identifier() > identifier ;
         rule< char() > idchar ;
 
-        rule< ast::nodector() > nodector;
-        rule< std::list<ast::expr>() > arglist;
+        rule< metast::nodector() > nodector;
+        rule< std::list<metast::expr>() > arglist;
         rule<> prop;
 
-        rule< ast::identifier() > name;
+        rule< metast::identifier() > name;
         rule< std::string() > quote;
 
         boost::spirit::qi::rule<Iterator> dashes;
 
-        boost::spirit::qi::symbols<char, ast::opcode>
+        boost::spirit::qi::symbols<char, metast::opcode>
             list_op,
             assign_op,
             equality_op,
@@ -356,7 +356,7 @@ namespace lyre
             multiplicative_op,
             unary_op ;
 
-        boost::spirit::qi::symbols<char, ast::cv>
+        boost::spirit::qi::symbols<char, metast::cv>
             builtin_constant ;
 
         boost::spirit::qi::symbols<char>
@@ -364,7 +364,7 @@ namespace lyre
     };
 
     template < class Iterator, class Locals, class SpaceType >
-    struct statement : boost::spirit::qi::grammar<Iterator, ast::stmts(), Locals, SpaceType>
+    struct statement : boost::spirit::qi::grammar<Iterator, metast::stmts(), Locals, SpaceType>
     {
         statement() : statement::base_type(stmts, "statement")
         {
@@ -399,9 +399,9 @@ namespace lyre
             boost::spirit::inf_type             inf;
             boost::spirit::skip_type            skip;
 
-            as<ast::xblock> as_xblock;
-            as<ast::param> as_param;
-            as<ast::identifier> as_identifier;
+            as<metast::xblock> as_xblock;
+            as<metast::param> as_param;
+            as<metast::identifier> as_identifier;
             as<std::list<std::string>> as_string_list;
             as<std::string> as_string;
 
@@ -418,7 +418,7 @@ namespace lyre
                 |  with
                 |  speak
                 |  ( expr > omit[ char_(';') ] )
-                |  ( attr(ast::none()) >> omit[ char_(';') ] ) // empty statement
+                |  ( attr(metast::none()) >> omit[ char_(';') ] ) // empty statement
                 ;
 
             block
@@ -532,19 +532,19 @@ namespace lyre
         template <class Spec = void()>
         using rule = boost::spirit::qi::rule<Iterator, Spec, Locals, SpaceType>;
 
-        rule< ast::stmts() > stmts;
-        rule< ast::stmt() > stmt;
-        rule< ast::decl() > decl;
-        rule< ast::proc() > proc;
-        rule< ast::type() > type;
-        rule< ast::speak() > speak;
-        rule< std::list<ast::param>() > params;
-        rule< ast::with() > with;
-        rule< ast::see() > see;
-        rule< ast::per() > per;
-        rule< ast::ret() > ret;
+        rule< metast::stmts() > stmts;
+        rule< metast::stmt() > stmt;
+        rule< metast::decl() > decl;
+        rule< metast::proc() > proc;
+        rule< metast::type() > type;
+        rule< metast::speak() > speak;
+        rule< std::list<metast::param>() > params;
+        rule< metast::with() > with;
+        rule< metast::see() > see;
+        rule< metast::per() > per;
+        rule< metast::ret() > ret;
 
-        rule< ast::block(std::string) > block;
+        rule< metast::block(std::string) > block;
 
         boost::spirit::qi::rule<Iterator> speak_stopper;
         boost::spirit::qi::rule<Iterator, Locals, std::string()> speak_source;
@@ -558,7 +558,7 @@ namespace lyre
         class Locals = boost::spirit::qi::locals<std::string>,
         class SpaceType = skipper<Iterator>
     >
-    struct grammar : boost::spirit::qi::grammar<Iterator, ast::stmts(), Locals, SpaceType>
+    struct grammar : boost::spirit::qi::grammar<Iterator, metast::stmts(), Locals, SpaceType>
     {
         grammar() : grammar::base_type(top, "lyre")
         {
@@ -585,7 +585,7 @@ namespace lyre
             );
         }
 
-        boost::spirit::qi::rule<Iterator, ast::stmts(), Locals, SpaceType> top;
+        boost::spirit::qi::rule<Iterator, metast::stmts(), Locals, SpaceType> top;
         statement<Iterator, Locals, SpaceType> body;
     };
 }
