@@ -14,7 +14,13 @@ using llvm::RecordKeeper;
 
 namespace lyre
 {
-  void EmitMessagingDriver(RecordKeeper &Records, raw_ostream &OS);
+  const std::string & getOptNamespace();
+  const std::string & getOptSharedHeader();
+
+  std::string getOutputFilename();
+  
+  void EmitMessagingDriverHH(RecordKeeper &Records, raw_ostream &OS);
+  void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS);
 }
 
 #endif//__MESSAGINGGEN_BACKENDS_H__

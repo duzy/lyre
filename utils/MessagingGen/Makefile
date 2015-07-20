@@ -27,11 +27,13 @@ MessagingGen: $(OBJECTS)
 test:
 	@$(LLVMTableGen) -print-records example.td
 
-example: example.cc
-#	$(CXX) -std=c++1y -I$(BOOST_ROOT) -o $@ $^
-	$(CXX) -std=c++1y -o $@ $^ -lboost-system
+example: example.cc example_main.cpp
+	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $^ -lzmq
 
-example.cc: example.td MessagingGen
-	./MessagingGen -o $@ $<
+example_main.cpp: example.hh
+example.hh: example.td MessagingGen
+	./MessagingGen -gen-messaging-driver-hh -ns=example -o $@ $<
+example.cc: example.td MessagingGen example.hh
+	./MessagingGen -gen-messaging-driver-cc -ns=example -hh=example.hh -o $@ $<
 
 .PHONY: 

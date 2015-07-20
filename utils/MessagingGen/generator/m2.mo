@@ -364,6 +364,7 @@ struct protocol : messaging::base_protocol < protocol, messages::codec >
 
 .end
 };
+
 ------------------end
 
 template cxx_statechart_state_events

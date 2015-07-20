@@ -12,20 +12,15 @@ let COMPONENT = Example in {
     def hello : Message<3, [ String<"token"> ]>;
     def welcome : Message<4, [ String<"token">, Uint32<"time"> ]>;
 
-    def ExampleServer : Component, SOCK_REP;
-    def ExampleClient : Component, SOCK_REQ;
+    def ExampleServer : StateMachine, SOCK_REP;
+    def ExampleClient : StateMachine, SOCK_REQ;
 
 }
 
-let COMPONENT = ExampleServer in {
+def enter : Event;
+def send : Event;
+def receive : Event;
 
-    /*
-    def enter : Event;
-    def send : Event;
-    def receive : Event;
-    */
-
-    def receiving : State, ACT_ENTER;
-    def alive : State;
-    
-}
+def receiving : State, ACT_ENTER;
+def sending : State;
+def alive : State;

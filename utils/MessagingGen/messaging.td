@@ -7,6 +7,10 @@ def SocketTypeREQ : SocketType;
 
 class Component {
     Component COMPONENT = ?; // Parent component if defined.
+}
+
+class StateMachine {
+    Component COMPONENT = ?; // Parent component if defined.
     SocketType TYPE = ?;
 }
 class SOCK_REP { SocketType TYPE = SocketTypeREP; }
