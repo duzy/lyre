@@ -21,7 +21,7 @@ def Named : Decl<1>;
             def Variable : DerivedDecl<Declarator>;
             def Field : DerivedDecl<Declarator>;
             def Procedure : DerivedDecl<Declarator>, DeclContext; // function, method
-                def Method : DerivedDecl<Proc>;
+                def Method : DerivedDecl<Procedure>;
                     def Constructor : DerivedDecl<Method>;
                     def Destructor : DerivedDecl<Method>;
                     def Conversion : DerivedDecl<Method>;

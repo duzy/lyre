@@ -20,9 +20,9 @@ namespace lyre
             return new (C, DC) ClassDecl(DC);
         }
 
-        VarDecl *VarDecl::Create(Context &C, DeclContext *DC)
+        VariableDecl *VariableDecl::Create(Context &C, DeclContext *DC)
         {
-            return new (C, DC) VarDecl(DC);
+            return new (C, DC) VariableDecl(DC);
         }
 
         FieldDecl *FieldDecl::Create(Context &C, DeclContext *DC)
@@ -30,9 +30,9 @@ namespace lyre
             return new (C, DC) FieldDecl(DC);
         }
 
-        ProcDecl *ProcDecl::Create(Context &C, DeclContext *DC)
+        ProcedureDecl *ProcedureDecl::Create(Context &C, DeclContext *DC)
         {
-            return new (C, DC) ProcDecl(Proc, DC);
+            return new (C, DC) ProcedureDecl(Procedure, DC);
         }
 
         MethodDecl *MethodDecl::Create(Context &C, DeclContext *DC)

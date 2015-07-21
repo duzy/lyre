@@ -114,16 +114,16 @@ namespace lyre
             static bool classofKind(Kind K) { return K >= firstDeclarator && K <= lastDeclarator; }
         };
 
-        class VarDecl : public DeclaratorDecl
+        class VariableDecl : public DeclaratorDecl
         {
         protected:
-            VarDecl(DeclContext *DC) : DeclaratorDecl(Var, DC) {}
+            VariableDecl(DeclContext *DC) : DeclaratorDecl(Variable, DC) {}
             
         public:
-            static VarDecl *Create(Context &C, DeclContext *DC);
+            static VariableDecl *Create(Context &C, DeclContext *DC);
 
             static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-            static bool classofKind(Kind K) { return K == Var; }
+            static bool classofKind(Kind K) { return K == Variable; }
         };
 
         class FieldDecl : public DeclaratorDecl
@@ -138,22 +138,22 @@ namespace lyre
             static bool classofKind(Kind K) { return K == Field; }
         };
 
-        class ProcDecl : public DeclaratorDecl
+        class ProcedureDecl : public DeclaratorDecl
         {
         protected:
-            ProcDecl(Kind K, DeclContext *DC) : DeclaratorDecl(K, DC) {}
+            ProcedureDecl(Kind K, DeclContext *DC) : DeclaratorDecl(K, DC) {}
             
         public:
-            static ProcDecl *Create(Context &C, DeclContext *DC);
+            static ProcedureDecl *Create(Context &C, DeclContext *DC);
 
             static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-            static bool classofKind(Kind K) { return K >= firstProc && K <= lastProc; }
+            static bool classofKind(Kind K) { return K >= firstProcedure && K <= lastProcedure; }
         };
 
-        class MethodDecl : public ProcDecl
+        class MethodDecl : public ProcedureDecl
         {
         protected:
-            MethodDecl(Kind K, DeclContext *DC) : ProcDecl(K, DC) {}
+            MethodDecl(Kind K, DeclContext *DC) : ProcedureDecl(K, DC) {}
             
         public:
             static MethodDecl *Create(Context &C, DeclContext *DC);
