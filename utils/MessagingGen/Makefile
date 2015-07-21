@@ -27,10 +27,10 @@ MessagingGen: $(OBJECTS)
 test:
 	@$(LLVMTableGen) -print-records example.td
 
-example: example.cc example_main.cpp
-	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $^ -lzmq
+example: example_main.cpp
+	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $^ -lzmq -lpthread
 
-example_main.cpp: example.hh
+example_main.cpp: example.hh example.cc
 example.hh: example.td MessagingGen
 	./MessagingGen -gen-messaging-driver-hh -ns=example -o $@ $<
 example.cc: example.td MessagingGen example.hh

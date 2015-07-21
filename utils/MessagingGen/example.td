@@ -1,8 +1,8 @@
 include "messaging.td"
 
-def Example : Component;
+def example : Namespace;
 
-let COMPONENT = Example in {
+let NS = example in {
     
     def nothing : Message<0>;
     
@@ -10,17 +10,17 @@ let COMPONENT = Example in {
     def pong : Message<2, [ String<"text"> ]>;
 
     def hello : Message<3, [ String<"token"> ]>;
-    def welcome : Message<4, [ String<"token">, Uint32<"time"> ]>;
+    def welcome : Message<4>, Fields<[ String<"token">, Uint32<"time"> ]>;
 
     def ExampleServer : StateMachine, SOCK_REP;
     def ExampleClient : StateMachine, SOCK_REQ;
 
+    def enter : Event;
+    def send : Event;
+    def receive : Event;
+
+    def receiving : State;
+    def sending : State;
+    def alive : State;
+
 }
-
-def enter : Event;
-def send : Event;
-def receive : Event;
-
-def receiving : State, ACT_ENTER;
-def sending : State;
-def alive : State;

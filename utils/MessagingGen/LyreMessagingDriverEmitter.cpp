@@ -53,11 +53,13 @@ void emitMessageStructs(const std::vector<Record*> &Messages, raw_ostream &OS)
     OS << "};\n\n" ;
   }
 }
-  
+
 void emitProtocol(const std::vector<Record*> &Messages, raw_ostream &OS)
 {
+  auto TagBase = Messages.size() < 256 ? "Uint8" : "Uint16";
+  
   // Define message tag.
-  OS << "enum class tag : " << (Messages.size() < 256 ? "Uint8" : "Uint16") << "\n" ;
+  OS << "enum class tag : " << TagBase << "\n" ;
   OS << "{\n" ;
   for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
     auto M = Messages[MI];
@@ -71,6 +73,8 @@ void emitProtocol(const std::vector<Record*> &Messages, raw_ostream &OS)
   OS << "template <class P, class accessor>\n" ;
   OS << "struct codec\n" ;
   OS << "{\n" ;
+  OS << "  typedef " << TagBase << " tag_value_t;\n";
+  OS << "  typedef ::tag tag_t;\n\n" ;
   for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
     auto M = Messages[MI];
     auto MSG = M->getName();
@@ -78,6 +82,9 @@ void emitProtocol(const std::vector<Record*> &Messages, raw_ostream &OS)
     // A comment line for the message.
     OS << "  // Message: "<<MSG<<"\n";
 
+    // static tag_t t(const MESSAGE &);
+    OS << "  static tag_t t(const "<<MSG<<"&) { return tag::"<<MSG<<"; }\n" ;
+    
     // static std::size_t size(P *p, const MESSAGE &m);
     OS << "  static std::size_t size(P *p, const "<<MSG<<" &m)\n" ;
     OS << "  {\n" ;

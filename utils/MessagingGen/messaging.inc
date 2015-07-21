@@ -436,32 +436,36 @@ namespace messaging
         void connect (const std::initializer_list<std::string> && a) { connect (a.begin(), a.end()); }
 
         template < class Message >
-        int send_message (const Message & m)
+        auto size (const Message & m) const //-> decltype(codec::size(this, m)) 
+        { return codec::size(static_cast<Derived*>(const_cast<base_protocol*>(this)), m); }
+
+        template < class Message >
+        int send (const Message & m)
         {
             auto size = codec::size (static_cast<Derived*>(this), m);
-            this->reset ( sizeof (typename codec::tag_value_base) + size );
-            this->put ( typename codec::tag_value_base(m.TAG) );
+            this->reset ( sizeof (typename codec::tag_value_t) + size );
+            this->put ( typename codec::tag_value_t(codec::t(m)) );
             codec::encode ( static_cast<Derived*>(this), m );
-            int rc = send (0);
+            int rc = send_with_flags (0);
             if (rc < 0) DBG ("error: " << __FUNCTION__ << ": " << error() << ", " << strerror());
             return rc;
         }
 
         template < class Message >
-        int recv_message (Message & m)
+        int recv (Message & m)
         {
-            int rc = recv (0);
+            int rc = recv_with_flags (0);
             if (rc < 0) {
                 DBG ("error: " << __FUNCTION__ << ": " << error() << ", " << strerror());
                 return rc;
             }
 
-            auto tag = typename codec::tag( get<typename codec::tag_value_base>() );
-
-            if (m.TAG == tag) {
+            auto tag = typename codec::tag_t( get<typename codec::tag_value_t>() );
+            
+            if (codec::t(m) == tag) {
                 codec::decode (static_cast<Derived*>(this), m);
             } else {
-                DBG ("error: " << __FUNCTION__ << ": tag not match: " << int(tag) << " != " << int(m.TAG));
+                DBG ("error: " << __FUNCTION__ << ": tag not match: " << int(tag) << " != " << int(codec::t(m)));
                 rc = -1;
             }
 
@@ -474,7 +478,7 @@ namespace messaging
         template < class Context >
         bool receive_and_process_message ( Context *ctx )
         {
-            int rc = recv (0);
+            int rc = recv_with_flags (0);
             if (rc < 0) {
                 if (error () == 11 /* e.g. Resource temporarily unavailable. */) {
                     /**
@@ -486,7 +490,7 @@ namespace messaging
                 return false;
             }
 
-            auto tag = typename codec::tag( get<typename codec::tag_value_base>() );
+            auto tag = typename codec::tag_t( get<typename codec::tag_value_t>() );
             return codec::parse ( static_cast<Derived*>(this), ctx, tag );
         }
 
@@ -511,13 +515,13 @@ namespace messaging
             }
         }
 
-        int send (int flags)
+        int send_with_flags (int flags)
         {
             std::lock_guard< std::mutex > lock (_sockmux);
             return ( _message.has_data () ) ? _socket.send (_message, flags) : 0;
         }
 
-        int recv (int flags)
+        int recv_with_flags (int flags)
         {
             std::lock_guard< std::mutex > lock (_sockmux);
 
@@ -727,4 +731,5 @@ namespace messaging
             virtual void receive() = 0;
         };
     }
-}}
+} // end namespace messaging
+} // end anonymous namespace
