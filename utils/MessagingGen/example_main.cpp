@@ -13,6 +13,15 @@ static void test_protocol()
         assert(proto.recv(m) == tag_size + proto.size(m));
         assert(proto.send(m) == tag_size + proto.size(m));
       }
+      {
+        ping req;
+        pong res = { "example-pong" };
+        assert(proto.recv(req) == tag_size + proto.size(req));
+        assert(proto.send(res) == tag_size + proto.size(res));
+        assert(req.text == "example-ping");
+      }
+
+      proto.receive_and_process(&proto);
     });
 
   std::thread tQ([] {
@@ -22,6 +31,19 @@ static void test_protocol()
         nothing m;
         assert(proto.send(m) == tag_size + proto.size(m));
         assert(proto.recv(m) == tag_size + proto.size(m));
+      }
+      {
+        ping req = { "example-ping" };
+        pong res;
+        assert(proto.send(req) == tag_size + proto.size(req));
+        assert(proto.recv(res) == tag_size + proto.size(res));
+        assert(res.text == "example-pong");
+      }
+
+      {
+        nothing m;
+        assert(proto.send(m) == tag_size + proto.size(m));
+        //assert(proto.recv(m) == tag_size + proto.size(m));
       }
     });
 

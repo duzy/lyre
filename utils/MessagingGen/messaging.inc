@@ -476,7 +476,7 @@ namespace messaging
          *  On errors, it should return false, and the error() should return the error code.
          */
         template < class Context >
-        bool receive_and_process_message ( Context *ctx )
+        bool receive_and_process ( Context *ctx )
         {
             int rc = recv_with_flags (0);
             if (rc < 0) {

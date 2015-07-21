@@ -54,10 +54,20 @@ void emitMessageStructs(const std::vector<Record*> &Messages, raw_ostream &OS)
   }
 }
 
-void emitProtocol(const std::vector<Record*> &Messages, raw_ostream &OS)
+void emitProtocols(const std::vector<Record*> &Protocols,
+    const std::vector<Record*> &Messages, raw_ostream &OS)
 {
   auto TagBase = Messages.size() < 256 ? "Uint8" : "Uint16";
-  
+
+  OS << "// Protocols: " << Protocols.size() << "\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "//    " << P->getName() << ": "
+       << Req->getName() << " -> " << Rep->getName()
+       << "\n" ;
+  }
+
   // Define message tag.
   OS << "enum class tag : " << TagBase << "\n" ;
   OS << "{\n" ;
@@ -111,7 +121,7 @@ void emitProtocol(const std::vector<Record*> &Messages, raw_ostream &OS)
     OS << "  }\n" ;
 
     // static void decode (P *p, const MESSAGE & m);
-    OS << "  static std::size_t decode(P *p, const "<<MSG<<" &m)\n";
+    OS << "  static std::size_t decode(P *p, "<<MSG<<" &m)\n";
     OS << "  {\n" ;
     for (std::size_t I = 0, S = Fields.size(); I < S; ++I) {
       auto F = Fields[I]->getValueAsString("NAME");
@@ -154,16 +164,87 @@ void emitProtocol(const std::vector<Record*> &Messages, raw_ostream &OS)
   OS << "{\n" ;
   OS << "  explicit protocol(int type) : base_protocol(type) {}\n" ;
   OS << "\n" ;
-  OS << "  template<class C, class M>\n" ;
-  OS << "  void process_message(C *c, M &m) { c->process_message(m); }\n" ;
-  OS << "\n";
+  OS << "protected:\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "  virtual void process(const "<<Req->getName()<<" &Req, "
+       << Rep->getName() << " &Rep) {}\n" ;
+  }
+  OS << "\n" ;
+  OS << "private:\n" ;
+  OS << "  friend codec;\n" ;
   for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
     auto M = Messages[MI];
     auto S = M->getName();
     OS << "  template<class C>" ;
-    OS << " void process_message(C*, "<<S<<" &m) {}\n" ;
+    OS << " void process_message(C*, "<<S<<" &m) {\n" ;
+    for (auto P : Protocols) {
+      auto Req = P->getValueAsDef("REQ");
+      auto Rep = P->getValueAsDef("REP");
+      OS << "    //" << M << ", " << Req << ", " << Rep << "\n" ;
+    }
+    OS << "  }\n" ;
   }
   OS << "}; // end struct protocol\n\n" ;
+
+  // The "request_processor" definition.
+  OS << "struct request_processor : messaging::base_protocol<request_processor, codec>\n" ;
+  OS << "{\n" ;
+  OS << "  explicit request_processor(int type) : base_protocol(type) {}\n" ;
+  OS << "\n" ;
+  OS << "protected:\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "  virtual void process(const "<<Req->getName()<<" &Req, "
+       << Rep->getName() << " &Rep) {}\n" ;
+  }
+  OS << "\n" ;
+  OS << "private:\n" ;
+  OS << "  friend codec;\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto S = M->getName();
+    OS << "  template<class C>" ;
+    OS << " void process_message(C*, "<<S<<" &m) {\n" ;
+    for (auto P : Protocols) {
+      auto Req = P->getValueAsDef("REQ");
+      auto Rep = P->getValueAsDef("REP");
+      OS << "    //" << M << ", " << Req << ", " << Rep << "\n" ;
+    }
+    OS << "  }\n" ;
+  }
+  OS << "}; // end struct request_processor\n\n" ;
+
+  // The "reply_processor" definition.
+  OS << "struct reply_processor : messaging::base_protocol<reply_processor, codec>\n" ;
+  OS << "{\n" ;
+  OS << "  explicit reply_processor(int type) : base_protocol(type) {}\n" ;
+  OS << "\n" ;
+  OS << "protected:\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "  virtual void process(const "<<Req->getName()<<" &Req, "
+       << Rep->getName() << " &Rep) {}\n" ;
+  }
+  OS << "\n" ;
+  OS << "private:\n" ;
+  OS << "  friend codec;\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto S = M->getName();
+    OS << "  template<class C>" ;
+    OS << " void process_message(C*, "<<S<<" &m) {\n" ;
+    for (auto P : Protocols) {
+      auto Req = P->getValueAsDef("REQ");
+      auto Rep = P->getValueAsDef("REP");
+      OS << "    //" << M << ", " << Req << ", " << Rep << "\n" ;
+    }
+    OS << "  }\n" ;
+  }
+  OS << "}; // end struct reply_processor\n\n" ;
 }
 
 void emitStateMachine(const std::vector<Record*> &States, 
@@ -181,16 +262,26 @@ void emitStateMachine(const std::vector<Record*> &States,
 }
 }
 
+static void sortMessages(std::vector<Record*> &Messages)
+{
+  std::sort(Messages.begin(), Messages.end(), [](Record *A, Record *B){
+      return A->getValueAsInt("ID") < B->getValueAsInt("ID");
+    });
+}
+
 namespace lyre
 {
   void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS)
   {
+    std::vector<Record*> Protocols = Records.getAllDerivedDefinitions("Protocol");
     std::vector<Record*> Messages = Records.getAllDerivedDefinitions("Message");
     std::vector<Record*> States = Records.getAllDerivedDefinitions("State");
     std::vector<Record*> Events = Records.getAllDerivedDefinitions("Event");
 
     emitSourceFileHeader("The Protocol Engine.", OS);
-
+    
+    sortMessages(Messages);
+    
     auto & Namespace = getOptNamespace();
     auto & SharedHeader = getOptSharedHeader();
 
@@ -208,7 +299,7 @@ namespace lyre
     if (SharedHeader.empty())
       emitMessageStructs(Messages, OS);    
     
-    emitProtocol(Messages, OS);
+    emitProtocols(Protocols, Messages, OS);
     emitStateMachine(States, Events, OS);
     
     OS << "} // end anonymous namespace\n" ;
@@ -222,6 +313,8 @@ namespace lyre
 
     emitSourceFileHeader("The Protocol Engine.", OS);
 
+    sortMessages(Messages);
+    
     auto & Namespace = getOptNamespace();
     auto OutputFilename = getOutputFilename();
 

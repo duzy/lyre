@@ -25,6 +25,12 @@ class Message<int id, list<FieldBase> fields = []> {
 // Allowing 'def msg : Message<1>, Fields<[String["text"]]>;'
 class Fields<list<FieldBase> fields = []> { list<FieldBase> FIELDS = fields; }
 
+class Protocol<Message request, Message reply> {
+    Namespace NS = ?;
+    Message REQ = request;
+    Message REP = reply;
+}
+
 //========
 
 class SocketType;
