@@ -20,8 +20,6 @@ static void test_protocol()
         assert(proto.send(res) == tag_size + proto.size(res));
         assert(req.text == "example-ping");
       }
-
-      proto.receive_and_process(&proto);
     });
 
   std::thread tQ([] {
@@ -39,20 +37,41 @@ static void test_protocol()
         assert(proto.recv(res) == tag_size + proto.size(res));
         assert(res.text == "example-pong");
       }
+    });
 
+  tQ.join();
+  tP.join();
+}
+
+static void test_processors()
+{
+  std::thread tP([] {
+      request_processor processor(ZMQ_REP);
+      processor.bind({ "inproc://example" });
       {
         nothing m;
-        assert(proto.send(m) == tag_size + proto.size(m));
-        //assert(proto.recv(m) == tag_size + proto.size(m));
+        assert(processor.recv(m) == tag_size + processor.size(m));
+        assert(processor.send(m) == tag_size + processor.size(m));
+      }
+    });
+
+  std::thread tQ([] {
+      reply_processor processor(ZMQ_REQ);
+      processor.connect({ "inproc://example" });
+      {
+        nothing m;
+        assert(processor.send(m) == tag_size + processor.size(m));
+        assert(processor.recv(m) == tag_size + processor.size(m));
       }
     });
 
   tQ.join();
   tP.join();
-};
+}
 
 int main(int argc, char **argv)
 {
   test_protocol();
+  test_processors();
   return 0;
 }

@@ -472,28 +472,6 @@ namespace messaging
             return rc;
         }
 
-        /**
-         *  On errors, it should return false, and the error() should return the error code.
-         */
-        template < class Context >
-        bool receive_and_process ( Context *ctx )
-        {
-            int rc = recv_with_flags (0);
-            if (rc < 0) {
-                if (error () == 11 /* e.g. Resource temporarily unavailable. */) {
-                    /**
-                     *  It could be timeout on receiving messages.
-                     */
-                } else {
-                    DBG ("error: " << __FUNCTION__ << ": " << error() << ", " << strerror());
-                }
-                return false;
-            }
-
-            auto tag = typename codec::tag_t( get<typename codec::tag_value_t>() );
-            return codec::parse ( static_cast<Derived*>(this), ctx, tag );
-        }
-
         int error() const { return zmq_errno(); }
         const char * strerror(int e) const { return zmq_strerror( e ); }
         const char * strerror() const { return zmq_strerror( error() ); }
@@ -693,7 +671,8 @@ namespace messaging
         }
 
         /**
-         *  Each time the protocol is about to encode a message, this `reset` must be called.
+         *  Each time the protocol is about to encode a message, this
+         *  `reset` must be called.
          */
         void reset (std::size_t framesize)
         {
@@ -706,10 +685,14 @@ namespace messaging
         }
 
         template < class Message >
-        void encode_message (const Message & m) { codec::encode(static_cast<Derived*>(this), m); }
+        void encode_message (const Message & m) {
+          codec::encode(static_cast<Derived*>(this), m);
+        }
 
         template < class Message >
-        void decode_message (Message & m) { codec::decode(static_cast<Derived*>(this), m); }
+        void decode_message (Message & m) {
+          codec::decode(static_cast<Derived*>(this), m);
+        }
 
     private:
         std::mutex _sockmux;
@@ -717,6 +700,49 @@ namespace messaging
         message _message;
         Uint8 *_cur;
         Uint8 *_end;
+    };
+
+    /**
+     *  Basic protocol combining with a codec implementation.
+     */
+    template < class Derived, template <class P, class A> class Codec >
+    struct base_processor : base_protocol < Derived, Codec >
+    {
+      using base_type = base_protocol< Derived, Codec >;
+      using typename base_type::codec;
+
+      /**
+       *  On errors, it should return false, and the error() should return
+       *  the error code.
+       */
+      template < class Context >
+      bool receive_and_process ( Context *ctx )
+      {
+        int rc = this->recv_with_flags (0);
+        if (rc < 0) {
+          if (this->error () == 11 /* e.g. Resource temporarily unavailable. */) {
+            /**
+             *  It could be timeout on receiving messages.
+             */
+          } else {
+            DBG ("error: " << __FUNCTION__ << ": " <<
+                 this->error() << ", " << this->strerror());
+          }
+          return false;
+        }
+
+        auto tag = typename codec::tag_t(
+            this->template get<typename codec::tag_value_t>() );
+        return codec::parse ( static_cast<Derived*>(this), ctx, tag );
+      }
+
+    protected:
+      explicit base_processor (
+          int type,
+          int sndtimeo = 12*1000,
+          int rcvtimeo = 12*1000)
+          : base_type (type, sndtimeo, rcvtimeo)
+      {}
     };
 
     namespace actors

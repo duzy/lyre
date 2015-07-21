@@ -163,35 +163,12 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "struct protocol : messaging::base_protocol<protocol, codec>\n" ;
   OS << "{\n" ;
   OS << "  explicit protocol(int type) : base_protocol(type) {}\n" ;
-  OS << "\n" ;
-  OS << "protected:\n" ;
-  for (auto P : Protocols) {
-    auto Req = P->getValueAsDef("REQ");
-    auto Rep = P->getValueAsDef("REP");
-    OS << "  virtual void process(const "<<Req->getName()<<" &Req, "
-       << Rep->getName() << " &Rep) {}\n" ;
-  }
-  OS << "\n" ;
-  OS << "private:\n" ;
-  OS << "  friend codec;\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto S = M->getName();
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, "<<S<<" &m) {\n" ;
-    for (auto P : Protocols) {
-      auto Req = P->getValueAsDef("REQ");
-      auto Rep = P->getValueAsDef("REP");
-      OS << "    //" << M << ", " << Req << ", " << Rep << "\n" ;
-    }
-    OS << "  }\n" ;
-  }
   OS << "}; // end struct protocol\n\n" ;
 
   // The "request_processor" definition.
-  OS << "struct request_processor : messaging::base_protocol<request_processor, codec>\n" ;
+  OS << "struct request_processor : messaging::base_processor<request_processor, codec>\n" ;
   OS << "{\n" ;
-  OS << "  explicit request_processor(int type) : base_protocol(type) {}\n" ;
+  OS << "  explicit request_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
   OS << "protected:\n" ;
   for (auto P : Protocols) {
@@ -218,9 +195,9 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "}; // end struct request_processor\n\n" ;
 
   // The "reply_processor" definition.
-  OS << "struct reply_processor : messaging::base_protocol<reply_processor, codec>\n" ;
+  OS << "struct reply_processor : messaging::base_processor<reply_processor, codec>\n" ;
   OS << "{\n" ;
-  OS << "  explicit reply_processor(int type) : base_protocol(type) {}\n" ;
+  OS << "  explicit reply_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
   OS << "protected:\n" ;
   for (auto P : Protocols) {
@@ -262,7 +239,7 @@ void emitStateMachine(const std::vector<Record*> &States,
 }
 }
 
-static void sortMessages(std::vector<Record*> &Messages)
+static inline void sortMessages(std::vector<Record*> &Messages)
 {
   std::sort(Messages.begin(), Messages.end(), [](Record *A, Record *B){
       return A->getValueAsInt("ID") < B->getValueAsInt("ID");
