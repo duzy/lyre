@@ -37,36 +37,48 @@ class SocketType;
 def SocketTypeREP : SocketType;
 def SocketTypeREQ : SocketType;
 
-class SOCK_REP { SocketType TYPE = SocketTypeREP; }
-class SOCK_REQ { SocketType TYPE = SocketTypeREQ; }
-
 //========---- State Machine related ----========
 
 class Action {
     Namespace NS = ?;
 }
 
-class Event {
+class Event<list<Action> actions = []> {
     Namespace NS = ?;
-    list<Action> ACTIONS = [];
+    list<Action> ACTIONS = actions;
+}
+class Do<list<Action> actions> {
+    list<Action> ACTIONS = actions;
 }
 
-class State {
+class State<list<State> states = []> {
     Namespace NS = ?;
     list<Event> EVENTS = []; // accepted events in this state
-    list<State> STATES = []; // sub-states
+    list<State> STATES = states; // sub-states
+}
+class Can<list<Event> events = []> {
+    list<Event> EVENTS = events; // accepted events in this state
 }
 
-class StateMachine {
+class StateMachine<list<State> states = []> {
     Namespace NS = ?; // Parent namespace if defined.
+    list<State> STATES = states; // initial states
+}
+
+class RequestProcessMachine<list<State> states = []> : StateMachine<states> {
     SocketType TYPE = ?;
 }
+class ReplyProcessMachine<list<State> states = []> : StateMachine<states> {
+    SocketType TYPE = ?;
+}
+class SOCK_REP { SocketType TYPE = SocketTypeREP; }
+class SOCK_REQ { SocketType TYPE = SocketTypeREQ; }
 
 //========---- Standard Actions for common messaging tasks. ----========
 
 // Action to transit to another state.
-def TransitAction : Action { 
-    State STATE; // Target state.
+class TransitAction<string state> : Action { 
+    string STATE = state; // Target state.
 }
 
 // Action to post an event to the state machine.
@@ -74,12 +86,14 @@ def PostAction : Action {
     Event EVENT; // Event to post.
 }
 
-/*
 // Action to send a message immediately.
 def SendAction : Action {
     string MESSAGE; // e.g. "event.message"; ""
-};
-*/
+}
+
+// Action to wait and receive a message and dispatch to the handlers.
+def ReceiveAction : Action {
+}
 
 // Action to queue a message for pending sending.
 def QueueAction : Action {

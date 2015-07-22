@@ -49,7 +49,7 @@ static void test_processors()
   std::thread tP([] {
       request_processor processor(ZMQ_REP);
       processor.bind({ "inproc://example-processor" });
-      processor.wait_for_request(&processor);
+      processor.wait_process_request(&processor);
     });
 
   std::thread tQ([] {
@@ -114,10 +114,10 @@ static void test_processors_2()
   std::thread tP([] {
       server S;
       S.bind({ "inproc://example-processor-2" });
-      S.wait_for_request(&S);
-      S.wait_for_request(&S);
-      S.wait_for_request(&S);
-      S.wait_for_request(&S);
+      S.wait_process_request(&S);
+      S.wait_process_request(&S);
+      S.wait_process_request(&S);
+      S.wait_process_request(&S);
     });
 
   std::thread tQ([] {
@@ -125,16 +125,16 @@ static void test_processors_2()
       C.connect({ "inproc://example-processor-2" });
 
       C.send(nothing());
-      C.wait_for_reply(&C);
+      C.wait_process_reply(&C);
 
       C.send(ping{ "example-ping" });
-      C.wait_for_reply(&C);
+      C.wait_process_reply(&C);
 
       C.send(pong{ "example-pong" });
-      C.wait_for_reply(&C);
+      C.wait_process_reply(&C);
 
       C.send(hello{ "example-hello" });
-      C.wait_for_reply(&C);
+      C.wait_process_reply(&C);
     });
 
   tQ.join();

@@ -212,7 +212,7 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "  explicit request_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
   OS << "  template <class Context>\n" ;
-  OS << "  bool wait_for_request(Context *C) {\n" ;
+  OS << "  bool wait_process_request(Context *C) {\n" ;
   OS << "    auto okay = receive_and_process(C);\n" ;
   OS << "    if (!okay) { /*...*/ }\n" ;
   OS << "    return okay;\n" ;
@@ -290,7 +290,7 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   }
   OS << "\n" ;
   OS << "  template <class Context>\n" ;
-  OS << "  bool wait_for_reply(Context *C) {\n" ;
+  OS << "  bool wait_process_reply(Context *C) {\n" ;
   OS << "    auto okay = receive_and_process(C);\n" ;
   OS << "    if (!okay) { /*...*/ }\n" ;
   OS << "    return okay;\n" ;
@@ -339,18 +339,36 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "}; // end struct reply_processor\n\n" ;
 }
 
-void emitStateMachine(const std::vector<Record*> &States, 
-    const std::vector<Record*> &Events, raw_ostream &OS)
+void emitStateMachines(
+    const std::vector<Record*> &Machines,
+    const std::vector<Record*> &States,
+    const std::vector<Record*> &Events,
+    raw_ostream &OS)
 {
   for (std::size_t EI = 0, EE = Events.size(); EI < EE; ++EI) {
     auto E = Events[EI];
-    auto S = E->getName();
-    OS << "struct event_"<<S<<" : sc::event<event_"<<S<<">\n" ;
-    OS << "{\n" ;
-    
+    auto N = E->getName();
+    OS << "struct event_"<<N<<" : sc::event<event_"<<N<<"> " ;
+    OS << "{" ;
     OS << "};\n" ;
-    OS << "\n" ;
   }
+  OS << "\n" ;
+
+  for (std::size_t SI = 0, SE = States.size(); SI < SE; ++SI) {
+    auto S = States[SI];
+    auto N = S->getName();
+    OS << "struct state_"<<N<<";\n" ;
+  }  
+  OS << "\n" ;
+
+  for (std::size_t MI = 0, ME = Machines.size(); MI < ME; ++MI) {
+    auto M = Machines[MI];
+    auto DirectSuper = M->getSuperClasses().back();
+    OS << "// " << M->getName() << ", " << DirectSuper->getName() << "\n";
+    for (auto super : M->getSuperClasses())
+      OS << "//     " << super->getName() << "\n";
+  }
+  OS << "\n" ;
 }
 }
 
@@ -366,6 +384,7 @@ namespace lyre
   void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS)
   {
     std::vector<Record*> Protocols = Records.getAllDerivedDefinitions("Protocol");
+    std::vector<Record*> Machines = Records.getAllDerivedDefinitions("StateMachine");
     std::vector<Record*> Messages = Records.getAllDerivedDefinitions("Message");
     std::vector<Record*> States = Records.getAllDerivedDefinitions("State");
     std::vector<Record*> Events = Records.getAllDerivedDefinitions("Event");
@@ -392,7 +411,7 @@ namespace lyre
       emitMessageStructs(Messages, OS);    
     
     emitProtocols(Protocols, Messages, OS);
-    emitStateMachine(States, Events, OS);
+    emitStateMachines(Machines, States, Events, OS);
     
     OS << "} // end anonymous namespace\n" ;
   }

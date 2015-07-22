@@ -282,12 +282,19 @@ namespace messaging
             this->post (boost::intrusive_ptr< Event >(new Event()));
         }
 
+#if 1
+        template < class Event, class... A >
+        void post(const A &... a)
+        {
+            this->post (boost::intrusive_ptr< Event >(new Event(a...)));
+        }
+#else
         template < class Event, class A >
         void post(const A & a)
         {
             this->post (boost::intrusive_ptr< Event >(new Event(a)));
         }
-
+      
         template < class Event, class A1, class A2 >
         void post(const A1 & a1, const A2 & a2)
         {
@@ -311,7 +318,7 @@ namespace messaging
         {
             this->post (boost::intrusive_ptr< Event >(new Event(a1, a2, a3, a4, a5)));
         }
-
+#endif
     protected:
         base_app()
             : _scheduler ( true )
