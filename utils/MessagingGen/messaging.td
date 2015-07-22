@@ -53,18 +53,19 @@ class Do<list<Action> actions> {
 
 class State<list<State> states = []> {
     Namespace NS = ?;
-    list<Event> EVENTS = []; // accepted events in this state
     list<State> STATES = states; // sub-states
+    list<Event> EVENTS = ?; // accepted events in this state
+    list<Action> ENTER = ?; // actions to perform when entering this state
+    list<Action> LEAVE = ?; // actions to perform when leaving this state
 }
-class Can<list<Event> events = []> {
-    list<Event> EVENTS = events; // accepted events in this state
-}
+class Can<list<Event> events> { list<Event> EVENTS = events; }
+class Enter<list<Action> actions> { list<Action> ENTER = actions; }
+class Leave<list<Action> actions> { list<Action> LEAVE = actions; }
 
 class StateMachine<list<State> states = []> {
     Namespace NS = ?; // Parent namespace if defined.
     list<State> STATES = states; // initial states
 }
-
 class RequestProcessMachine<list<State> states = []> : StateMachine<states> {
     SocketType TYPE = ?;
 }
@@ -77,36 +78,20 @@ class SOCK_REQ { SocketType TYPE = SocketTypeREQ; }
 //========---- Standard Actions for common messaging tasks. ----========
 
 // Action to transit to another state.
-class TransitAction<string state> : Action { 
+class Transit<string state> : Action { 
     string STATE = state; // Target state.
 }
 
-// Action to post an event to the state machine.
-def PostAction : Action {
-    Event EVENT; // Event to post.
-}
-
 // Action to send a message immediately.
-def SendAction : Action {
+def Send : Action {
     string MESSAGE; // e.g. "event.message"; ""
 }
 
-// Action to wait and receive a message and dispatch to the handlers.
-def ReceiveAction : Action {
-}
+// Action to wait for a request and process it
+def WaitProcessRequest : Action;
 
-// Action to queue a message for pending sending.
-def QueueAction : Action {
-    string MESSAGE; // e.g. "event.message"; ""
-}
-
-// Action to send a message from the sending queue (synchronously).
-def SendQueuedAction : Action {
-}
-
-// Action to wait and receive a message and dispatch to the handlers.
-def ReceiveDispatchAction : Action {
-}
+// Action to wait for a reply and process it
+def WaitProcessReply : Action;
 
 // Action to call external function, e.g. user defined function.
 def ExternalAction : Action {

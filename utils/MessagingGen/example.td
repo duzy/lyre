@@ -19,26 +19,16 @@ let NS = example in {
 
     //========== State Machines ==========
 
-    /*    
-    def server_receiving : State, Do<[ ReceiveAction, TransitAction<"server_sending"> ]>;
-    def server_sending : State, Do<[ SendAction, TransitAction<"server_receiving"> ]>;
-    def server_alive : State<[ server_receiving, server_sending ]>;
-    def server : RequestProcessMachine<[ server_alive ]>, SOCK_REP;
+    def send_request : Event, Do<[ Send, Transit<"waiting_reply"> ]>;
 
-    def client_sending : State, Do<[ SendAction, TransitAction<"client_receiving"> ]>;
-    def client_receiving : State, Do<[ ReceiveAction, TransitAction<"client_sending"> ]>;
-    def client_alive : State<[ client_sending, client_receiving ]>;
-    def client : ReplyProcessMachine<[ client_alive ]>, SOCK_REQ;
-    */
+    def waiting_request : State,
+        Enter<[ WaitProcessRequest ]>;
+    def server_idle : State, Do<[ Transit<"waiting_request"> ]>;
 
-    def wait_process_request : Action;
-    def server_alive : State, Do<[ wait_process_request ]>;
-    def server : RequestProcessMachine<[ server_alive ]>, SOCK_REP;
+    def waiting_reply : State,
+        Enter<[ WaitProcessReply, Transit<"client_idle"> ]>;
+    def client_idle : State, Can<[ send_request ]>;
 
-    def wait_process_reply : Action;
-    def send : Event, Do<[ SendAction, TransitAction<"waiting_reply"> ]>;
-    
-    def waiting_reply : State, Do<[ wait_process_reply ]>;
-    def client_alive : State, Can<[ send ]>;
-    def client : ReplyProcessMachine<[ client_alive ]>, SOCK_REQ;
+    def server : RequestProcessMachine<[ server_idle ]>, SOCK_REP;
+    def client : ReplyProcessMachine<[ client_idle ]>, SOCK_REQ;
 }
