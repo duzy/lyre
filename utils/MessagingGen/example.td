@@ -10,10 +10,11 @@ let NS = example in {
     def pong : Message<2, [ String<"text"> ]>;
 
     def hello : Message<3, [ String<"token"> ]>;
-    def welcome : Message<4>, Fields<[ String<"token">, Uint32<"time"> ]>;
+    def welcome : Message<4>, Fields<[ String<"token">, Uint64<"time"> ]>;
 
     def : Protocol<nothing, nothing>;
     def : Protocol<ping, pong>;
+    def : Protocol<pong, ping>;
     def : Protocol<hello, welcome>;
 
     def ExampleServer : StateMachine, SOCK_REP;

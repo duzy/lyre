@@ -28,8 +28,7 @@ test:
 	@$(LLVMTableGen) -print-records example.td
 
 example: example_main.cpp messaging.inc
-	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY \
-	-o $@ $< -lzmq -lpthread
+	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $< -lzmq -lpthread
 
 example_main.cpp: example.hh example.cc
 example.hh: example.td MessagingGen

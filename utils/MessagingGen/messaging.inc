@@ -257,7 +257,7 @@ namespace messaging
      *  Basic server combins a state machine.
      */
     template < class Derived, class Machine >
-    struct base_app
+    struct base_app : boost::noncopyable
     {
         typedef sc::fifo_scheduler<> Scheduler;
 
@@ -349,7 +349,7 @@ namespace messaging
      *  Basic state machine (asynchronous) combining with a protocol.
      */
     template < class Derived, class InitState, class Protocol >
-    struct base_machine : sc::asynchronous_state_machine < Derived, InitState >
+    struct base_machine : sc::asynchronous_state_machine < Derived, InitState >, boost::noncopyable
     {
         template < class Context > base_machine( Context ctx, int type )
             : sc::asynchronous_state_machine < Derived, InitState > (ctx)
@@ -414,7 +414,7 @@ namespace messaging
      *  Basic protocol combining with a codec implementation.
      */
     template < class Derived, template <class P, class A> class Codec >
-    struct base_protocol
+    struct base_protocol : boost::noncopyable
     {
         struct accessor
         {
@@ -706,11 +706,30 @@ namespace messaging
      *  Basic protocol combining with a codec implementation.
      */
     template < class Derived, template <class P, class A> class Codec >
-    struct base_processor : base_protocol < Derived, Codec >
+    struct base_processor : /*protected*/ base_protocol < Derived, Codec >
     {
       using base_type = base_protocol< Derived, Codec >;
       using typename base_type::codec;
+      using base_type::bind;
+      using base_type::connect;
+      using base_type::size;
+      using base_type::error;
+      using base_type::strerror;
 
+      const base_type & protocol() const { return *this; }
+      base_type & protocol() { return *this; }
+
+    protected:
+      explicit base_processor (
+          int type,
+          int sndtimeo = 12*1000,
+          int rcvtimeo = 12*1000)
+          : base_type (type, sndtimeo, rcvtimeo)
+      {}
+
+      //using base_type::send;
+      //using base_type::recv;
+      
       /**
        *  On errors, it should return false, and the error() should return
        *  the error code.
@@ -735,14 +754,6 @@ namespace messaging
             this->template get<typename codec::tag_value_t>() );
         return codec::parse ( static_cast<Derived*>(this), ctx, tag );
       }
-
-    protected:
-      explicit base_processor (
-          int type,
-          int sndtimeo = 12*1000,
-          int rcvtimeo = 12*1000)
-          : base_type (type, sndtimeo, rcvtimeo)
-      {}
     };
 
     namespace actors

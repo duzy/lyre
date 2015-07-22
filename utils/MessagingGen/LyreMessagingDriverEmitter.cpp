@@ -39,8 +39,12 @@ void emitMessageStructs(const std::vector<Record*> &Messages, raw_ostream &OS)
   
   OS << "\n";
 
+  bool HasUserDefinedErrorMessage = false;
+
   // Define message structs.
   for (auto M : Messages) {
+    if (M->getName() == "error") HasUserDefinedErrorMessage = true;
+
     OS << "struct " << M->getName() << " {\n" ;
 
     auto Fields = M->getValueAsListOfDefs("FIELDS");
@@ -50,6 +54,13 @@ void emitMessageStructs(const std::vector<Record*> &Messages, raw_ostream &OS)
       OS << " " << F->getValueAsString("NAME") << ";\n";
     }
       
+    OS << "};\n\n" ;
+  }
+
+  if (!HasUserDefinedErrorMessage) {
+    OS << "struct error {\n" ;
+    OS << "  Uint16 code;\n" ;
+    OS << "  String text;\n" ;
     OS << "};\n\n" ;
   }
 }
@@ -68,15 +79,24 @@ void emitProtocols(const std::vector<Record*> &Protocols,
        << "\n" ;
   }
 
+  bool HasUserDefinedErrorMessage = false;
+  auto ErrorID = 0;
+  
   // Define message tag.
   OS << "enum class tag : " << TagBase << "\n" ;
   OS << "{\n" ;
   for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
     auto M = Messages[MI];
-    OS << "  " << M->getName() << " = " << M->getValueAsInt("ID") << ", \n";
+    auto ID = M->getValueAsInt("ID");
+    OS << "  " << M->getName() << " = " << ID << ", \n";
+    if (M->getName() == "error") HasUserDefinedErrorMessage = true;
+    if (ID == ErrorID) ErrorID += 1;
   }
+  if (!HasUserDefinedErrorMessage)
+    OS << "  error = " << ErrorID << "\n";
   OS << "};\n\n" ;
 
+  OS << "using ERROR = struct error;\n\n" ;
   OS << "constexpr std::size_t tag_size = sizeof(tag);\n\n" ;
 
   // Define message codec.
@@ -129,6 +149,25 @@ void emitProtocols(const std::vector<Record*> &Protocols,
     }
     OS << "  }\n\n" ;
   }
+  if (!HasUserDefinedErrorMessage) {
+    OS << "  // Message: error\n";
+    OS << "  static tag_t t(const ERROR&) { return tag::error; }\n" ;
+    OS << "  static std::size_t size(P *p, const ERROR &m)\n" ;
+    OS << "  {\n" ;
+    OS << "    return accessor::field_size(p, m.code)\n" ;
+    OS << "      +    accessor::field_size(p, m.text);\n" ;
+    OS << "  }\n" ;
+    OS << "  static std::size_t encode(P *p, const ERROR &m)\n";
+    OS << "  {\n" ;
+    OS << "    accessor::put(p, m.code);\n" ;
+    OS << "    accessor::put(p, m.text);\n" ;
+    OS << "  }\n" ;
+    OS << "  static std::size_t decode(P *p, ERROR &m)\n";
+    OS << "  {\n" ;
+    OS << "    accessor::get(p, m.code);\n" ;
+    OS << "    accessor::get(p, m.text);\n" ;
+    OS << "  }\n\n" ;
+  }
   
   // static void parse (P *p, Context *ctx)
   OS << "  template < class Message, class Context >\n" ;
@@ -149,6 +188,8 @@ void emitProtocols(const std::vector<Record*> &Protocols,
     auto S = M->getName();
     OS << "    case tag::"<<S<<": parse<"<<S<<">(p, ctx); return true; \n";
   }
+  if (!HasUserDefinedErrorMessage)
+    OS << "    case tag::error: parse<ERROR>(p, ctx); return true; \n";
   OS << "    }\n" ;
   OS << "    return false;\n" ;
   OS << "  }\n" ;
@@ -170,13 +211,32 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "{\n" ;
   OS << "  explicit request_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
+  OS << "  template <class Context>\n" ;
+  OS << "  bool wait_for_request(Context *C) {\n" ;
+  OS << "    auto okay = receive_and_process(C);\n" ;
+  OS << "    if (!okay) { /*...*/ }\n" ;
+  OS << "    return okay;\n" ;
+  OS << "  }\n" ;
+  OS << "\n" ;
   OS << "protected:\n" ;
   for (auto P : Protocols) {
     auto Req = P->getValueAsDef("REQ");
     auto Rep = P->getValueAsDef("REP");
-    OS << "  virtual void process(const "<<Req->getName()<<" &Req, "
+    OS << "  virtual void on_request(const "<<Req->getName()<<" &Req, "
        << Rep->getName() << " &Rep) {}\n" ;
   }
+  OS << "\n" ;
+  OS << "  virtual void on_bad_request() {}\n" ;
+  OS << "\n" ;
+  OS << "  ERROR make_error(Uint16 n, const char *s) {\n" ;
+  if (!HasUserDefinedErrorMessage) {
+    OS << "    return ERROR{ n, s };\n" ;
+  } else {
+    OS << "    ERROR E;\n" ;
+    OS << "    // TODO: init E;\n" ;
+    OS << "    return E;\n" ;
+  }
+  OS << "  }\n" ;
   OS << "\n" ;
   OS << "private:\n" ;
   OS << "  friend codec;\n" ;
@@ -184,12 +244,36 @@ void emitProtocols(const std::vector<Record*> &Protocols,
     auto M = Messages[MI];
     auto S = M->getName();
     OS << "  template<class C>" ;
-    OS << " void process_message(C*, "<<S<<" &m) {\n" ;
+    OS << " void process_message(C*, const "<<S<<" &Q) {\n" ;
+    auto C = 0;
     for (auto P : Protocols) {
       auto Req = P->getValueAsDef("REQ");
       auto Rep = P->getValueAsDef("REP");
-      OS << "    //" << M << ", " << Req << ", " << Rep << "\n" ;
+      if (Req != M && Rep != M) continue;
+      if (Req == M) {
+        OS << "    {\n" ;
+        OS << "      "<<Rep->getName()<<" P;\n" ;
+        OS << "      on_request(Q, P);\n" ;
+        OS << "      base_processor::send(P);\n" ;
+        OS << "    }\n" ;
+        C += 1;
+      }
     }
+    if (C == 0) {
+      OS << "    {\n" ;
+      OS << "      ERROR P = make_error(-1, \"bad\");\n" ;
+      OS << "      on_bad_request();\n" ;
+      OS << "      base_processor::send(P);\n" ;
+      OS << "    }\n" ;
+    }
+    OS << "  }\n" ;
+  }
+  if (!HasUserDefinedErrorMessage) {
+    OS << "  template<class C>" ;
+    OS << " void process_message(C*, const ERROR &E) {\n" ;
+    OS << "      ERROR P = make_error(-2, \"bad\");\n" ;
+    OS << "      on_bad_request();\n" ;
+    OS << "      base_processor::send(P);\n" ;
     OS << "  }\n" ;
   }
   OS << "}; // end struct request_processor\n\n" ;
@@ -199,13 +283,30 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "{\n" ;
   OS << "  explicit reply_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    OS << "  auto send(const "<<Req->getName()<<"&Q) {" ;
+    OS << " return base_processor::send(Q); }\n" ;
+  }
+  OS << "\n" ;
+  OS << "  template <class Context>\n" ;
+  OS << "  bool wait_for_reply(Context *C) {\n" ;
+  OS << "    auto okay = receive_and_process(C);\n" ;
+  OS << "    if (!okay) { /*...*/ }\n" ;
+  OS << "    return okay;\n" ;
+  OS << "  }\n" ;
+  OS << "\n" ;
   OS << "protected:\n" ;
   for (auto P : Protocols) {
     auto Req = P->getValueAsDef("REQ");
     auto Rep = P->getValueAsDef("REP");
-    OS << "  virtual void process(const "<<Req->getName()<<" &Req, "
-       << Rep->getName() << " &Rep) {}\n" ;
+    OS << "  virtual void on_reply(const "<<Rep->getName()<<" &Rep) {}\n" ;
   }
+  if (true /*!HasUserDefinedErrorMessage*/) {
+    OS << "  virtual void on_reply(const ERROR &E) {}\n" ;
+  }
+  OS << "\n" ;
+  OS << "  virtual void on_bad_reply() {}\n" ;
   OS << "\n" ;
   OS << "private:\n" ;
   OS << "  friend codec;\n" ;
@@ -213,12 +314,26 @@ void emitProtocols(const std::vector<Record*> &Protocols,
     auto M = Messages[MI];
     auto S = M->getName();
     OS << "  template<class C>" ;
-    OS << " void process_message(C*, "<<S<<" &m) {\n" ;
+    OS << " void process_message(C*, const "<<S<<" &P) {\n" ;
+    auto C = 0;
     for (auto P : Protocols) {
       auto Req = P->getValueAsDef("REQ");
       auto Rep = P->getValueAsDef("REP");
-      OS << "    //" << M << ", " << Req << ", " << Rep << "\n" ;
+      if (Req != M && Rep != M) continue;
+      if (Rep == M) {
+        OS << "    on_reply(P);\n" ;
+        C += 1;
+      }
     }
+    if (C == 0) {
+      OS << "    on_bad_reply();\n" ;
+    }
+    OS << "  }\n" ;
+  }
+  if (true /*!HasUserDefinedErrorMessage*/) {
+    OS << "  template<class C>" ;
+    OS << " void process_message(C*, const ERROR &E) {\n" ;
+    OS << "    on_reply(E);\n" ;
     OS << "  }\n" ;
   }
   OS << "}; // end struct reply_processor\n\n" ;
