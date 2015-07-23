@@ -16,11 +16,13 @@ namespace
   enum ActionName {
     GenMessagingDriverCC,
     GenMessagingDriverHH,
+    GenMessagingDriverJ,
   };
 
   static EmitterFn Emitters[] = {
     EmitMessagingDriverCC,
     EmitMessagingDriverHH,
+    EmitMessagingDriverJ,
   };
 
   cl::opt<ActionName> Action(cl::desc("Actions to perform:"), 
@@ -30,6 +32,8 @@ namespace
            "Generate messaging driver."),
        clEnumValN(GenMessagingDriverHH, "gen-messaging-driver-hh",
            "Generate messaging driver header."),
+       clEnumValN(GenMessagingDriverJ, "gen-messaging-driver-j",
+           "Generate messaging driver for Java."),
                  
        clEnumValEnd
       )

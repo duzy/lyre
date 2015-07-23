@@ -146,5 +146,13 @@ int main(int argc, char **argv)
   test_protocol();
   test_processors();
   test_processors_2();
+
+  std::clog << "-------------------------" << std::endl;
+  
+  server S;
+  S.bind({ "ipc://example-server" });
+  S.wait_process_request(&S);
+  S.wait_process_request(&S);
+  S.wait_process_request(&S);
   return 0;
 }

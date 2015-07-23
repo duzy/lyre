@@ -32,16 +32,6 @@ namespace meta = boost::mpl;
 namespace sc = boost::statechart;
 
 namespace {
-typedef std::int8_t     Int8;
-typedef std::int16_t    Int16;
-typedef std::int32_t    Int32;
-typedef std::int64_t    Int64;
-typedef std::uint8_t    Uint8;
-typedef std::uint16_t   Uint16;
-typedef std::uint32_t   Uint32;
-typedef std::uint64_t   Uint64;
-typedef std::string     String;
-
 namespace messaging
 {
     static struct zmq_wrapper
@@ -538,9 +528,9 @@ namespace messaging
         std::size_t field_size (Uint16) const { return sizeof (Uint16); }
         std::size_t field_size (Uint32) const { return sizeof (Uint32); }
         std::size_t field_size (Uint64) const { return sizeof (Uint64); }
-        std::size_t field_size (const std::string & s, bool longstr = false) const {
-            return (longstr ? sizeof(Uint32) : sizeof(Uint8)) + s.size();
-        }
+        std::size_t field_size (const TinyString & s) const { return sizeof(Uint8) + s.size(); }
+        std::size_t field_size (const ShortString & s) const { return sizeof(Uint16) + s.size(); }
+        std::size_t field_size (const LongString & s) const { return sizeof(Uint32) + s.size(); }
 
         void put (Uint8 v)
         {
@@ -632,17 +622,19 @@ namespace messaging
             return 8;
         }
 
-        void put (const std::string & s, bool longstr = false)
+        template <class SizeType>
+        void put_string (const std::string & s)
         {
             std::size_t size = s.size();
-            longstr ? put(Uint32(size)) : put(Uint8(size));
+            put(SizeType(size));
             memcpy (_cur, &s[0], size);
             _cur += size;
         }
 
-        int get (std::string & s, bool longstr = false)
+        template <class SizeType>
+        int get_string (std::string & s)
         {
-            std::size_t size = std::size_t( longstr ? get<Uint32>() : get<Uint8>() );
+            std::size_t size = std::size_t( get<SizeType>() );
             if (_end < _cur + size) return -1;
             s.resize( size );
             assert (_cur != NULL);
@@ -650,6 +642,13 @@ namespace messaging
             _cur += size;
             return size;
         }
+
+        void put (const TinyString & s) { put_string<Uint8>(s); }
+        void put (const ShortString & s) { put_string<Uint16>(s); }
+        void put (const LongString & s) { put_string<Uint32>(s); }
+        int get (TinyString & s) { return get_string<Uint8>(s); }
+        int get (ShortString & s) { return get_string<Uint16>(s); }
+        int get (LongString & s) { return get_string<Uint32>(s); }
 
         void put (Uint8 *data, std::size_t size)
         {

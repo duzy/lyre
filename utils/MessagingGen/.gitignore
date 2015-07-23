@@ -1,5 +1,6 @@
 *~
 *.o
+/*.class
 /ev
 /sc
 /test
@@ -8,3 +9,5 @@
 /example.hh
 /example.cc
 /example
+/messaging.java
+/com

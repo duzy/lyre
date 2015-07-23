@@ -10,7 +10,9 @@ using namespace llvm;
 
 namespace 
 {
-std::string toMacroName(const std::string & S)
+}
+
+static std::string toMacroName(const std::string & S)
 {
   std::string T(S);
   for (std::size_t I = 0, E = S.size(); I < E; ++I) {
@@ -20,62 +22,259 @@ std::string toMacroName(const std::string & S)
   return T;
 }
 
-void emitBasicTypedefs(raw_ostream &OS)
+static std::string TypeName(const std::string & S)
 {
-  OS << "typedef std::int8_t     Int8;\n";
-  OS << "typedef std::int16_t    Int16;\n";
-  OS << "typedef std::int32_t    Int32;\n";
-  OS << "typedef std::int64_t    Int64;\n";
-  OS << "typedef std::uint8_t    Uint8;\n";
-  OS << "typedef std::uint16_t   Uint16;\n";
-  OS << "typedef std::uint32_t   Uint32;\n";
-  OS << "typedef std::uint64_t   Uint64;\n";
-  OS << "struct TinyString : std::string {\n";
-  OS << "  using std::string::string;\n";
-  OS << "};\n";
-  OS << "struct ShortString : std::string {\n";
-  OS << "  using std::string::string;\n";
-  OS << "};\n";
-  OS << "struct LongString : std::string {\n";
-  OS << "  using std::string::string;\n";
-  OS << "};\n";
+  if (S == "Int8" || S == "Uint8") return "byte";
+  if (S == "Int16" || S == "Uint16") return "short";
+  if (S == "Int32" || S == "Uint32") return "int";
+  if (S == "Int64" || S == "Uint64") return "long";
+  if (S == "TinyString" || S == "ShortString" || S == "LongString")
+    return "byte[]"; // UTF-8 bytes
+  return "unknown";
 }
 
-void emitMessageStructs(const std::vector<Record*> &Messages, raw_ostream &OS)
+static std::string TypeSize(const std::string & S)
 {
-  emitBasicTypedefs(OS);
-  
+  if (S == "Int8" || S == "Uint8") return "1";
+  if (S == "Int16" || S == "Uint16") return "2";
+  if (S == "Int32" || S == "Uint32") return "4";
+  if (S == "Int64" || S == "Uint64") return "8";
+  if (S == "TinyString" || S == "ShortString" || S == "LongString")
+    return S;
+  return "0";
+}
+
+static void emitFieldSizeExpr(raw_ostream &OS, const std::string &S, const std::string &N)
+{
+  if (S == "Int8" || S == "Uint8")   OS << "1 /* m."<<N<<" */" ;
+  if (S == "Int16" || S == "Uint16") OS << "2 /* m."<<N<<" */" ;
+  if (S == "Int32" || S == "Uint32") OS << "4 /* m."<<N<<" */" ;
+  if (S == "Int64" || S == "Uint64") OS << "8 /* m."<<N<<" */" ;
+  if (S == "TinyString") OS << "1 + m."<<N<<".length" ;
+  if (S == "ShortString") OS << "2 + m."<<N<<".length" ;
+  if (S == "LongString") OS << "4 + m."<<N<<".length" ;
+    
+}
+
+static void emitFieldEncodingCode(raw_ostream &OS, const std::string &S, const std::string &N)
+{
+  if (S == "Int8" || S == "Uint8") {
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 0);\n";
+  }
+  if (S == "Int16" || S == "Uint16") {
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 8);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 0);\n";
+  }
+  if (S == "Int32" || S == "Uint32") {
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 24);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 16);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 8);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 0);\n";
+  }
+  if (S == "Int64" || S == "Uint64") {
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 56);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 48);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 40);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 32);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 24);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 16);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 8);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<" >>> 0);\n";
+  }
+  if (S == "TinyString") {
+    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 0);\n";
+    OS << "        System.arraycopy(m."<<N<<", 0, data, off, m."<<N<<".length);\n";
+    OS << "        off += m."<<N<<".length;\n";
+  }
+  if (S == "ShortString") {
+    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 8);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 0);\n";
+    OS << "        System.arraycopy(m."<<N<<", 0, data, off, m."<<N<<".length);\n";
+    OS << "        off += m."<<N<<".length;\n";
+  }
+  if (S == "LongString") {
+    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 24);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 16);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 8);\n";
+    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 0);\n";
+    OS << "        System.arraycopy(m."<<N<<", 0, data, off, m."<<N<<".length);\n";
+    OS << "        off += m."<<N<<".length;\n";
+  }
+}
+static void emitFieldEncodingCode(raw_ostream &OS, Record *F)
+{
+  auto T = F->getSuperClasses().back();
+  auto N = F->getValueAsString("NAME");
+  auto S = T->getName();
+  emitFieldEncodingCode(OS, S, N);
+}
+
+static void emitFieldDecodingCode(raw_ostream &OS, const std::string &S, const std::string &N)
+{
+  if (S == "Int8" || S == "Uint8") {
+    OS << "        m."<<N<<" += data[off++];\n";
+  }
+  if (S == "Int16" || S == "Uint16") {
+    OS << "        {\n";
+    OS << "        short v = 0;\n";
+    OS << "        v += (short)(data[off++] << 8);\n";
+    OS << "        v += (short)(data[off++] << 0);\n";
+    OS << "        m."<<N<<" = v;\n";
+    OS << "        }\n";
+  }
+  if (S == "Int32" || S == "Uint32") {
+    OS << "        {\n";
+    OS << "        int v = 0;\n";
+    OS << "        v += (int)(data[off++] << 24);\n";
+    OS << "        v += (int)(data[off++] << 16);\n";
+    OS << "        v += (int)(data[off++] << 8);\n";
+    OS << "        v += (int)(data[off++] << 0);\n";
+    OS << "        m."<<N<<" = v;\n";
+    OS << "        }\n";
+  }
+  if (S == "Int64" || S == "Uint64") {
+    OS << "        {\n";
+    OS << "        long v = 0;\n";
+    OS << "        v += (long)(data[off++] << 56);\n";
+    OS << "        v += (long)(data[off++] << 48);\n";
+    OS << "        v += (long)(data[off++] << 40);\n";
+    OS << "        v += (long)(data[off++] << 32);\n";
+    OS << "        v += (long)(data[off++] << 24);\n";
+    OS << "        v += (long)(data[off++] << 16);\n";
+    OS << "        v += (long)(data[off++] << 8);\n";
+    OS << "        v += (long)(data[off++] << 0);\n";
+    OS << "        m."<<N<<" = v;\n";
+    OS << "        }\n";
+  }
+  if (S == "TinyString") {
+    OS << "        m."<<N<<" = new byte[data[off++]];\n";
+    OS << "        System.arraycopy(data, off, m."<<N<<", 0, m."<<N<<".length);\n";
+    OS << "        off += m."<<N<<".length;\n";
+  }
+  if (S == "ShortString") {
+    OS << "        {\n";
+    OS << "        short v = 0;\n";
+    OS << "        v += (short)(data[off++] << 8);\n";
+    OS << "        v += (short)(data[off++] << 0);\n";
+    OS << "        m."<<N<<" = new byte[v];\n";
+    OS << "        System.arraycopy(data, off, m."<<N<<", 0, m."<<N<<".length);\n";
+    OS << "        off += m."<<N<<".length;\n";
+    OS << "        }\n";
+  }
+  if (S == "LongString") {
+    OS << "        {\n";
+    OS << "        int v = 0;\n";
+    OS << "        v += (int)(data[off++] << 24);\n";
+    OS << "        v += (int)(data[off++] << 16);\n";
+    OS << "        v += (int)(data[off++] << 8);\n";
+    OS << "        v += (int)(data[off++] << 0);\n";
+    OS << "        m."<<N<<" = new byte[v];\n";
+    OS << "        System.arraycopy(data, off, m."<<N<<", 0, m."<<N<<".length);\n";
+    OS << "        off += m."<<N<<".length;\n";
+    OS << "        }\n";
+  }
+}
+
+static void emitFieldDecodingCode(raw_ostream &OS, Record *F)
+{
+  auto T = F->getSuperClasses().back();
+  auto N = F->getValueAsString("NAME");
+  auto S = T->getName();
+  emitFieldDecodingCode(OS, S, N);
+}
+
+static void emitMessageDefines(const std::vector<Record*> &Messages, raw_ostream &OS)
+{
   OS << "\n";
 
   bool HasUserDefinedErrorMessage = false;
+
+  OS << "    public static abstract class Message {\n" ;
+  OS << "    }\n\n" ;
 
   // Define message structs.
   for (auto M : Messages) {
     if (M->getName() == "error") HasUserDefinedErrorMessage = true;
 
-    OS << "struct " << M->getName() << " {\n" ;
+    OS << "    public static final class " << M->getName() << " extends Message {\n" ;
 
     auto Fields = M->getValueAsListOfDefs("FIELDS");
     for (auto F : Fields) {
       auto T = F->getSuperClasses().back();
-      OS << "  " << T->getName() ;
-      OS << " " << F->getValueAsString("NAME") << ";\n";
+      OS << "        public " << TypeName(T->getName())
+         << " " << F->getValueAsString("NAME")
+         << ";\n";
     }
       
-    OS << "};\n\n" ;
+    OS << "    }\n\n" ;
+  }
+  if (!HasUserDefinedErrorMessage) {
+    OS << "    public static final class error extends Message {\n" ;
+    OS << "        public "<<TypeName("Uint16")<<" code;\n" ;
+    OS << "        public "<<TypeName("TinyString")<<" text;\n" ;
+    OS << "    }\n\n" ;
   }
 
-  if (!HasUserDefinedErrorMessage) {
-    OS << "struct error {\n" ;
-    OS << "  Uint16 code;\n" ;
-    OS << "  TinyString text;\n" ;
-    OS << "};\n\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto Fields = M->getValueAsListOfDefs("FIELDS");
+    OS << "    public static int getMessageSize(" << M->getName() << " m) {\n" ;
+    if (Fields.empty()) {
+      OS << "        return 0;\n" ;
+    } else {
+      for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
+        auto F = Fields[FI];
+        auto T = F->getSuperClasses().back();
+        auto N = F->getValueAsString("NAME");
+        auto S = T->getName();
+        OS << "        " ;
+        OS << (FI == 0 ? "return " : "    +  ") ;
+        emitFieldSizeExpr(OS, S, N);
+        OS << (FI + 1 == FE ? ";\n" : "\n") ;
+      }
+    }
+    OS << "    }\n" ;
+    OS << "\n" ;
+    OS << "    public static int encodeMessage(final byte[] data, int off, final " << M->getName() << " m) {\n" ;
+    for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
+      emitFieldEncodingCode(OS, Fields[FI]);
+    }
+    OS << "        return off;\n" ;
+    OS << "    }\n" ;
+    OS << "    public static int decodeMessage(final byte[] data, int off, final " << M->getName() << " m) {\n" ;
+    for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
+      emitFieldDecodingCode(OS, Fields[FI]);
+    }
+    OS << "        return off;\n" ;
+    OS << "    }\n" ;
+    OS << "\n" ;
   }
+  if (!HasUserDefinedErrorMessage) {
+    OS << "    public static int getMessageSize(error m) {\n" ;
+    OS << "        return " ; emitFieldSizeExpr(OS, "Uint16", "code"); OS << "\n" ;
+    OS << "            +  " ; emitFieldSizeExpr(OS, "TinyString", "text"); OS << ";\n" ;
+    OS << "    }\n" ;
+    OS << "\n" ;
+    OS << "    public static void encodeMessage(byte[] data, int off, error m) {\n" ;
+    emitFieldEncodingCode(OS, "Uint16", "code");
+    emitFieldEncodingCode(OS, "TinyString", "text");
+    OS << "    }\n" ;
+    OS << "\n" ;
+    OS << "    public static void decodeMessage(byte[] data, int off, error m) {\n" ;
+    emitFieldDecodingCode(OS, "Uint16", "code");
+    emitFieldDecodingCode(OS, "TinyString", "text");
+    OS << "    }\n" ;
+    OS << "\n" ;
+  }
+  
+  
 }
 
-void emitProtocols(const std::vector<Record*> &Protocols,
+static void emitProtocols(const std::vector<Record*> &Protocols,
     const std::vector<Record*> &Messages, raw_ostream &OS)
 {
+  return;
+  
   auto TagBase = Messages.size() < 256 ? "Uint8" : "Uint16";
 
   OS << "// Protocols: " << Protocols.size() << "\n" ;
@@ -347,7 +546,7 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "}; // end struct reply_processor\n\n" ;
 }
 
-void emitStateMachines(
+static void emitStateMachines(
     const std::vector<Record*> &Machines,
     const std::vector<Record*> &States,
     const std::vector<Record*> &Events,
@@ -356,16 +555,14 @@ void emitStateMachines(
   for (std::size_t EI = 0, EE = Events.size(); EI < EE; ++EI) {
     auto E = Events[EI];
     auto N = E->getName();
-    OS << "struct event_"<<N<<" : sc::event<event_"<<N<<"> " ;
-    OS << "{" ;
-    OS << "};\n" ;
+    OS << "    // event: " <<N<< "\n" ;
   }
   OS << "\n" ;
 
   for (std::size_t SI = 0, SE = States.size(); SI < SE; ++SI) {
     auto S = States[SI];
     auto N = S->getName();
-    OS << "struct state_"<<N<<";\n" ;
+    OS << "    // state: "<<N<<";\n" ;
   }  
   OS << "\n" ;
 
@@ -378,7 +575,6 @@ void emitStateMachines(
   }
   OS << "\n" ;
 }
-}
 
 static inline void sortMessages(std::vector<Record*> &Messages)
 {
@@ -389,7 +585,7 @@ static inline void sortMessages(std::vector<Record*> &Messages)
 
 namespace lyre
 {
-  void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS)
+  void EmitMessagingDriverJ(RecordKeeper &Records, raw_ostream &OS)
   {
     std::vector<Record*> Protocols = Records.getAllDerivedDefinitions("Protocol");
     std::vector<Record*> Machines = Records.getAllDerivedDefinitions("StateMachine");
@@ -397,61 +593,31 @@ namespace lyre
     std::vector<Record*> States = Records.getAllDerivedDefinitions("State");
     std::vector<Record*> Events = Records.getAllDerivedDefinitions("Event");
 
-    emitSourceFileHeader("The Protocol Engine.", OS);
-    
     sortMessages(Messages);
     
     auto & Namespace = getOptNamespace();
-    auto & SharedHeader = getOptSharedHeader();
 
-    if (!SharedHeader.empty())
-      OS << "#include \"" << SharedHeader << "\"\n" ;
+    if (Namespace.empty())
+      OS << "package lyre;\n" ;
+    else
+      OS << "package " << Namespace << ";\n" ;
 
-    if (!Namespace.empty())
-      OS << "using namespace " << Namespace << ";\n" ;
-
-    OS << "#include \"messaging.inc\"\n\n" ;
+    OS << "\n" ;
+    OS << "import java.nio.ByteBuffer;\n" ;
+    OS << "import java.nio.channels.SelectableChannel;\n" ;
+    OS << "import java.nio.charset.Charset;\n" ;
     
     OS << "\n" ;
-    OS << "namespace\n" ;
+    OS << "public class messaging\n" ;
     OS << "{\n" ;
+    OS << "    private messaging() {}\n" ;
+    OS << "\n" ;
+    OS << "    public static final Charset CHARSET = Charset.forName(\"UTF-8\");\n" ;
 
-    if (SharedHeader.empty())
-      emitMessageStructs(Messages, OS);    
-    
+    emitMessageDefines(Messages, OS);
     emitProtocols(Protocols, Messages, OS);
     emitStateMachines(Machines, States, Events, OS);
     
-    OS << "} // end anonymous namespace\n" ;
-  }
-
-  void EmitMessagingDriverHH(RecordKeeper &Records, raw_ostream &OS)
-  {
-    std::vector<Record*> Messages = Records.getAllDerivedDefinitions("Message");
-    std::vector<Record*> States = Records.getAllDerivedDefinitions("State");
-    std::vector<Record*> Events = Records.getAllDerivedDefinitions("Event");
-
-    emitSourceFileHeader("The Protocol Engine.", OS);
-
-    sortMessages(Messages);
-    
-    auto & Namespace = getOptNamespace();
-    auto OutputFilename = getOutputFilename();
-
-    OS << "#ifndef __"<<toMacroName(OutputFilename)<<"__\n" ;
-    OS << "#define __"<<toMacroName(OutputFilename)<<"__\n" ;
-    OS << "#include <cstdint>\n" ;
-    OS << "#include <string>\n" ;
-    OS << "\n" ;
-    
-    if (!Namespace.empty())
-      OS << "namespace " << Namespace << "\n{\n" ;
-    
-    emitMessageStructs(Messages, OS);
-    
-    if (!Namespace.empty())
-      OS << "} // end namespace " << Namespace << "\n";
-
-    OS << "#endif//__"<<toMacroName(OutputFilename)<<"__\n" ;
+    OS << "}\n" ;
   }
 } // end namespace lyre

@@ -14,7 +14,9 @@ class Uint8<string name>  : FieldBase<name>;
 class Uint16<string name> : FieldBase<name>;
 class Uint32<string name> : FieldBase<name>;
 class Uint64<string name> : FieldBase<name>;
-class String<string name> : FieldBase<name>;
+class TinyString<string name>  : FieldBase<name>; // max(Uint8)
+class ShortString<string name> : FieldBase<name>; // max(Uint16)
+class LongString<string name>  : FieldBase<name>; // max(Uint32)
 
 // Allowing 'def msg : Message<1, [String["text"]]>;'
 class Message<int id, list<FieldBase> fields = []> {

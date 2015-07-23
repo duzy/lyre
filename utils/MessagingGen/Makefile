@@ -12,6 +12,7 @@ LOADLIBS :=
 
 OBJECTS = MessagingGen.o \
   LyreMessagingDriverEmitter.o \
+  LyreMessagingJavaDriverEmitter.o \
 
 MessagingGen: $(OBJECTS)
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
@@ -27,13 +28,24 @@ MessagingGen: $(OBJECTS)
 test:
 	@$(LLVMTableGen) -print-records example.td
 
-example: example_main.cpp messaging.inc
+example: example_main.cpp example.cc messaging.inc
 	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $< -lzmq -lpthread
+
+com/lyrecode/example.class: example.java com/lyrecode/messaging.class
+	javac -d . $<
+
+com/lyrecode/messaging.class: messaging.java
+	javac -d . $<
+
+run: example com/lyrecode/example.class
+	./example & java com/lyrecode/example
 
 example_main.cpp: example.hh example.cc
 example.hh: example.td MessagingGen
 	./MessagingGen -gen-messaging-driver-hh -ns=example -o $@ $<
 example.cc: example.td MessagingGen example.hh
 	./MessagingGen -gen-messaging-driver-cc -ns=example -hh=example.hh -o $@ $<
+messaging.java: example.td MessagingGen
+	./MessagingGen -gen-messaging-driver-j -ns=com.lyrecode -o $@ $<
 
 .PHONY: 

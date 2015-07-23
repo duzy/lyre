@@ -19,6 +19,7 @@ namespace lyre
 
   std::string getOutputFilename();
   
+  void EmitMessagingDriverJ(RecordKeeper &Records, raw_ostream &OS);
   void EmitMessagingDriverHH(RecordKeeper &Records, raw_ostream &OS);
   void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS);
 }
