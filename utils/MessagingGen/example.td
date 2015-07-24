@@ -9,8 +9,8 @@ let NS = example in {
     def ping : Message<1, [ TinyString<"text"> ]>;
     def pong : Message<2, [ TinyString<"text"> ]>;
 
-    def hello : Message<3, [ TinyString<"token"> ]>;
-    def welcome : Message<4>, Fields<[ TinyString<"token">, Uint64<"time"> ]>;
+    def hello : Message<3, [ ShortString<"token"> ]>;
+    def welcome : Message<4>, Fields<[ LongString<"token">, Uint64<"time"> ]>;
 
     def : Protocol<nothing, nothing>;
     def : Protocol<ping, pong>;

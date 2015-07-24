@@ -17,6 +17,10 @@ class Uint64<string name> : FieldBase<name>;
 class TinyString<string name>  : FieldBase<name>; // max(Uint8)
 class ShortString<string name> : FieldBase<name>; // max(Uint16)
 class LongString<string name>  : FieldBase<name>; // max(Uint32)
+class Octets<string name> : FieldBase<name>;
+class Chunk<string name> : FieldBase<name>;
+class Frame<string name> : FieldBase<name>;
+class Msg<string name> : FieldBase<name>;
 
 // Allowing 'def msg : Message<1, [String["text"]]>;'
 class Message<int id, list<FieldBase> fields = []> {

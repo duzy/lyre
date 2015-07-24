@@ -14,6 +14,8 @@ OBJECTS = MessagingGen.o \
   LyreMessagingDriverEmitter.o \
   LyreMessagingJavaDriverEmitter.o \
 
+JEROMQ = $(HOME)/Tools/jeromq/src/main/java
+
 MessagingGen: $(OBJECTS)
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
 
@@ -31,14 +33,16 @@ test:
 example: example_main.cpp example.cc messaging.inc
 	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $< -lzmq -lpthread
 
-com/lyrecode/example.class: example.java com/lyrecode/messaging.class
-	javac -d . $<
+com/lyrecode/example.class: example.java messaging.java
+	@mkdir -p classes
+	javac -d classes -classpath "$(JEROMQ)" $^
 
 com/lyrecode/messaging.class: messaging.java
-	javac -d . $<
+	@mkdir -p classes
+	javac -d classes -classpath "$(JEROMQ)" $<
 
 run: example com/lyrecode/example.class
-	./example & java com/lyrecode/example
+	./example & (P=$$! && java -classpath classes com.lyrecode.example && echo "waiting $$P..." && (wait $$P; true))
 
 example_main.cpp: example.hh example.cc
 example.hh: example.td MessagingGen
