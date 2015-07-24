@@ -14,7 +14,9 @@ OBJECTS = MessagingGen.o \
   LyreMessagingDriverEmitter.o \
   LyreMessagingJavaDriverEmitter.o \
 
-JEROMQ = $(HOME)/Tools/jeromq/src/main/java
+JEROMQ = $(or \
+	$(wildcard $(HOME)/Tools/jeromq/src/main/java),\
+	$(wildcard /open/zero/jeromq/src/main/java))
 
 MessagingGen: $(OBJECTS)
 	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
