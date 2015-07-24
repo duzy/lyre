@@ -595,6 +595,59 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        }\n" ;
   OS << "    } // end class Protocol\n" ;
   OS << "\n" ;
+  OS << "    public static class RequestProcessor\n" ;
+  OS << "    {\n" ;
+  OS << "        private Protocol protocol = null;\n" ;
+  OS << "        private Socket socket = null;\n" ;
+  OS << "\n" ;
+  OS << "        public RequestProcessor(Socket s)\n" ;
+  OS << "        {\n" ;
+  OS << "            protocol = new Protocol();\n" ;
+  OS << "            socket = s;\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
+  OS << "        protected boolean waitProcessRequest()\n" ;
+  OS << "        {\n" ;
+  OS << "            return false;\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "        protected void onRequest("<<Msg(Req)<<" Q, "<<Msg(Rep)<<" P)\n" ;
+    OS << "        {\n" ;
+    OS << "        }\n" ;
+  }
+  OS << "    }\n" ;
+  OS << "\n" ;
+  OS << "    public static class ReplyProcessor\n" ;
+  OS << "    {\n" ;
+  OS << "        private Protocol proto = null;\n" ;
+  OS << "        private Socket socket = null;\n" ;
+  OS << "\n" ;
+  OS << "        public ReplyProcessor(Socket s)\n" ;
+  OS << "        {\n" ;
+  OS << "            proto = new Protocol();\n" ;
+  OS << "            socket = s;\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
+  for (auto P : Protocols) {
+    auto M = P->getValueAsDef("REQ");
+    OS << "        public boolean send("<<Msg(M)<<" m) { return proto.send(socket, m); }\n" ;
+  }
+  OS << "\n" ;
+  OS << "        protected boolean waitProcessReply()\n" ;
+  OS << "        {\n" ;
+  OS << "            return false;\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
+  for (auto P : Protocols) {
+    auto M = P->getValueAsDef("REP");
+    OS << "        protected void onReply("<<Msg(M)<<" m)\n" ;
+    OS << "        {\n" ;
+    OS << "        }\n" ;
+  }
+  OS << "    }\n" ;
 }
 
 static void emitStateMachines(
