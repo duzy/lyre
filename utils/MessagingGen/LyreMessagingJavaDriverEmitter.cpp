@@ -385,11 +385,20 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
 {
   auto TagValueType = Messages.size() < 256 ? "Uint8" : "Uint16";
   auto TagValueSize = Messages.size() < 256 ? 1 : 2;
+  auto Signature = "0xABC0 | 0";
   OS << "\n" ;
-  OS << "    public static class Protocol\n" ;
+  OS << "    public static class Protocol implements AutoCloseable\n" ;
   OS << "    {\n" ;
-  OS << "        private ZFrame routing; // routing_id from ROUTER, if any\n" ;
-  OS << "        private ByteBuffer buffer; // Read/write pointer for serialization\n" ;
+  OS << "        private ZFrame routing = null; // routing_id from ROUTER, if any\n" ;
+  OS << "        private ByteBuffer buffer = null; // Read/write pointer for serialization\n" ;
+  OS << "\n" ;
+  OS << "        @Override\n" ;
+  OS << "        public void close() {\n" ;
+  OS << "            if (routing != null) routing.destroy(); \n" ;
+  OS << "            //if (buffer != null) buffer.destroy(); \n" ;
+  OS << "            routing = null;\n" ;
+  OS << "            buffer = null;\n" ;
+  OS << "        }\n" ;
   OS << "\n" ;
   OS << "        // Put a 1-byte number to the frame\n" ;
   OS << "        private void putNumber1(int value)\n" ;
@@ -504,6 +513,7 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "            try {\n" ;
   OS << "                while (true) {\n" ;
   OS << "                    if (input.getType() == ZMQ.ROUTER) {\n" ;
+  OS << "                        if (routing != null) routing.destroy();\n" ;
   OS << "                        routing = ZFrame.recvFrame(input);\n" ;
   OS << "                        if (routing == null) return null; // Interrupted\n" ;
   OS << "                        if (!routing.hasData()) return null; // Empty Frame (eg recv-timeout)\n" ;
@@ -516,16 +526,15 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "\n" ;
   OS << "                    // Get and check protocol signature\n" ;
   OS << "                    buffer = ByteBuffer.wrap( frame.getData() );\n" ;
-  OS << "                    //int signature = getNumber2();\n" ;
-  OS << "                    //if (signature == (0xAAA0 | 0)) break; // Valid signature\n" ;
-  OS << "                    if (buffer != null) break;\n" ;
+  OS << "                    int signature = getNumber2();\n" ;
+  OS << "                    if (signature == ("<<Signature<<")) break; // Valid signature\n" ;
   OS << "\n" ;
   OS << "                    // Protocol assertion, drop message\n" ;
   OS << "                    while (input.hasReceiveMore()) {\n" ;
   OS << "                        frame.destroy();\n" ;
   OS << "                        frame = ZFrame.recvFrame(input);\n" ;
   OS << "                    }\n" ;
-  OS << "                    frame.destroy();\n" ;
+  OS << "                    if (frame != null) frame.destroy();\n" ;
   OS << "                }\n" ;
   OS << "\n" ;
   OS << "                switch ((tag = getNumber"<<TagValueSize<<"())) {\n" ;
@@ -560,12 +569,12 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "\n" ;
   OS << "            ZMsg msg = new ZMsg();\n" ;
   OS << "            // If we're sending to a ROUTER, send the 'routing' first\n" ;
-  OS << "            if (output.getType() == ZMQ.ROUTER) {\n" ;
+  OS << "            if (output.getType() == ZMQ.ROUTER && routing != null) {\n" ;
   OS << "                msg.add(routing);\n" ;
   OS << "            }\n" ;
   OS << "            \n" ;
-  OS << "            int frameSize = "<<TagValueSize<<";\n" ;
   OS << "            int tag = -1;\n" ;
+  OS << "            int frameSize = 2 + "<<TagValueSize<<";\n" ;
   OS << "            \n" ;
   for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
     auto M = Messages[MI];
@@ -587,6 +596,7 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "            ZFrame frame = new ZFrame(new byte[frameSize]);\n" ;
   OS << "            buffer = ByteBuffer.wrap( frame.getData() );\n" ;
   OS << "\n" ;
+  OS << "            putNumber2("<<Signature<<"); // signature\n" ;
   OS << "            putNumber"<<TagValueSize<<"(tag);\n" ;
   OS << "\n" ;
   OS << "            switch (tag) {\n" ;
@@ -608,7 +618,7 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        }\n" ;
   OS << "    } // end class Protocol\n" ;
   OS << "\n" ;
-  OS << "    public static class RequestProcessor\n" ;
+  OS << "    public static class RequestProcessor implements AutoCloseable\n" ;
   OS << "    {\n" ;
   OS << "        private Protocol protocol = null;\n" ;
   OS << "        private Socket socket = null;\n" ;
@@ -617,6 +627,15 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        {\n" ;
   OS << "            protocol = new Protocol();\n" ;
   OS << "            socket = s;\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
+  OS << "        public final Socket getSocket() { return socket; }\n" ;
+  OS << "\n" ;
+  OS << "        @Override\n" ;
+  OS << "        public void close()\n" ;
+  OS << "        {\n" ;
+  OS << "            if (protocol != null) protocol.close();\n" ;
+  OS << "            protocol = null;\n" ;
   OS << "        }\n" ;
   OS << "\n" ;
   OS << "        // Wait and process a request.\n" ;
@@ -665,7 +684,7 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   }
   OS << "    }\n" ;
   OS << "\n" ;
-  OS << "    public static class ReplyProcessor\n" ;
+  OS << "    public static class ReplyProcessor implements AutoCloseable\n" ;
   OS << "    {\n" ;
   OS << "        private Protocol protocol = null;\n" ;
   OS << "        private Socket socket = null;\n" ;
@@ -674,6 +693,15 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        {\n" ;
   OS << "            protocol = new Protocol();\n" ;
   OS << "            socket = s;\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
+  OS << "        public final Socket getSocket() { return socket; }\n" ;
+  OS << "\n" ;
+  OS << "        @Override\n" ;
+  OS << "        public void close()\n" ;
+  OS << "        {\n" ;
+  OS << "            if (protocol != null) protocol.close();\n" ;
+  OS << "            protocol = null;\n" ;
   OS << "        }\n" ;
   OS << "\n" ;
   for (auto P : Protocols) {
