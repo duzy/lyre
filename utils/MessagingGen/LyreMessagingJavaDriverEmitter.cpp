@@ -43,209 +43,6 @@ static inline std::string Msg(Record *M)
   return Msg(M->getName());
 }
 
-static void emitFieldSizeExpr_deprecated(raw_ostream &OS, const std::string &S, const std::string &N)
-{
-  if (S == "Int8" || S == "Uint8")   OS << "1 /* m."<<N<<" */" ;
-  if (S == "Int16" || S == "Uint16") OS << "2 /* m."<<N<<" */" ;
-  if (S == "Int32" || S == "Uint32") OS << "4 /* m."<<N<<" */" ;
-  if (S == "Int64" || S == "Uint64") OS << "8 /* m."<<N<<" */" ;
-  if (S == "TinyString") OS << "1 + m."<<N<<".length" ;
-  if (S == "ShortString") OS << "2 + m."<<N<<".length" ;
-  if (S == "LongString") OS << "4 + m."<<N<<".length" ;
-    
-}
-
-static void emitFieldEncodingCode_deprecated(raw_ostream &OS, const std::string &S, const std::string &N)
-{
-  if (S == "Int8" || S == "Uint8") {
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 0);\n";
-  }
-  if (S == "Int16" || S == "Uint16") {
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 8);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 0);\n";
-  }
-  if (S == "Int32" || S == "Uint32") {
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 24);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 16);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 8);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 0);\n";
-  }
-  if (S == "Int64" || S == "Uint64") {
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 56);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 48);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 40);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 32);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 24);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 16);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 8);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<" >>> 0);\n";
-  }
-  if (S == "TinyString") {
-    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 0);\n";
-    OS << "        System.arraycopy(m."<<N<<", 0, data, off, m."<<N<<".length);\n";
-    OS << "        off += m."<<N<<".length;\n";
-  }
-  if (S == "ShortString") {
-    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 8);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 0);\n";
-    OS << "        System.arraycopy(m."<<N<<", 0, data, off, m."<<N<<".length);\n";
-    OS << "        off += m."<<N<<".length;\n";
-  }
-  if (S == "LongString") {
-    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 24);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 16);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 8);\n";
-    OS << "        data[off++] = (byte)(m."<<N<<".length >>> 0);\n";
-    OS << "        System.arraycopy(m."<<N<<", 0, data, off, m."<<N<<".length);\n";
-    OS << "        off += m."<<N<<".length;\n";
-  }
-}
-static void emitFieldEncodingCode_deprecated(raw_ostream &OS, Record *F)
-{
-  auto T = F->getSuperClasses().back();
-  auto N = F->getValueAsString("NAME");
-  auto S = T->getName();
-  emitFieldEncodingCode_deprecated(OS, S, N);
-}
-
-static void emitFieldDecodingCode_deprecated(raw_ostream &OS, const std::string &S, const std::string &N)
-{
-  if (S == "Int8" || S == "Uint8") {
-    OS << "        m."<<N<<" += data[off++];\n";
-  }
-  if (S == "Int16" || S == "Uint16") {
-    OS << "        m."<<N<<" = (short)((data[off+0] << 8) + (data[off+1] << 0));\n";
-    OS << "        off += 2;\n";
-  }
-  if (S == "Int32" || S == "Uint32") {
-    OS << "        m."<<N<<" = 0\n";
-    OS << "            + (int)(data[off++] << 24)\n";
-    OS << "            + (int)(data[off++] << 16)\n";
-    OS << "            + (int)(data[off++] << 8)\n";
-    OS << "            + (int)(data[off++] << 0);\n";
-    OS << "        off += 4;\n";
-  }
-  if (S == "Int64" || S == "Uint64") {
-    OS << "        m."<<N<<" = 0\n";
-    OS << "            + (long)(data[off+0] << 56)\n";
-    OS << "            + (long)(data[off+1] << 48)\n";
-    OS << "            + (long)(data[off+2] << 40)\n";
-    OS << "            + (long)(data[off+3] << 32)\n";
-    OS << "            + (long)(data[off+4] << 24)\n";
-    OS << "            + (long)(data[off+5] << 16)\n";
-    OS << "            + (long)(data[off+6] << 8)\n";
-    OS << "            + (long)(data[off+7] << 0);\n";
-    OS << "        off += 8;\n";
-  }
-  if (S == "TinyString") {
-    OS << "        m."<<N<<" = new byte[data[off++]];\n";
-    OS << "        System.arraycopy(data, off, m."<<N<<", 0, m."<<N<<".length);\n";
-    OS << "        off += m."<<N<<".length;\n";
-  }
-  if (S == "ShortString") {
-    OS << "        m."<<N<<" = new byte[(data[off+0] << 8) + (data[off+1] << 0)];\n";
-    OS << "        off += 2;\n";
-    OS << "        System.arraycopy(data, off, m."<<N<<", 0, m."<<N<<".length);\n";
-    OS << "        off += m."<<N<<".length;\n";
-  }
-  if (S == "LongString") {
-    OS << "        m."<<N<<" = new byte[(data[off+0] << 24) + (data[off+1] << 16)\n";
-    OS << "            + (data[off+2] << 8) + (data[off+3] << 0)];\n";
-    OS << "        off += 4;\n";
-    OS << "        System.arraycopy(data, off, m."<<N<<", 0, m."<<N<<".length);\n";
-    OS << "        off += m."<<N<<".length;\n";
-  }
-}
-
-static void emitFieldDecodingCode_deprecated(raw_ostream &OS, Record *F)
-{
-  auto T = F->getSuperClasses().back();
-  auto N = F->getValueAsString("NAME");
-  auto S = T->getName();
-  emitFieldDecodingCode_deprecated(OS, S, N);
-}
-
-static void emitMessageDefines_deprecated(const std::vector<Record*> &Messages, raw_ostream &OS)
-{
-  Record *UserDefinedErrorMessage = nullptr;
-
-  // Define message structs.
-  OS << "    public static abstract class Message {\n" ;
-  for (auto M : Messages) {
-    if (M->getName() == "error") UserDefinedErrorMessage = M;
-
-    OS << "        public static final class " << M->getName() << " extends Message {\n" ;
-
-    auto Fields = M->getValueAsListOfDefs("FIELDS");
-    for (auto F : Fields) {
-      auto T = F->getSuperClasses().back();
-      OS << "            public " << TypeName(T->getName())
-         << " " << F->getValueAsString("NAME")
-         << ";\n";
-    }
-      
-    OS << "        }\n" ;
-  }
-  if (!UserDefinedErrorMessage) {
-    OS << "        public static final class error extends Message {\n" ;
-    OS << "            public "<<TypeName("Uint16")<<" code;\n" ;
-    OS << "            public "<<TypeName("TinyString")<<" text;\n" ;
-    OS << "        }\n" ;
-  }
-  OS << "    } // end class Message\n\n" ;
-  
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto Fields = M->getValueAsListOfDefs("FIELDS");
-    OS << "    public static int getMessageSize(" << Msg(M) << " m) {\n" ;
-    if (Fields.empty()) {
-      OS << "        return 0;\n" ;
-    } else {
-      for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
-        auto F = Fields[FI];
-        auto T = F->getSuperClasses().back();
-        auto N = F->getValueAsString("NAME");
-        auto S = T->getName();
-        OS << "        " ;
-        OS << (FI == 0 ? "return " : "    +  ") ;
-        emitFieldSizeExpr_deprecated(OS, S, N);
-        OS << (FI + 1 == FE ? ";\n" : "\n") ;
-      }
-    }
-    OS << "    }\n" ;
-    OS << "    public static int encodeMessage(final byte[] data, int off, final " << Msg(M) << " m) {\n" ;
-    for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
-      emitFieldEncodingCode_deprecated(OS, Fields[FI]);
-    }
-    OS << "        return off;\n" ;
-    OS << "    }\n" ;
-    OS << "    public static int decodeMessage(final byte[] data, int off, final " << Msg(M) << " m) {\n" ;
-    for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
-      emitFieldDecodingCode_deprecated(OS, Fields[FI]);
-    }
-    OS << "        return off;\n" ;
-    OS << "    }\n" ;
-    OS << "\n" ;
-  }
-  if (!UserDefinedErrorMessage) {
-    OS << "    public static int getMessageSize("<<Msg("error")<<" m) {\n" ;
-    OS << "        return " ; emitFieldSizeExpr_deprecated(OS, "Uint16", "code"); OS << "\n" ;
-    OS << "            +  " ; emitFieldSizeExpr_deprecated(OS, "TinyString", "text"); OS << ";\n" ;
-    OS << "    }\n" ;
-    OS << "    public static void encodeMessage(byte[] data, int off, "<<Msg("error")<<" m) {\n" ;
-    emitFieldEncodingCode_deprecated(OS, "Uint16", "code");
-    emitFieldEncodingCode_deprecated(OS, "TinyString", "text");
-    OS << "    }\n" ;
-    OS << "    public static void decodeMessage(byte[] data, int off, "<<Msg("error")<<" m) {\n" ;
-    emitFieldDecodingCode_deprecated(OS, "Uint16", "code");
-    emitFieldDecodingCode_deprecated(OS, "TinyString", "text");
-    OS << "    }\n" ;
-    OS << "\n" ;
-  }
-  
-  
-}
-
 static void emitFieldEncodingCode(raw_ostream &OS, const std::string &S, const std::string &N)
 {
   if (S == "Int8" || S == "Uint8") {
@@ -264,10 +61,10 @@ static void emitFieldEncodingCode(raw_ostream &OS, const std::string &S, const s
     OS << "            putTinyString(m."<<N<<");\n";
   }
   if (S == "ShortString") {
-    OS << "            putTinyString(m."<<N<<");\n";
+    OS << "            putShortString(m."<<N<<");\n";
   }
   if (S == "LongString") {
-    OS << "            putTinyString(m."<<N<<");\n";
+    OS << "            putLongString(m."<<N<<");\n";
   }
 }
 static void emitFieldEncodingCode(raw_ostream &OS, Record *F)
@@ -317,9 +114,15 @@ static void emitFieldSizeExpr(raw_ostream &OS, const std::string &S, const std::
   if (S == "Int16" || S == "Uint16") OS << "2 /* m."<<N<<" */" ;
   if (S == "Int32" || S == "Uint32") OS << "4 /* m."<<N<<" */" ;
   if (S == "Int64" || S == "Uint64") OS << "8 /* m."<<N<<" */" ;
-  if (S == "TinyString") OS << "1 + m."<<N<<".getBytes(CHARSET).length" ;
-  if (S == "ShortString") OS << "2 + m."<<N<<".getBytes(CHARSET).length" ;
-  if (S == "LongString") OS << "4 + m."<<N<<".getBytes(CHARSET).length" ;
+  if (S == "TinyString") {
+    OS << "1 + (m."<<N<<" == null ? 0 : m."<<N<<".getBytes(CHARSET).length)" ;
+  }
+  if (S == "ShortString") {
+    OS << "2 + (m."<<N<<" == null ? 0 : m."<<N<<".getBytes(CHARSET).length)" ;
+  }
+  if (S == "LongString") {
+    OS << "4 + (m."<<N<<" == null ? 0 : m."<<N<<".getBytes(CHARSET).length)" ;
+  }
 }
 
 static void emitFieldSizeExpr(raw_ostream &OS, Record *F)
@@ -460,14 +263,19 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        // Put a tiny-string to the frame\n" ;
   OS << "        private void putTinyString(String s)\n" ;
   OS << "        {\n" ;
-  OS << "            byte[] a = s.getBytes(CHARSET);\n" ;
-  OS << "            buffer.put((byte) a.length);\n" ;
-  OS << "            buffer.put(ByteBuffer.wrap(a, 0, Math.min(a.length, 0xFF))/*.slice()*/);\n" ;
+  OS << "            if (s == null) {\n" ;
+  OS << "                buffer.put((byte) 0);\n" ;
+  OS << "            } else {\n" ;
+  OS << "                byte[] a = s.getBytes(CHARSET);\n" ;
+  OS << "                buffer.put((byte) a.length);\n" ;
+  OS << "                buffer.put(ByteBuffer.wrap(a, 0, Math.min(a.length, 0xFF))/*.slice()*/);\n" ;
+  OS << "            }\n" ;
   OS << "        }\n" ;
   OS << "        // Get a tiny-string number from the frame\n" ;
   OS << "        private String getTinyString()\n" ;
   OS << "        {\n" ;
   OS << "            int size = getNumber1();\n" ;
+  OS << "            if (size <= 0) return null;\n" ;
   OS << "            byte[] a = new byte[size];\n" ;
   OS << "            buffer.get(a);\n" ;
   OS << "            return new String(a, CHARSET);\n" ;
@@ -476,14 +284,19 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        // Put a short-string to the frame\n" ;
   OS << "        private void putShortString(String s)\n" ;
   OS << "        {\n" ;
-  OS << "            byte[] a = s.getBytes(CHARSET);\n" ;
-  OS << "            buffer.putShort((short) a.length);\n" ;
-  OS << "            buffer.put(ByteBuffer.wrap(a, 0, Math.min(a.length, 0xFFFF)));\n" ;
+  OS << "            if (s == null) {\n" ;
+  OS << "                buffer.putShort((short) 0);\n" ;
+  OS << "            } else {\n" ;
+  OS << "                byte[] a = s.getBytes(CHARSET);\n" ;
+  OS << "                buffer.putShort((short) a.length);\n" ;
+  OS << "                buffer.put(ByteBuffer.wrap(a, 0, Math.min(a.length, 0xFFFF)));\n" ;
+  OS << "            }\n" ;
   OS << "        }\n" ;
   OS << "        // Get a short-string number from the frame\n" ;
   OS << "        private String getShortString()\n" ;
   OS << "        {\n" ;
   OS << "            int size = getNumber2();\n" ;
+  OS << "            if (size <= 0) return null;\n" ;
   OS << "            byte[] a = new byte[size];\n" ;
   OS << "            buffer.get(a);\n" ;
   OS << "            return new String(a, CHARSET);\n" ;
@@ -492,14 +305,19 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        // Put a long-string to the frame\n" ;
   OS << "        private void putLongString(String s)\n" ;
   OS << "        {\n" ;
-  OS << "            byte[] a = s.getBytes(CHARSET);\n" ;
-  OS << "            buffer.putInt((int) a.length);\n" ;
-  OS << "            buffer.put(ByteBuffer.wrap(a, 0, Math.min(a.length, 0xFFFFFFFF)));\n" ;
+  OS << "            if (s == null) {\n" ;
+  OS << "                buffer.putInt((int) 0);\n" ;
+  OS << "            } else {\n" ;
+  OS << "                byte[] a = s.getBytes(CHARSET);\n" ;
+  OS << "                buffer.putInt((int) a.length);\n" ;
+  OS << "                buffer.put(ByteBuffer.wrap(a, 0, Math.min(a.length, 0xEFFFFFFF)));\n" ;
+  OS << "            }\n" ;
   OS << "        }\n" ;
   OS << "        // Get a long-string number from the frame\n" ;
   OS << "        private String getLongString()\n" ;
   OS << "        {\n" ;
   OS << "            int size = getNumber4();\n" ;
+  OS << "            if (size <= 0) return null;\n" ;
   OS << "            byte[] a = new byte[size];\n" ;
   OS << "            buffer.get(a);\n" ;
   OS << "            return new String(a, CHARSET);\n" ;
@@ -685,14 +503,18 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
         OS << "                "<<Msg(Req)<<" Q = new "<<Msg(Req)<<"();\n" ;
         OS << "                "<<Msg(Rep)<<" P = new "<<Msg(Rep)<<"();\n" ;
         OS << "                protocol.decodeMessage(Q);\n" ;
-        OS << "                onRequest(Q, P);\n" ;
+        OS << "                try { onRequest(Q, P); } catch(Exception e) {\n" ;
+        OS << "                    System.out.println(\"onRequest: \"+e);\n" ;
+        OS << "                }\n" ;
         OS << "                return protocol.send(socket, P);\n" ;
         C += 1;
       }
     }
     if (C == 0) {
       OS << "                "<<Msg("error")<<" P = Message.makeError(-1, \"bad\");\n" ;
-      OS << "                onBadRequest(tag);\n" ;
+      OS << "                try { onBadRequest(tag); } catch(Exception e) {\n" ;
+      OS << "                    System.out.println(\"onRequest: \"+e);\n" ;
+      OS << "                }\n" ;
       OS << "                return protocol.send(socket, P);\n" ;
       BadRequests.push_back(M);
     }
