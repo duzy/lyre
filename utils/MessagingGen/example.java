@@ -49,7 +49,7 @@ public class example
            ) {
           socket.connect("ipc://test-channel-x");
           
-          messaging.Message m = new messaging.Message.nothing();
+          Message.nothing m = new Message.nothing();
           if (protocol.send(socket, m)) {
             System.out.printf("client: sent: "+m+"\n");
           } else {

@@ -249,25 +249,25 @@ static void emitMessageDefines_deprecated(const std::vector<Record*> &Messages, 
 static void emitFieldEncodingCode(raw_ostream &OS, const std::string &S, const std::string &N)
 {
   if (S == "Int8" || S == "Uint8") {
-    OS << "                putNumber1(m."<<N<<");\n";
+    OS << "            putNumber1(m."<<N<<");\n";
   }
   if (S == "Int16" || S == "Uint16") {
-    OS << "                putNumber2(m."<<N<<");\n";
+    OS << "            putNumber2(m."<<N<<");\n";
   }
   if (S == "Int32" || S == "Uint32") {
-    OS << "                putNumber4(m."<<N<<");\n";
+    OS << "            putNumber4(m."<<N<<");\n";
   }
   if (S == "Int64" || S == "Uint64") {
-    OS << "                putNumber8(m."<<N<<");\n";
+    OS << "            putNumber8(m."<<N<<");\n";
   }
   if (S == "TinyString") {
-    OS << "                putTinyString(m."<<N<<");\n";
+    OS << "            putTinyString(m."<<N<<");\n";
   }
   if (S == "ShortString") {
-    OS << "                putTinyString(m."<<N<<");\n";
+    OS << "            putTinyString(m."<<N<<");\n";
   }
   if (S == "LongString") {
-    OS << "                putTinyString(m."<<N<<");\n";
+    OS << "            putTinyString(m."<<N<<");\n";
   }
 }
 static void emitFieldEncodingCode(raw_ostream &OS, Record *F)
@@ -281,25 +281,25 @@ static void emitFieldEncodingCode(raw_ostream &OS, Record *F)
 static void emitFieldDecodingCode(raw_ostream &OS, const std::string &S, const std::string &N)
 {
   if (S == "Int8" || S == "Uint8") {
-    OS << "                    m."<<N<<" = getNumber1();\n";
+    OS << "            m."<<N<<" = getNumber1();\n";
   }
   if (S == "Int16" || S == "Uint16") {
-    OS << "                    m."<<N<<" = getNumber2();\n";
+    OS << "            m."<<N<<" = getNumber2();\n";
   }
   if (S == "Int32" || S == "Uint32") {
-    OS << "                    m."<<N<<" = getNumber4();\n";
+    OS << "            m."<<N<<" = getNumber4();\n";
   }
   if (S == "Int64" || S == "Uint64") {
-    OS << "                    m."<<N<<" = getNumber8();\n";
+    OS << "            m."<<N<<" = getNumber8();\n";
   }
   if (S == "TinyString") {
-    OS << "                    m."<<N<<" = getTinyString();\n";
+    OS << "            m."<<N<<" = getTinyString();\n";
   }
   if (S == "ShortString") {
-    OS << "                    m."<<N<<" = getShortString();\n";
+    OS << "            m."<<N<<" = getShortString();\n";
   }
   if (S == "LongString") {
-    OS << "                    m."<<N<<" = getLongString();\n";
+    OS << "            m."<<N<<" = getLongString();\n";
   }
 }
 
@@ -333,9 +333,9 @@ static void emitFieldSizeExpr(raw_ostream &OS, Record *F)
 static void emitMessageDefines(const std::vector<Record*> &Messages, raw_ostream &OS)
 {
   Record *UserDefinedErrorMessage = nullptr;
-  auto ErrorID = 0;
   auto TagValueType = Messages.size() < 256 ? "Uint8" : "Uint16";
   auto TagValueSize = Messages.size() < 256 ? 1 : 2;
+  auto ErrorID = 0;
 
   // Define message structs.
   OS << "    public static abstract class Message\n" ;
@@ -383,9 +383,16 @@ static void emitMessageDefines(const std::vector<Record*> &Messages, raw_ostream
 static void emitProtocols(const std::vector<Record*> &Protocols,
     const std::vector<Record*> &Messages, raw_ostream &OS)
 {
+  Record *UserDefinedErrorMessage = nullptr;
   auto TagValueType = Messages.size() < 256 ? "Uint8" : "Uint16";
   auto TagValueSize = Messages.size() < 256 ? 1 : 2;
   auto Signature = "0xABC0 | 0";
+  auto ErrorID = 0;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    if (M->getName() == "error") UserDefinedErrorMessage = M;
+    if (M->getValueAsInt("ID") == ErrorID) ErrorID += 1;
+  }
   OS << "\n" ;
   OS << "    public static class Protocol implements AutoCloseable\n" ;
   OS << "    {\n" ;
@@ -498,36 +505,32 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "            return new String(a, CHARSET);\n" ;
   OS << "        }\n" ;
   OS << "\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    OS << "        protected void onMessageRecved("<<Msg(M)<<" m) {}\n" ;
-  }
-  OS << "\n" ;
-  OS << "        public final Message recv(Socket input)\n" ;
+  OS << "        // Receive message to the buffer without decoding it.\n" ;
+  OS << "        private final int recvToBuffer(Socket input)\n" ;
   OS << "        {\n" ;
-  OS << "            assert( input != null );\n" ;
-  OS << "            Message msg = null;\n" ;
   OS << "            ZFrame frame = null;\n" ;
-  OS << "            int tag = -1;\n" ;
+  OS << "            \n" ;
+  OS << "            assert( input != null );\n" ;
   OS << "            \n" ;
   OS << "            try {\n" ;
   OS << "                while (true) {\n" ;
   OS << "                    if (input.getType() == ZMQ.ROUTER) {\n" ;
   OS << "                        if (routing != null) routing.destroy();\n" ;
   OS << "                        routing = ZFrame.recvFrame(input);\n" ;
-  OS << "                        if (routing == null) return null; // Interrupted\n" ;
-  OS << "                        if (!routing.hasData()) return null; // Empty Frame (eg recv-timeout)\n" ;
+  OS << "                        if (routing == null) return -1; // Interrupted\n" ;
+  OS << "                        if (!routing.hasData()) return -1; // Empty Frame (eg recv-timeout)\n" ;
   OS << "                        if (!input.hasReceiveMore())\n" ;
   OS << "                            throw new IllegalArgumentException ();\n" ;
   OS << "                    }\n" ;
   OS << "\n" ;
   OS << "                    frame = ZFrame.recvFrame(input);\n" ;
-  OS << "                    if (frame == null) return null; // Interrupted\n" ;
+  OS << "                    if (frame == null) return -1; // Interrupted\n" ;
   OS << "\n" ;
   OS << "                    // Get and check protocol signature\n" ;
   OS << "                    buffer = ByteBuffer.wrap( frame.getData() );\n" ;
   OS << "                    int signature = getNumber2();\n" ;
-  OS << "                    if (signature == ("<<Signature<<")) break; // Valid signature\n" ;
+  OS << "                    if (signature == ("<<Signature<<"))\n" ;
+  OS << "                        break; // Valid signature\n" ;
   OS << "\n" ;
   OS << "                    // Protocol assertion, drop message\n" ;
   OS << "                    while (input.hasReceiveMore()) {\n" ;
@@ -536,89 +539,113 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "                    }\n" ;
   OS << "                    if (frame != null) frame.destroy();\n" ;
   OS << "                }\n" ;
-  OS << "\n" ;
-  OS << "                switch ((tag = getNumber"<<TagValueSize<<"())) {\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto Fields = M->getValueAsListOfDefs("FIELDS");
-    OS << "                case Message.tag_"<<M->getName()<<": {\n" ;
-    OS << "                    "<<Msg(M)<<" m = new "<<Msg(M)<<"();\n" ;
-    for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
-      emitFieldDecodingCode(OS, Fields[FI]);
-    }
-    OS << "                    onMessageRecved(m);\n" ;
-    OS << "                    msg = m;\n" ;
-    OS << "                } break;\n" ;
-    OS << "\n" ;
-  }
-  OS << "                default:\n" ;
-  OS << "                    throw new IllegalArgumentException();\n" ;
-  OS << "                }\n" ;
-  OS << "                return msg;\n" ;
+  OS << "                int tag = getNumber"<<TagValueSize<<"();\n" ;
+  OS << "                //System.out.println(\"tag: \"+tag);\n" ;
+  OS << "                return tag;\n" ;
   OS << "            } catch (Exception e) {\n" ;
-  OS << "                System.out.printf(\"E: malformed message '%d'\\n\", tag);\n" ;
-  OS << "                return null;\n" ;
+  OS << "                // e.printStackTrace();\n" ;
+  OS << "                System.out.println(\"E: \"+e);\n" ;
+  OS << "                return -1;\n" ;
   OS << "            } finally {\n" ;
   OS << "                if (frame != null) frame.destroy();\n" ;
   OS << "            }\n" ;
   OS << "        }\n" ;
   OS << "\n" ;
-  OS << "        public final boolean send(Socket output, Message am)\n" ;
+  OS << "        private final Message decodeMessage(int tag)\n" ;
   OS << "        {\n" ;
-  OS << "            assert( output != null );\n" ;
+  OS << "            switch (tag) {\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    OS << "            case Message.tag_"<<M->getName()<<": {\n" ;
+    OS << "                "<<Msg(M)<<" m = new "<<Msg(M)<<"();\n" ;
+    OS << "                decodeMessage(m);\n" ;
+    OS << "                return m;\n" ;
+    OS << "            }\n" ;
+  }
+  OS << "            default:\n" ;
+  OS << "                throw new IllegalArgumentException();\n" ;
+  OS << "            }\n" ;
+  OS << "        }\n" ;
   OS << "\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto Fields = M->getValueAsListOfDefs("FIELDS");
+    OS << "        private final void decodeMessage("<<Msg(M)<<" m)\n" ;
+    OS << "        {\n" ;
+    for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
+      emitFieldDecodingCode(OS, Fields[FI]);
+    }
+    OS << "        }\n" ;
+  }
+  OS << "\n" ;
+  OS << "        public final Message recv(Socket input)\n" ;
+  OS << "        {\n" ;
+  OS << "            return decodeMessage(recvToBuffer(input));\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
+  OS << "        private final ZMsg newOutputMsg(Socket output) {\n" ;
   OS << "            ZMsg msg = new ZMsg();\n" ;
   OS << "            // If we're sending to a ROUTER, send the 'routing' first\n" ;
   OS << "            if (output.getType() == ZMQ.ROUTER && routing != null) {\n" ;
   OS << "                msg.add(routing);\n" ;
   OS << "            }\n" ;
-  OS << "            \n" ;
-  OS << "            int tag = -1;\n" ;
-  OS << "            int frameSize = 2 + "<<TagValueSize<<";\n" ;
-  OS << "            \n" ;
+  OS << "            return msg;\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
+  OS << "        private final ZFrame newMsgFrame(int tag, int msgSize) {\n" ;
+  OS << "            int frameSize = 2 + "<<TagValueSize<<" + msgSize;\n" ;
+  OS << "            ZFrame frame = new ZFrame(new byte[frameSize]);\n" ;
+  OS << "            buffer = ByteBuffer.wrap( frame.getData() );\n" ;
+  OS << "            putNumber2("<<Signature<<"); // signature\n" ;
+  OS << "            putNumber"<<TagValueSize<<"(tag);\n" ;
+  OS << "            return frame;\n" ;
+  OS << "        }\n" ;
+  OS << "\n" ;
   for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
     auto M = Messages[MI];
     auto Fields = M->getValueAsListOfDefs("FIELDS");
-    if (MI == 0)
-      OS << "            if (am instanceof "<<Msg(M)<<") {\n" ;
-    else 
-      OS << "            else if (am instanceof "<<Msg(M)<<") {\n" ;
-    OS << "                "<<Msg(M)<<" m = ("<<Msg(M)<<") am;\n" ;
+    OS << "        public final boolean send(Socket output, "<<Msg(M)<<" m)\n" ;
+    OS << "        {\n" ;
+    OS << "            ZMsg msg = newOutputMsg(output);\n" ;
+    OS << "            \n" ;
+    OS << "            int tag = Message.tag_"<<M->getName()<<";\n" ;
+    OS << "            int msgSize = 0;\n" ;
     for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
-      OS << "                frameSize += " ;
+      OS << "            msgSize += " ;
       emitFieldSizeExpr(OS, Fields[FI]);
       OS <<";\n" ;
     }
-    OS << "                tag = Message.tag_"<<M->getName()<<";\n" ;
-    OS << "            }\n" ;
-  }
-  OS << "\n" ;
-  OS << "            ZFrame frame = new ZFrame(new byte[frameSize]);\n" ;
-  OS << "            buffer = ByteBuffer.wrap( frame.getData() );\n" ;
-  OS << "\n" ;
-  OS << "            putNumber2("<<Signature<<"); // signature\n" ;
-  OS << "            putNumber"<<TagValueSize<<"(tag);\n" ;
-  OS << "\n" ;
-  OS << "            switch (tag) {\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto Fields = M->getValueAsListOfDefs("FIELDS");
-    OS << "            case Message.tag_"<<M->getName()<<":\n" ;
-    OS << "              {\n" ;
-    OS << "                "<<Msg(M)<<" m = ("<<Msg(M)<<") am;\n" ;
+    OS << "\n" ;
+    OS << "            ZFrame frame = newMsgFrame(tag, msgSize);\n" ;
     for (std::size_t FI = 0, FE = Fields.size(); FI < FE; ++FI) {
       emitFieldEncodingCode(OS, Fields[FI]);
     }
-    OS << "              } break;\n" ;
+    OS << "\n" ;
+    OS << "            msg.add(frame);\n" ;
+    OS << "            return msg.send(output);\n" ;
+    OS << "        }\n" ;
   }
-  OS << "            }\n" ;
-  OS << "            msg.add(frame);\n" ;
-  OS << "            msg.send(output);\n" ;
-  OS << "            return true;\n" ;
-  OS << "        }\n" ;
+  if (!UserDefinedErrorMessage) {
+    OS << "        public final boolean send(Socket output, "<<Msg("error")<<" m)\n" ;
+    OS << "        {\n" ;
+    OS << "            ZMsg msg = newOutputMsg(output);\n" ;
+    OS << "            \n" ;
+    OS << "            int tag = Message.tag_error;\n" ;
+    OS << "            int msgSize = 0;\n" ;
+    OS << "            msgSize += "; emitFieldSizeExpr(OS, "Uint16", "code"); OS << ";\n" ;
+    OS << "            msgSize += "; emitFieldSizeExpr(OS, "TinyString", "text"); OS << ";\n" ;
+    OS << "\n" ;
+    OS << "            ZFrame frame = newMsgFrame(tag, msgSize);\n" ;
+    emitFieldEncodingCode(OS, "Uint16", "code");
+    emitFieldEncodingCode(OS, "TinyString", "text");
+    OS << "\n" ;
+    OS << "            msg.add(frame);\n" ;
+    OS << "            return msg.send(output);\n" ;
+    OS << "        }\n" ;
+  }
   OS << "    } // end class Protocol\n" ;
   OS << "\n" ;
-  OS << "    public static class RequestProcessor implements AutoCloseable\n" ;
+  OS << "    public static abstract class RequestProcessor implements AutoCloseable\n" ;
   OS << "    {\n" ;
   OS << "        private Protocol protocol = null;\n" ;
   OS << "        private Socket socket = null;\n" ;
@@ -639,52 +666,52 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        }\n" ;
   OS << "\n" ;
   OS << "        // Wait and process a request.\n" ;
-  OS << "        public boolean waitProcessRequest()\n" ;
+  OS << "        public final boolean waitProcessRequest()\n" ;
   OS << "        {\n" ;
   OS << "            assert(protocol != null);\n" ;
   OS << "            assert(socket != null);\n" ;
-  OS << "            return protocol.recv(socket) != null;\n" ;
-  OS << "        }\n" ;
-  OS << "\n" ;
+  OS << "            final int tag = protocol.recvToBuffer(socket);\n" ;
+  OS << "            switch (tag) {\n" ;
+  std::vector<Record*> BadRequests;
   for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
     auto M = Messages[MI];
-    OS << "        protected void onMessageRecved("<<Msg(M)<<" Q)\n" ;
-    OS << "        {\n" ;
+    OS << "            case Message.tag_"<<M->getName()<<": {\n" ;
     auto C = 0;
     for (auto P : Protocols) {
       auto Req = P->getValueAsDef("REQ");
       auto Rep = P->getValueAsDef("REP");
       if (Req != M && Rep != M) continue;
       if (Req == M) {
-        OS << "            {\n" ;
+        OS << "                "<<Msg(Req)<<" Q = new "<<Msg(Req)<<"();\n" ;
         OS << "                "<<Msg(Rep)<<" P = new "<<Msg(Rep)<<"();\n" ;
+        OS << "                protocol.decodeMessage(Q);\n" ;
         OS << "                onRequest(Q, P);\n" ;
-        OS << "                protocol.send(socket, P);\n" ;
-        OS << "            }\n" ;
+        OS << "                return protocol.send(socket, P);\n" ;
         C += 1;
       }
     }
     if (C == 0) {
-      OS << "            {\n" ;
       OS << "                "<<Msg("error")<<" P = Message.makeError(-1, \"bad\");\n" ;
-      OS << "                onBadRequest(Q);\n" ;
-      OS << "                protocol.send(socket, P);\n" ;
-      OS << "            }\n" ;
+      OS << "                onBadRequest(tag);\n" ;
+      OS << "                return protocol.send(socket, P);\n" ;
+      BadRequests.push_back(M);
     }
-    OS << "        }\n" ;
-    if (C == 0) {
-      OS << "        protected void onBadRequest("<<Msg(M)<<" Q) {}\n" ;
-    }
+    OS << "            }\n" ;
   }
+  OS << "            }\n" ;
+  OS << "            return false;\n" ;
+  OS << "        }\n" ;
   OS << "\n" ;
   for (auto P : Protocols) {
     auto Req = P->getValueAsDef("REQ");
     auto Rep = P->getValueAsDef("REP");
-    OS << "        protected void onRequest("<<Msg(Req)<<" Q, "<<Msg(Rep)<<" P) {}\n" ;
+    OS << "        protected abstract void onRequest("<<Msg(Req)<<" Q, "<<Msg(Rep)<<" P);\n" ;
   }
+  OS << "\n" ;
+  OS << "        protected void onBadRequest(int tag) {}\n" ;
   OS << "    }\n" ;
   OS << "\n" ;
-  OS << "    public static class ReplyProcessor implements AutoCloseable\n" ;
+  OS << "    public static abstract class ReplyProcessor implements AutoCloseable\n" ;
   OS << "    {\n" ;
   OS << "        private Protocol protocol = null;\n" ;
   OS << "        private Socket socket = null;\n" ;
@@ -706,43 +733,47 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "\n" ;
   for (auto P : Protocols) {
     auto M = P->getValueAsDef("REQ");
-    OS << "        public boolean send("<<Msg(M)<<" m) { return protocol.send(socket, m); }\n" ;
+    OS << "        public final boolean send("<<Msg(M)<<" m) { return protocol.send(socket, m); }\n" ;
   }
   OS << "\n" ;
-  OS << "        protected boolean waitProcessReply()\n" ;
+  OS << "        public final boolean waitProcessReply()\n" ;
   OS << "        {\n" ;
   OS << "            assert(protocol != null);\n" ;
   OS << "            assert(socket != null);\n" ;
-  OS << "            return protocol.recv(socket) != null;\n" ;
-  OS << "        }\n" ;
-  OS << "\n" ;
+  OS << "            final int tag = protocol.recvToBuffer(socket);\n" ;
+  OS << "            switch (tag) {\n" ;
   for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
     auto M = Messages[MI];
-    OS << "        protected void onMessageRecved("<<Msg(M)<<" P)\n" ;
-    OS << "        {\n" ;
+    OS << "            case Message.tag_"<<M->getName()<<": {\n" ;
     auto C = 0;
     for (auto P : Protocols) {
       auto Req = P->getValueAsDef("REQ");
       auto Rep = P->getValueAsDef("REP");
       if (Req != M && Rep != M) continue;
       if (Rep == M) {
-        OS << "            onReply(P);\n" ;
+        OS << "                "<<Msg(Rep)<<" P = new "<<Msg(Rep)<<"();\n" ;
+        OS << "                protocol.decodeMessage(P);\n" ;
+        OS << "                onReply(P);\n" ;
+        OS << "                return true;\n" ;
         C += 1;
       }
     }
     if (C == 0) {
-      OS << "            onBadReply(P);\n" ;
+      OS << "                onBadReply(tag);\n" ;
+      OS << "                return true;\n" ;
     }
-    OS << "        }\n" ;
-    if (C == 0) {
-      OS << "        protected void onBadReply("<<Msg(M)<<" Q) {}\n" ;
-    }
+    OS << "            }\n" ;
   }
+  OS << "            }\n" ;
+  OS << "            return false;\n" ;
+  OS << "        }\n" ;
   OS << "\n" ;
   for (auto P : Protocols) {
     auto Rep = P->getValueAsDef("REP");
-    OS << "        protected void onReply("<<Msg(Rep)<<" P) {}\n" ;
+    OS << "        protected abstract void onReply("<<Msg(Rep)<<" P);\n" ;
   }
+  OS << "\n" ;
+  OS << "        protected void onBadReply(int tag) {}\n" ;
   OS << "    }\n" ;
 }
 
