@@ -310,7 +310,7 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "            } else {\n" ;
   OS << "                byte[] a = s.getBytes(CHARSET);\n" ;
   OS << "                buffer.putInt((int) a.length);\n" ;
-  OS << "                buffer.put(ByteBuffer.wrap(a, 0, Math.min(a.length, 0xEFFFFFFF)));\n" ;
+  OS << "                buffer.put(ByteBuffer.wrap(a, 0, Math.min(a.length, 0x7FFFFFFF)));\n" ;
   OS << "            }\n" ;
   OS << "        }\n" ;
   OS << "        // Get a long-string number from the frame\n" ;
