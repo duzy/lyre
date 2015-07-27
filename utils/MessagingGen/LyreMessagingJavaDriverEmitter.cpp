@@ -244,7 +244,7 @@ static void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "        // Get a 4-byte number from the frame then make it unsigned\n" ;
   OS << "        private int getNumber4()\n" ;
   OS << "        {\n" ;
-  OS << "            int value = buffer.getShort();\n" ;
+  OS << "            int value = buffer.getInt();\n" ;
   OS << "            if (value < 0) value = (0XFFFFFFFF) & value;\n" ;
   OS << "            return value;\n" ;
   OS << "        }\n" ;
