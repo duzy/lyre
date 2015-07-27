@@ -11,14 +11,14 @@ static void test_protocol()
       proto.bind({ "inproc://example-protocol" });
       {
         nothing m;
-        assert(proto.recv(m) == tag_size + proto.size(m));
-        assert(proto.send(m) == tag_size + proto.size(m));
+        assert(proto.recv(m) == tag_size + 2 + proto.size(m));
+        assert(proto.send(m) == tag_size + 2 + proto.size(m));
       }
       {
         ping req;
         pong res = { "example-pong" };
-        assert(proto.recv(req) == tag_size + proto.size(req));
-        assert(proto.send(res) == tag_size + proto.size(res));
+        assert(proto.recv(req) == tag_size + 2 + proto.size(req));
+        assert(proto.send(res) == tag_size + 2 + proto.size(res));
         assert(req.text == "example-ping");
       }
     });
@@ -28,14 +28,14 @@ static void test_protocol()
       proto.connect({ "inproc://example-protocol" });
       {
         nothing m;
-        assert(proto.send(m) == tag_size + proto.size(m));
-        assert(proto.recv(m) == tag_size + proto.size(m));
+        assert(proto.send(m) == tag_size + 2 + proto.size(m));
+        assert(proto.recv(m) == tag_size + 2 + proto.size(m));
       }
       {
         ping req = { "example-ping" };
         pong res;
-        assert(proto.send(req) == tag_size + proto.size(req));
-        assert(proto.recv(res) == tag_size + proto.size(res));
+        assert(proto.send(req) == tag_size + 2 + proto.size(req));
+        assert(proto.recv(res) == tag_size + 2 + proto.size(res));
         assert(res.text == "example-pong");
       }
     });
@@ -143,16 +143,18 @@ static void test_processors_2()
 
 int main(int argc, char **argv)
 {
+  /*
   test_protocol();
   test_processors();
   test_processors_2();
+  */
 
-  std::clog << "-------------------------" << std::endl;
-  
   server S;
-  S.bind({ "ipc://example-server" });
+  S.bind({ "tcp://127.0.0.1:18888" });
   S.wait_process_request(&S);
   S.wait_process_request(&S);
   S.wait_process_request(&S);
+  
+  std::clog << "------------------------=" << std::endl;
   return 0;
 }

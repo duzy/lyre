@@ -22,6 +22,8 @@ namespace lyre
   void EmitMessagingDriverJ(RecordKeeper &Records, raw_ostream &OS);
   void EmitMessagingDriverHH(RecordKeeper &Records, raw_ostream &OS);
   void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS);
+  void EmitMessagingDriverHH_deprecated(RecordKeeper &Records, raw_ostream &OS);
+  void EmitMessagingDriverCC_deprecated(RecordKeeper &Records, raw_ostream &OS);
 }
 
 #endif//__MESSAGINGGEN_BACKENDS_H__
