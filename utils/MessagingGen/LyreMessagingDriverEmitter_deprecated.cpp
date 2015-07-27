@@ -209,13 +209,13 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "}; // end struct codec\n\n" ;
 
   // The "protocol" definition.
-  OS << "struct protocol : base_protocol<protocol, codec>\n" ;
+  OS << "struct protocol : messaging::base_protocol<protocol, codec>\n" ;
   OS << "{\n" ;
   OS << "  explicit protocol(int type) : base_protocol(type) {}\n" ;
   OS << "}; // end struct protocol\n\n" ;
 
   // The "request_processor" definition.
-  OS << "struct request_processor : base_processor<request_processor, codec>\n" ;
+  OS << "struct request_processor : messaging::base_processor<request_processor, codec>\n" ;
   OS << "{\n" ;
   OS << "  explicit request_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
@@ -287,7 +287,7 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "}; // end struct request_processor\n\n" ;
 
   // The "reply_processor" definition.
-  OS << "struct reply_processor : base_processor<reply_processor, codec>\n" ;
+  OS << "struct reply_processor : messaging::base_processor<reply_processor, codec>\n" ;
   OS << "{\n" ;
   OS << "  explicit reply_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
@@ -347,7 +347,38 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "}; // end struct reply_processor\n\n" ;
 }
 
-} // end anonymous namespace
+void emitStateMachines(
+    const std::vector<Record*> &Machines,
+    const std::vector<Record*> &States,
+    const std::vector<Record*> &Events,
+    raw_ostream &OS)
+{
+  for (std::size_t EI = 0, EE = Events.size(); EI < EE; ++EI) {
+    auto E = Events[EI];
+    auto N = E->getName();
+    OS << "struct event_"<<N<<" : sc::event<event_"<<N<<"> " ;
+    OS << "{" ;
+    OS << "};\n" ;
+  }
+  OS << "\n" ;
+
+  for (std::size_t SI = 0, SE = States.size(); SI < SE; ++SI) {
+    auto S = States[SI];
+    auto N = S->getName();
+    OS << "struct state_"<<N<<";\n" ;
+  }  
+  OS << "\n" ;
+
+  for (std::size_t MI = 0, ME = Machines.size(); MI < ME; ++MI) {
+    auto M = Machines[MI];
+    auto DirectSuper = M->getSuperClasses().back();
+    OS << "// " << M->getName() << ", " << DirectSuper->getName() << "\n";
+    for (auto super : M->getSuperClasses())
+      OS << "//     " << super->getName() << "\n";
+  }
+  OS << "\n" ;
+}
+}
 
 static inline void sortMessages(std::vector<Record*> &Messages)
 {
@@ -358,7 +389,7 @@ static inline void sortMessages(std::vector<Record*> &Messages)
 
 namespace lyre
 {
-  void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS)
+  void EmitMessagingDriverCC_deprecated(RecordKeeper &Records, raw_ostream &OS)
   {
     std::vector<Record*> Protocols = Records.getAllDerivedDefinitions("Protocol");
     std::vector<Record*> Machines = Records.getAllDerivedDefinitions("StateMachine");
@@ -378,51 +409,23 @@ namespace lyre
 
     if (!Namespace.empty())
       OS << "using namespace " << Namespace << ";\n" ;
-    OS << "\n" ;
-    OS << "#include <boost/algorithm/string/split.hpp>\n" ;
-    OS << "#include <boost/ptr_container/ptr_list.hpp>\n" ;
-    OS << "#include <boost/noncopyable.hpp>\n" ;
-    OS << "#include <cstdint>\n" ;
-    OS << "#include <thread>\n" ;
-    OS << "#include <chrono>\n" ;
-    OS << "#include <memory>\n" ;
-    OS << "#include <zmq.h>\n" ;
-    OS << "#include <mutex>\n" ;
-    OS << "#include <iostream>\n" ;
-    OS << "\n" ;
-    OS << "namespace { static std::mutex logmux; }\n" ;
-    OS << "#define DBG(x)                                            \\\n" ;
-    OS << "    do {                                                  \\\n" ;
-    OS << "        std::lock_guard <std::mutex> lock (logmux);       \\\n" ;
-    OS << "        std::clog << __FILE__ << \":\" << __LINE__ << \": \"  \\\n" ;
-    OS << "                  << x << std::endl;                      \\\n" ;
-    OS << "    } while (false);\n" ;
-    OS << "\n" ;
-    OS << "namespace meta = boost::mpl;\n" ;
+
+    OS << "#include \"messaging_deprecated.inc\"\n\n" ;
+    
     OS << "\n" ;
     OS << "namespace\n" ;
     OS << "{\n" ;
-    OS << "static const struct zmq_wrapper\n" ;
-    OS << "{\n" ;
-    OS << "  zmq_wrapper() : the_context( zmq_ctx_new () ) {}\n" ;
-    OS << "  ~zmq_wrapper() { zmq_ctx_term (the_context); }\n" ;
-    OS << "  inline void *context() const { return the_context; }\n" ;
-    OS << "private:\n" ;
-    OS << "  void * the_context;\n" ;
-    OS << "} zmq;\n" ;
-    OS << "\n" ;
-    OS << "#include \"messaging2.inc\"\n" ;
-    OS << "\n" ;
 
     if (SharedHeader.empty())
       emitMessageStructs(Messages, OS);    
     
     emitProtocols(Protocols, Messages, OS);
+    emitStateMachines(Machines, States, Events, OS);
     
     OS << "} // end anonymous namespace\n" ;
   }
 
-  void EmitMessagingDriverHH(RecordKeeper &Records, raw_ostream &OS)
+  void EmitMessagingDriverHH_deprecated(RecordKeeper &Records, raw_ostream &OS)
   {
     std::vector<Record*> Messages = Records.getAllDerivedDefinitions("Message");
     std::vector<Record*> States = Records.getAllDerivedDefinitions("State");

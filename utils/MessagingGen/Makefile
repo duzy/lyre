@@ -11,8 +11,8 @@ LIBS := \
 LOADLIBS := 
 
 OBJECTS = MessagingGen.o \
+  LyreMessagingDriverEmitter_deprecated.o \
   LyreMessagingDriverEmitter.o \
-  LyreMessagingDriverEmitter2.o \
   LyreMessagingJavaDriverEmitter.o \
 
 JEROMQ = $(or \
@@ -33,7 +33,7 @@ MessagingGen: $(OBJECTS)
 test:
 	@$(LLVMTableGen) -print-records example.td
 
-example: example_main.cpp example.cc messaging2.inc
+example: example_main.cpp example.cc messaging.inc
 	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $< -lzmq -lpthread
 
 com/lyrecode/example.class: example.java messaging.java
