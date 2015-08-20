@@ -17,9 +17,15 @@ TableGen := utils/TableGen/TableGen
 CXXFLAGS := -Iinclude -Isource -I$(BOOST_ROOT) -g -ggdb \
   -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) $(LLVM_CXXFLAGS)
 
+CXXFLAGS := \
+  -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
+  $(shell $(LLVM_CONFIG) --cxxflags)
+
 LIBS := \
   $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
-  -lpthread -ldl -lm -lz $(EXTRA_LIBS)
+  -lpthread -ldl -lm -lz
+
+LIBS += -ltinfo
 
 LOADLIBS := 
 
