@@ -6,379 +6,7 @@
 #include <set>
 #include <string>
 
-using namespace llvm;
-
-namespace 
-{
-std::string toMacroName(const std::string & S)
-{
-  std::string T(S);
-  for (std::size_t I = 0, E = S.size(); I < E; ++I) {
-    if (std::ispunct(T[I]) || std::isspace(T[I])) T[I] = '_';
-    if (std::islower(T[I])) T[I] = std::toupper(T[I]);
-  }
-  return T;
-}
-
-void emitBasicTypedefs(raw_ostream &OS)
-{
-  OS << "typedef std::int8_t     Int8;\n";
-  OS << "typedef std::int16_t    Int16;\n";
-  OS << "typedef std::int32_t    Int32;\n";
-  OS << "typedef std::int64_t    Int64;\n";
-  OS << "typedef std::uint8_t    Uint8;\n";
-  OS << "typedef std::uint16_t   Uint16;\n";
-  OS << "typedef std::uint32_t   Uint32;\n";
-  OS << "typedef std::uint64_t   Uint64;\n";
-  OS << "struct TinyString : std::string {\n";
-  OS << "  using std::string::string;\n";
-  OS << "};\n";
-  OS << "struct ShortString : std::string {\n";
-  OS << "  using std::string::string;\n";
-  OS << "};\n";
-  OS << "struct LongString : std::string {\n";
-  OS << "  using std::string::string;\n";
-  OS << "};\n";
-}
-
-void emitMessageStructs(const std::vector<Record*> &Messages, raw_ostream &OS)
-{
-  emitBasicTypedefs(OS);
-  
-  OS << "\n";
-
-  bool HasUserDefinedErrorMessage = false;
-
-  // Define message structs.
-  for (auto M : Messages) {
-    if (M->getName() == "error") HasUserDefinedErrorMessage = true;
-
-    OS << "struct " << M->getName() << " {\n" ;
-
-    auto Fields = M->getValueAsListOfDefs("FIELDS");
-    for (auto F : Fields) {
-      auto T = F->getSuperClasses().back();
-      OS << "  " << T->getName() ;
-      OS << " " << F->getValueAsString("NAME") << ";\n";
-    }
-      
-    OS << "};\n\n" ;
-  }
-
-  if (!HasUserDefinedErrorMessage) {
-    OS << "struct error {\n" ;
-    OS << "  Uint16 code;\n" ;
-    OS << "  TinyString text;\n" ;
-    OS << "};\n\n" ;
-  }
-}
-
-void emitProtocols(const std::vector<Record*> &Protocols,
-    const std::vector<Record*> &Messages, raw_ostream &OS)
-{
-  auto TagBase = Messages.size() < 256 ? "Uint8" : "Uint16";
-
-  OS << "// Protocols: " << Protocols.size() << "\n" ;
-  for (auto P : Protocols) {
-    auto Req = P->getValueAsDef("REQ");
-    auto Rep = P->getValueAsDef("REP");
-    OS << "//    " << P->getName() << ": "
-       << Req->getName() << " -> " << Rep->getName()
-       << "\n" ;
-  }
-
-  bool HasUserDefinedErrorMessage = false;
-  auto ErrorID = 0;
-  
-  // Define message tag.
-  OS << "enum class tag : " << TagBase << "\n" ;
-  OS << "{\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto ID = M->getValueAsInt("ID");
-    OS << "  " << M->getName() << " = " << ID << ", \n";
-    if (M->getName() == "error") HasUserDefinedErrorMessage = true;
-    if (ID == ErrorID) ErrorID += 1;
-  }
-  if (!HasUserDefinedErrorMessage)
-    OS << "  error = " << ErrorID << "\n";
-  OS << "};\n\n" ;
-
-  OS << "using ERROR = struct error;\n\n" ;
-  OS << "constexpr std::size_t tag_size = sizeof(tag);\n\n" ;
-
-  // Define message codec.
-  OS << "template <class P, class accessor>\n" ;
-  OS << "struct codec\n" ;
-  OS << "{\n" ;
-  OS << "  typedef " << TagBase << " tag_value_t;\n";
-  OS << "  typedef ::tag tag_t;\n\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto MSG = M->getName();
-
-    // A comment line for the message.
-    OS << "  // Message: "<<MSG<<"\n";
-
-    // static tag_t t(const MESSAGE &);
-    OS << "  static tag_t t(const "<<MSG<<"&) { return tag::"<<MSG<<"; }\n" ;
-    
-    // static std::size_t size(P *p, const MESSAGE &m);
-    OS << "  static std::size_t size(P *p, const "<<MSG<<" &m)\n" ;
-    OS << "  {\n" ;
-    auto Fields = M->getValueAsListOfDefs("FIELDS");
-    if (Fields.empty()) {
-      OS << "    return 0;\n";
-    } else {
-      for (std::size_t I = 0, S = Fields.size(); I < S; ++I) {
-        auto F = Fields[I]->getValueAsString("NAME");
-        OS << (I == 0 ? "    return " : "      +    ") ;
-        OS << "accessor::field_size(p, m." << F << ")" ;
-        OS << (I + 1 == S ? ";\n" : "\n") ;
-      }
-    }
-    OS << "  }\n" ;
-
-    // static void encode (P *p, const MESSAGE & m);
-    OS << "  static std::size_t encode(P *p, const "<<MSG<<" &m)\n";
-    OS << "  {\n" ;
-    for (std::size_t I = 0, S = Fields.size(); I < S; ++I) {
-      auto F = Fields[I]->getValueAsString("NAME");
-      OS << "    accessor::put(p, m." << F << ");\n" ;
-    }
-    OS << "  }\n" ;
-
-    // static void decode (P *p, const MESSAGE & m);
-    OS << "  static std::size_t decode(P *p, "<<MSG<<" &m)\n";
-    OS << "  {\n" ;
-    for (std::size_t I = 0, S = Fields.size(); I < S; ++I) {
-      auto F = Fields[I]->getValueAsString("NAME");
-      OS << "    accessor::get(p, m." << F << ");\n" ;
-    }
-    OS << "  }\n\n" ;
-  }
-  if (!HasUserDefinedErrorMessage) {
-    OS << "  // Message: error\n";
-    OS << "  static tag_t t(const ERROR&) { return tag::error; }\n" ;
-    OS << "  static std::size_t size(P *p, const ERROR &m)\n" ;
-    OS << "  {\n" ;
-    OS << "    return accessor::field_size(p, m.code)\n" ;
-    OS << "      +    accessor::field_size(p, m.text);\n" ;
-    OS << "  }\n" ;
-    OS << "  static std::size_t encode(P *p, const ERROR &m)\n";
-    OS << "  {\n" ;
-    OS << "    accessor::put(p, m.code);\n" ;
-    OS << "    accessor::put(p, m.text);\n" ;
-    OS << "  }\n" ;
-    OS << "  static std::size_t decode(P *p, ERROR &m)\n";
-    OS << "  {\n" ;
-    OS << "    accessor::get(p, m.code);\n" ;
-    OS << "    accessor::get(p, m.text);\n" ;
-    OS << "  }\n\n" ;
-  }
-  
-  // static void parse (P *p, Context *ctx)
-  OS << "  template < class Message, class Context >\n" ;
-  OS << "  static void parse(P *p, Context *ctx)\n" ;
-  OS << "  {\n" ;
-  OS << "    Message m;\n" ;
-  OS << "    decode(p, m);\n" ;
-  OS << "    p->process_message(ctx, m);\n" ;
-  OS << "  }\n\n" ;
-
-  // static bool parse (P *p, Context *ctx, tag t)
-  OS << "  template < class Context >\n" ;
-  OS << "  static bool parse(P *p, Context *ctx, tag t)\n" ;
-  OS << "  {\n" ;
-  OS << "    switch (t) {\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto S = M->getName();
-    OS << "    case tag::"<<S<<": parse<"<<S<<">(p, ctx); return true; \n";
-  }
-  if (!HasUserDefinedErrorMessage)
-    OS << "    case tag::error: parse<ERROR>(p, ctx); return true; \n";
-  OS << "    }\n" ;
-  OS << "    return false;\n" ;
-  OS << "  }\n" ;
-  OS << "\n" ;
-  OS << "private:\n" ;
-  OS << "  codec() = delete;\n" ;
-  OS << "  ~codec() = delete;\n" ;
-  OS << "  void operator=(const codec &) = delete;\n" ;
-  OS << "}; // end struct codec\n\n" ;
-
-  // The "protocol" definition.
-  OS << "struct protocol : base_protocol<protocol, codec>\n" ;
-  OS << "{\n" ;
-  OS << "  explicit protocol(int type) : base_protocol(type) {}\n" ;
-  OS << "}; // end struct protocol\n\n" ;
-
-  // The "request_processor" definition.
-  OS << "struct request_processor : base_processor<request_processor, codec>\n" ;
-  OS << "{\n" ;
-  OS << "  explicit request_processor(int type) : base_processor(type) {}\n" ;
-  OS << "\n" ;
-  OS << "  template <class Context>\n" ;
-  OS << "  bool wait_process_request(Context *C) {\n" ;
-  OS << "    auto okay = receive_and_process(C);\n" ;
-  OS << "    if (!okay) { /*...*/ }\n" ;
-  OS << "    return okay;\n" ;
-  OS << "  }\n" ;
-  OS << "\n" ;
-  OS << "protected:\n" ;
-  for (auto P : Protocols) {
-    auto Req = P->getValueAsDef("REQ");
-    auto Rep = P->getValueAsDef("REP");
-    OS << "  virtual void on_request(const "<<Req->getName()<<" &Req, "
-       << Rep->getName() << " &Rep) {}\n" ;
-  }
-  OS << "\n" ;
-  OS << "  virtual void on_bad_request() {}\n" ;
-  OS << "\n" ;
-  OS << "  ERROR make_error(Uint16 n, const char *s) {\n" ;
-  if (!HasUserDefinedErrorMessage) {
-    OS << "    return ERROR{ n, s };\n" ;
-  } else {
-    OS << "    ERROR E;\n" ;
-    OS << "    // TODO: init E;\n" ;
-    OS << "    return E;\n" ;
-  }
-  OS << "  }\n" ;
-  OS << "\n" ;
-  OS << "private:\n" ;
-  OS << "  friend codec;\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto S = M->getName();
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, const "<<S<<" &Q) {\n" ;
-    auto C = 0;
-    for (auto P : Protocols) {
-      auto Req = P->getValueAsDef("REQ");
-      auto Rep = P->getValueAsDef("REP");
-      if (Req != M && Rep != M) continue;
-      if (Req == M) {
-        OS << "    {\n" ;
-        OS << "      "<<Rep->getName()<<" P;\n" ;
-        OS << "      on_request(Q, P);\n" ;
-        OS << "      base_processor::send(P);\n" ;
-        OS << "    }\n" ;
-        C += 1;
-      }
-    }
-    if (C == 0) {
-      OS << "    {\n" ;
-      OS << "      ERROR P = make_error(-1, \"bad\");\n" ;
-      OS << "      on_bad_request();\n" ;
-      OS << "      base_processor::send(P);\n" ;
-      OS << "    }\n" ;
-    }
-    OS << "  }\n" ;
-  }
-  if (!HasUserDefinedErrorMessage) {
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, const ERROR &E) {\n" ;
-    OS << "      ERROR P = make_error(-2, \"bad\");\n" ;
-    OS << "      on_bad_request();\n" ;
-    OS << "      base_processor::send(P);\n" ;
-    OS << "  }\n" ;
-  }
-  OS << "}; // end struct request_processor\n\n" ;
-
-  // The "reply_processor" definition.
-  OS << "struct reply_processor : base_processor<reply_processor, codec>\n" ;
-  OS << "{\n" ;
-  OS << "  explicit reply_processor(int type) : base_processor(type) {}\n" ;
-  OS << "\n" ;
-  for (auto P : Protocols) {
-    auto Req = P->getValueAsDef("REQ");
-    OS << "  auto send(const "<<Req->getName()<<"&Q) {" ;
-    OS << " return base_processor::send(Q); }\n" ;
-  }
-  OS << "\n" ;
-  OS << "  template <class Context>\n" ;
-  OS << "  bool wait_process_reply(Context *C) {\n" ;
-  OS << "    auto okay = receive_and_process(C);\n" ;
-  OS << "    if (!okay) { /*...*/ }\n" ;
-  OS << "    return okay;\n" ;
-  OS << "  }\n" ;
-  OS << "\n" ;
-  OS << "protected:\n" ;
-  for (auto P : Protocols) {
-    auto Req = P->getValueAsDef("REQ");
-    auto Rep = P->getValueAsDef("REP");
-    OS << "  virtual void on_reply(const "<<Rep->getName()<<" &Rep) {}\n" ;
-  }
-  if (true /*!HasUserDefinedErrorMessage*/) {
-    OS << "  virtual void on_reply(const ERROR &E) {}\n" ;
-  }
-  OS << "\n" ;
-  OS << "  virtual void on_bad_reply() {}\n" ;
-  OS << "\n" ;
-  OS << "private:\n" ;
-  OS << "  friend codec;\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto S = M->getName();
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, const "<<S<<" &P) {\n" ;
-    auto C = 0;
-    for (auto P : Protocols) {
-      auto Req = P->getValueAsDef("REQ");
-      auto Rep = P->getValueAsDef("REP");
-      if (Req != M && Rep != M) continue;
-      if (Rep == M) {
-        OS << "    on_reply(P);\n" ;
-        C += 1;
-      }
-    }
-    if (C == 0) {
-      OS << "    on_bad_reply();\n" ;
-    }
-    OS << "  }\n" ;
-  }
-  if (true /*!HasUserDefinedErrorMessage*/) {
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, const ERROR &E) {\n" ;
-    OS << "    on_reply(E);\n" ;
-    OS << "  }\n" ;
-  }
-  OS << "}; // end struct reply_processor\n\n" ;
-}
-
-} // end anonymous namespace
-
-static inline void sortMessages(std::vector<Record*> &Messages)
-{
-  std::sort(Messages.begin(), Messages.end(), [](Record *A, Record *B){
-      return A->getValueAsInt("ID") < B->getValueAsInt("ID");
-    });
-}
-
-namespace lyre
-{
-  void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS)
-  {
-    std::vector<Record*> Protocols = Records.getAllDerivedDefinitions("Protocol");
-    std::vector<Record*> Machines = Records.getAllDerivedDefinitions("StateMachine");
-    std::vector<Record*> Messages = Records.getAllDerivedDefinitions("Message");
-    std::vector<Record*> States = Records.getAllDerivedDefinitions("State");
-    std::vector<Record*> Events = Records.getAllDerivedDefinitions("Event");
-
-    emitSourceFileHeader("The Protocol Engine.", OS);
-    
-    sortMessages(Messages);
-    
-    auto & Namespace = getOptNamespace();
-    auto & SharedHeader = getOptSharedHeader();
-
-    if (!SharedHeader.empty())
-      OS << "#include \"" << SharedHeader << "\"\n" ;
-
-    if (!Namespace.empty())
-      OS << "using namespace " << Namespace << ";\n" ;
-    OS << R"***(
+static const char * const BaseCode = R"***(//"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/noncopyable.hpp>
@@ -391,12 +19,13 @@ namespace lyre
 #include <iostream>
 
 namespace { static std::mutex logmux; }
+
 #define DBG(x)                                            \
-    do {                                                  \
-        std::lock_guard <std::mutex> lock (logmux);       \
-        std::clog << __FILE__ << ":" << __LINE__ << ": "  \
-                  << x << std::endl;                      \
-    } while (false);
+  do {                                                    \
+    std::lock_guard <std::mutex> lock (logmux);           \
+    std::clog << __FILE__ << ":" << __LINE__ << ": "      \
+              << x << std::endl;                          \
+  } while (false);
 
 namespace meta = boost::mpl;
 
@@ -917,7 +546,7 @@ private:
  *  Basic protocol combining with a codec implementation.
  */
 template < class Derived, template <class P, class A> class Codec >
-struct base_processor : /*protected*/ base_protocol < Derived, Codec >
+struct base_processor : base_protocol < Derived, Codec >
 {
   using base_type = base_protocol< Derived, Codec >;
   using typename base_type::codec;
@@ -931,23 +560,13 @@ struct base_processor : /*protected*/ base_protocol < Derived, Codec >
   base_type & protocol() { return *this; }
 
 protected:
-  explicit base_processor (
-                           int type,
-                           int sndtimeo = 12*1000,
-                           int rcvtimeo = 12*1000)
-    : base_type (type, sndtimeo, rcvtimeo)
+  explicit base_processor (int type, int sndtimeo = 12*1000, int rcvtimeo = 12*1000)
+      : base_type (type, sndtimeo, rcvtimeo)
   {}
+};
+)***";//"
 
-  //using base_type::send;
-  //using base_type::recv;
-      
-  /**
-   *  On errors, it should return false, and the error() should return
-   *  the error code.
-   */
-  template < class Context >
-  bool receive_and_process ( Context *ctx )
-  {
+static const char * const ReceivingCode = R"***(//"
     int rc = this->recv_with_flags (0);
     if (rc < 0) {
       if (this->error () == 11 /* e.g. Resource temporarily unavailable. */) {
@@ -973,14 +592,432 @@ protected:
     }
       
     auto tag = typename codec::tag_t(this->template get<typename codec::tag_value_t>());
-    return codec::parse ( static_cast<Derived*>(this), ctx, tag );
+)***";//"
+
+using namespace llvm;
+
+namespace 
+{
+std::string toMacroName(const std::string & S)
+{
+  std::string T(S);
+  for (std::size_t I = 0, E = S.size(); I < E; ++I) {
+    if (std::ispunct(T[I]) || std::isspace(T[I])) T[I] = '_';
+    if (std::islower(T[I])) T[I] = std::toupper(T[I]);
   }
-};
-)***";
+  return T;
+}
+
+void emitBasicTypedefs(raw_ostream &OS)
+{
+  OS << "typedef std::int8_t     Int8;\n";
+  OS << "typedef std::int16_t    Int16;\n";
+  OS << "typedef std::int32_t    Int32;\n";
+  OS << "typedef std::int64_t    Int64;\n";
+  OS << "typedef std::uint8_t    Uint8;\n";
+  OS << "typedef std::uint16_t   Uint16;\n";
+  OS << "typedef std::uint32_t   Uint32;\n";
+  OS << "typedef std::uint64_t   Uint64;\n";
+  OS << "struct TinyString : std::string {\n";
+  OS << "  using std::string::string;\n";
+  OS << "};\n";
+  OS << "struct ShortString : std::string {\n";
+  OS << "  using std::string::string;\n";
+  OS << "};\n";
+  OS << "struct LongString : std::string {\n";
+  OS << "  using std::string::string;\n";
+  OS << "};\n";
+}
+
+void emitMessageStructs(const std::vector<Record*> &Messages, raw_ostream &OS)
+{
+  emitBasicTypedefs(OS);
+  
+  OS << "\n";
+
+  bool HasUserDefinedErrorMessage = false;
+
+  // Define message structs.
+  for (auto M : Messages) {
+    if (M->getName() == "error") HasUserDefinedErrorMessage = true;
+
+    OS << "struct " << M->getName() << " {\n" ;
+
+    auto Fields = M->getValueAsListOfDefs("FIELDS");
+    for (auto F : Fields) {
+      auto T = F->getSuperClasses().back();
+      OS << "  " << T->getName() ;
+      OS << " " << F->getValueAsString("NAME") << ";\n";
+    }
+      
+    OS << "};\n\n" ;
+  }
+
+  if (!HasUserDefinedErrorMessage) {
+    OS << "struct error {\n" ;
+    OS << "  Uint16 code;\n" ;
+    OS << "  TinyString text;\n" ;
+    OS << "};\n\n" ;
+  }
+}
+
+void emitProtocols(const std::vector<Record*> &Protocols,
+    const std::vector<Record*> &Messages, raw_ostream &OS)
+{
+  auto TagBase = Messages.size() < 256 ? "Uint8" : "Uint16";
+
+  OS << "// Protocols: " << Protocols.size() << "\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "//    " << P->getName() << ": "
+       << Req->getName() << " -> " << Rep->getName()
+       << "\n" ;
+  }
+
+  bool HasUserDefinedErrorMessage = false;
+  auto ErrorID = 0;
+  
+  // Define message tag.
+  OS << "enum class tag : " << TagBase << "\n" ;
+  OS << "{\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto ID = M->getValueAsInt("ID");
+    OS << "  " << M->getName() << " = " << ID << ", \n";
+    if (M->getName() == "error") HasUserDefinedErrorMessage = true;
+    if (ID == ErrorID) ErrorID += 1;
+  }
+  if (!HasUserDefinedErrorMessage)
+    OS << "  error = " << ErrorID << "\n";
+  OS << "};\n\n" ;
+
+  OS << "using ERROR = struct error;\n\n" ;
+  OS << "constexpr std::size_t tag_size = sizeof(tag);\n\n" ;
+
+  // Define message codec.
+  OS << "template <class P, class accessor>\n" ;
+  OS << "struct codec\n" ;
+  OS << "{\n" ;
+  OS << "  typedef " << TagBase << " tag_value_t;\n";
+  OS << "  typedef ::tag tag_t;\n\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto MSG = M->getName();
+
+    // A comment line for the message.
+    OS << "  // Message: "<<MSG<<"\n";
+
+    // static tag_t t(const MESSAGE &);
+    OS << "  static tag_t t(const "<<MSG<<"&) { return tag::"<<MSG<<"; }\n" ;
+    
+    // static std::size_t size(P *p, const MESSAGE &m);
+    OS << "  static std::size_t size(P *p, const "<<MSG<<" &m)\n" ;
+    OS << "  {\n" ;
+    auto Fields = M->getValueAsListOfDefs("FIELDS");
+    if (Fields.empty()) {
+      OS << "    return 0;\n";
+    } else {
+      for (std::size_t I = 0, S = Fields.size(); I < S; ++I) {
+        auto F = Fields[I]->getValueAsString("NAME");
+        OS << (I == 0 ? "    return " : "      +    ") ;
+        OS << "accessor::field_size(p, m." << F << ")" ;
+        OS << (I + 1 == S ? ";\n" : "\n") ;
+      }
+    }
+    OS << "  }\n" ;
+
+    // static void encode (P *p, const MESSAGE & m);
+    OS << "  static std::size_t encode(P *p, const "<<MSG<<" &m)\n";
+    OS << "  {\n" ;
+    for (std::size_t I = 0, S = Fields.size(); I < S; ++I) {
+      auto F = Fields[I]->getValueAsString("NAME");
+      OS << "    accessor::put(p, m." << F << ");\n" ;
+    }
+    OS << "  }\n" ;
+
+    // static void decode (P *p, const MESSAGE & m);
+    OS << "  static std::size_t decode(P *p, "<<MSG<<" &m)\n";
+    OS << "  {\n" ;
+    for (std::size_t I = 0, S = Fields.size(); I < S; ++I) {
+      auto F = Fields[I]->getValueAsString("NAME");
+      OS << "    accessor::get(p, m." << F << ");\n" ;
+    }
+    OS << "  }\n\n" ;
+  }
+  if (!HasUserDefinedErrorMessage) {
+    OS << "  // Message: error\n";
+    OS << "  static tag_t t(const ERROR&) { return tag::error; }\n" ;
+    OS << "  static std::size_t size(P *p, const ERROR &m)\n" ;
+    OS << "  {\n" ;
+    OS << "    return accessor::field_size(p, m.code)\n" ;
+    OS << "      +    accessor::field_size(p, m.text);\n" ;
+    OS << "  }\n" ;
+    OS << "  static std::size_t encode(P *p, const ERROR &m)\n";
+    OS << "  {\n" ;
+    OS << "    accessor::put(p, m.code);\n" ;
+    OS << "    accessor::put(p, m.text);\n" ;
+    OS << "  }\n" ;
+    OS << "  static std::size_t decode(P *p, ERROR &m)\n";
+    OS << "  {\n" ;
+    OS << "    accessor::get(p, m.code);\n" ;
+    OS << "    accessor::get(p, m.text);\n" ;
+    OS << "  }\n\n" ;
+  }
+
+  /*
+  // static void parse (P *p, Context *ctx)
+  OS << "  template < class Message, class Context >\n" ;
+  OS << "  static void parse(P *p, Context *ctx)\n" ;
+  OS << "  {\n" ;
+  OS << "    Message m;\n" ;
+  OS << "    decode(p, m);\n" ;
+  OS << "    p->process_message(ctx, m);\n" ;
+  OS << "  }\n\n" ;
+
+  // static bool parse (P *p, Context *ctx, tag t)
+  OS << "  template < class Context >\n" ;
+  OS << "  static bool parse(P *p, Context *ctx, tag t)\n" ;
+  OS << "  {\n" ;
+  OS << "    switch (t) {\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto S = M->getName();
+    OS << "    case tag::"<<S<<": parse<"<<S<<">(p, ctx); return true; \n";
+  }
+  if (!HasUserDefinedErrorMessage)
+    OS << "    case tag::error: parse<ERROR>(p, ctx); return true; \n";
+  OS << "    }\n" ;
+  OS << "    return false;\n" ;
+  OS << "  }\n" ;
+  */
+  OS << "\n" ;
+  OS << "private:\n" ;
+  OS << "  codec() = delete;\n" ;
+  OS << "  ~codec() = delete;\n" ;
+  OS << "  void operator=(const codec &) = delete;\n" ;
+  OS << "}; // end struct codec\n\n" ;
+
+  // The "protocol" definition.
+  OS << "struct protocol : base_protocol<protocol, codec>\n" ;
+  OS << "{\n" ;
+  OS << "  explicit protocol(int type) : base_protocol(type) {}\n" ;
+  OS << "}; // end struct protocol\n\n" ;
+
+  // The "request_processor" definition.
+  OS << "struct request_processor : base_processor<request_processor, codec>\n" ;
+  OS << "{\n" ;
+  OS << "  explicit request_processor(int type) : base_processor(type) {}\n" ;
+  OS << "\n" ;
+  OS << "  template <class Context>\n" ;
+  OS << "  bool wait_process_request(Context *C) { " ;
+  OS << ReceivingCode ;
+  OS << "    switch (tag) {\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "    case ::tag::"<<Req->getName()<<":\n" ;
+    OS << "    {\n" ;
+    OS << "      "<<Req->getName()<<" Q;\n" ;
+    OS << "      "<<Rep->getName()<<" P;\n" ;
+    OS << "      codec::decode(this, Q);\n";
+    OS << "      on_request(Q, P);\n" ;
+    OS << "      int rc = base_processor::send(P);\n" ;
+    OS << "      return rc == 0;\n" ;
+    OS << "    }\n" ;
+  }
+  OS << "    default:\n" ;
+  OS << "    {\n" ;
+  OS << "      ERROR P = make_error(-2, \"bad\");\n" ;
+  OS << "      on_bad_request();\n" ;
+  OS << "      int rc = base_processor::send(P);\n" ;
+  OS << "      return rc == 0;\n" ;
+  OS << "    }\n" ;
+  if (!HasUserDefinedErrorMessage) {
+    // TODO: ...
+  }
+  OS << "    }\n" ;
+  OS << "    return false;\n" ;
+  OS << "  }\n" ;
+  OS << "\n" ;
+  OS << "protected:\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "  virtual void on_request(const "<<Req->getName()<<" &Req, "
+       << Rep->getName() << " &Rep) {}\n" ;
+  }
+  OS << "\n" ;
+  OS << "  virtual void on_bad_request() {}\n" ;
+  OS << "\n" ;
+  OS << "private:\n" ;
+  OS << "  ERROR make_error(Uint16 n, const char *s) {\n" ;
+  if (!HasUserDefinedErrorMessage) {
+    OS << "    return ERROR{ n, s };\n" ;
+  } else {
+    OS << "    ERROR E;\n" ;
+    OS << "    // TODO: init E;\n" ;
+    OS << "    return E;\n" ;
+  }
+  OS << "  }\n" ;
+  /*
+  OS << "\n" ;
+  OS << "  friend codec;\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto S = M->getName();
+    OS << "  template<class C>" ;
+    OS << " void process_message(C*, const "<<S<<" &Q) {\n" ;
+    auto C = 0;
+    for (auto P : Protocols) {
+      auto Req = P->getValueAsDef("REQ");
+      auto Rep = P->getValueAsDef("REP");
+      if (Req != M && Rep != M) continue;
+      if (Req == M) {
+        OS << "    {\n" ;
+        OS << "      "<<Rep->getName()<<" P;\n" ;
+        OS << "      on_request(Q, P);\n" ;
+        OS << "      base_processor::send(P);\n" ;
+        OS << "    }\n" ;
+        C += 1;
+      }
+    }
+    if (C == 0) {
+      OS << "    {\n" ;
+      OS << "      ERROR P = make_error(-1, \"bad\");\n" ;
+      OS << "      on_bad_request();\n" ;
+      OS << "      base_processor::send(P);\n" ;
+      OS << "    }\n" ;
+    }
+    OS << "  }\n" ;
+  }
+  if (!HasUserDefinedErrorMessage) {
+    OS << "  template<class C>" ;
+    OS << " void process_message(C*, const ERROR &E) {\n" ;
+    OS << "      ERROR P = make_error(-2, \"bad\");\n" ;
+    OS << "      on_bad_request();\n" ;
+    OS << "      base_processor::send(P);\n" ;
+    OS << "  }\n" ;
+  }
+  */
+  OS << "}; // end struct request_processor\n\n" ;
+
+  // The "reply_processor" definition.
+  OS << "struct reply_processor : base_processor<reply_processor, codec>\n" ;
+  OS << "{\n" ;
+  OS << "  explicit reply_processor(int type) : base_processor(type) {}\n" ;
+  OS << "\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    OS << "  auto send(const "<<Req->getName()<<"&Q) {" ;
+    OS << " return base_processor::send(Q); }\n" ;
+  }
+  OS << "\n" ;
+  OS << "  template <class Context>\n" ;
+  OS << "  bool wait_process_reply(Context *C) { " ;
+  OS << ReceivingCode ;
+  OS << "    switch (tag) {\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "    case ::tag::"<<Req->getName()<<":\n" ;
+    OS << "    {\n" ;
+    OS << "      "<<Rep->getName()<<" P;\n" ;
+    OS << "      codec::decode(this, P);\n";
+    OS << "      on_reply(P);\n" ;
+    OS << "      return true;\n" ;
+    OS << "    }\n" ;
+  }
+  OS << "    default:\n" ;
+  OS << "      on_bad_reply(tag);\n" ;
+  OS << "    }\n" ;
+  OS << "    return false;\n" ;
+  OS << "  }\n" ;
+  OS << "\n" ;
+  OS << "protected:\n" ;
+  for (auto P : Protocols) {
+    auto Req = P->getValueAsDef("REQ");
+    auto Rep = P->getValueAsDef("REP");
+    OS << "  virtual void on_reply(const "<<Rep->getName()<<" &Rep) {}\n" ;
+  }
+  if (true /*!HasUserDefinedErrorMessage*/) {
+    OS << "  virtual void on_reply(const ERROR &E) {}\n" ;
+  }
+  OS << "\n" ;
+  OS << "  virtual void on_bad_reply(tag t) {}\n" ;
+  /*
+  OS << "\n" ;
+  OS << "private:\n" ;
+  OS << "  friend codec;\n" ;
+  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
+    auto M = Messages[MI];
+    auto S = M->getName();
+    OS << "  template<class C>" ;
+    OS << " void process_message(C*, const "<<S<<" &P) {\n" ;
+    auto C = 0;
+    for (auto P : Protocols) {
+      auto Req = P->getValueAsDef("REQ");
+      auto Rep = P->getValueAsDef("REP");
+      if (Req != M && Rep != M) continue;
+      if (Rep == M) {
+        OS << "    on_reply(P);\n" ;
+        C += 1;
+      }
+    }
+    if (C == 0) {
+      OS << "    on_bad_reply();\n" ;
+    }
+    OS << "  }\n" ;
+  }
+  */
+  if (true /*!HasUserDefinedErrorMessage*/) {
+    /*
+    OS << "  template<class C>" ;
+    OS << " void process_message(C*, const ERROR &E) {\n" ;
+    OS << "    on_reply(E);\n" ;
+    OS << "  }\n" ;
+    */
+  }
+  OS << "}; // end struct reply_processor\n\n" ;
+}
+
+} // end anonymous namespace
+
+static inline void sortMessages(std::vector<Record*> &Messages)
+{
+  std::sort(Messages.begin(), Messages.end(), [](Record *A, Record *B){
+      return A->getValueAsInt("ID") < B->getValueAsInt("ID");
+    });
+}
+
+namespace lyre
+{
+  void EmitMessagingDriverCC(RecordKeeper &Records, raw_ostream &OS)
+  {
+    std::vector<Record*> Protocols = Records.getAllDerivedDefinitions("Protocol");
+    std::vector<Record*> Machines = Records.getAllDerivedDefinitions("StateMachine");
+    std::vector<Record*> Messages = Records.getAllDerivedDefinitions("Message");
+    std::vector<Record*> States = Records.getAllDerivedDefinitions("State");
+    std::vector<Record*> Events = Records.getAllDerivedDefinitions("Event");
+
+    emitSourceFileHeader("The Protocol Engine.", OS);
+    
+    sortMessages(Messages);
+    
+    auto & Namespace = getOptNamespace();
+    auto & SharedHeader = getOptSharedHeader();
+
+    if (!SharedHeader.empty())
+      OS << "#include \"" << SharedHeader << "\"\n" ;
+
+    if (!Namespace.empty())
+      OS << "using namespace " << Namespace << ";\n" ;
+
+    OS << BaseCode ;
 
     if (SharedHeader.empty())
-      emitMessageStructs(Messages, OS);    
-    
+      emitMessageStructs(Messages, OS);
+
     emitProtocols(Protocols, Messages, OS);
     
     OS << "} // end anonymous namespace\n" ;
