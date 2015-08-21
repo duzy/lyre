@@ -14,12 +14,16 @@ namespace
   typedef void (*EmitterFn)(RecordKeeper &Records, raw_ostream &OS);
 
   enum ActionName {
+    GenMessagingDriverCC_deprecated,
+    GenMessagingDriverHH_deprecated,
     GenMessagingDriverCC,
     GenMessagingDriverHH,
     GenMessagingDriverJ,
   };
 
   static EmitterFn Emitters[] = {
+    EmitMessagingDriverCC_deprecated,
+    EmitMessagingDriverHH_deprecated,
     EmitMessagingDriverCC,
     EmitMessagingDriverHH,
     EmitMessagingDriverJ,
@@ -28,6 +32,10 @@ namespace
   cl::opt<ActionName> Action(cl::desc("Actions to perform:"), 
       cl::values
       (
+       clEnumValN(GenMessagingDriverCC_deprecated, "gen-messaging-driver-cc-deprecated",
+           "Generate messaging driver."),
+       clEnumValN(GenMessagingDriverHH_deprecated, "gen-messaging-driver-hh-deprecated",
+           "Generate messaging driver header."),
        clEnumValN(GenMessagingDriverCC, "gen-messaging-driver-cc",
            "Generate messaging driver."),
        clEnumValN(GenMessagingDriverHH, "gen-messaging-driver-hh",

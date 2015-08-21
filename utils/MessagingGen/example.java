@@ -160,11 +160,66 @@ public class example
       System.out.println("client: stop");
     }
   };
+
+  static class TestX extends Thread
+  {
+    ZMQ.Context context = null;
+    
+    TestX(ZMQ.Context c) { context = c; }
+
+    @Override
+    public void run()
+    {
+      System.out.println("client: start");
+      try (
+           Socket socket = context.socket(ZMQ.REQ);
+           messaging.ReplyProcessor client = new messaging.ReplyProcessor(socket)
+             {
+               protected void onReply(Message.nothing P) {
+                 System.out.println("reply: nothing");
+               }
+               protected void onReply(Message.pong P) {
+                 System.out.println("reply: pong.text = "+P.text);
+               }
+               protected void onReply(Message.ping P) {
+                 System.out.println("reply: ping.text = "+P.text);
+               }
+               protected void onReply(Message.welcome P) {
+                 System.out.println("reply: welcome.token = "+P.token+", welcome.time = "+P.time);
+               }
+             };
+           ) {
+        socket.connect("tcp://localhost:18888");
+        
+        Message.nothing m = new Message.nothing();
+        if (client.send(m) == false) System.out.println("E: send request failed");
+        System.out.println("client: sent: "+m);
+        if (client.waitProcessReply() == false) System.out.println("E: wait reply failed");
+
+        Message.ping ping = new Message.ping();
+        ping.text = "ping";
+        if (client.send(ping) == false) System.out.println("E: send request failed");
+        System.out.println("client: sent: "+ping);
+        if (client.waitProcessReply() == false) System.out.println("E: wait reply failed");
+
+        Message.hello hello = new Message.hello();
+        hello.token = "hello-token";
+        if (client.send(hello) == false) System.out.println("E: send request failed");
+        System.out.println("client: sent: "+hello);
+        if (client.waitProcessReply() == false) System.out.println("E: wait reply failed");
+      } catch (Exception e) {
+        System.out.println("E: reply: "+e);
+        e.printStackTrace();
+      }
+      System.out.println("client: stop");
+    }
+  };
   
   public static void main(String[] args) throws Exception 
   {
     ZMQ.Context context = ZMQ.context(5);
-    
+
+    /*
     new TestProtoClient(context).start();
     new TestProtoServer(context).start();
 
@@ -179,6 +234,16 @@ public class example
     // Run for 2 seconds
     Thread.sleep(2 * 1000);
 
+    System.out.println("-------------------------");
+    */
+    
+    new TestX(context).start();
+
+    // Run for 3 seconds
+    Thread.sleep(3 * 1000);
+
+    System.out.println("-------------------------");
+    
     context.close();
 
     System.out.println("done");
