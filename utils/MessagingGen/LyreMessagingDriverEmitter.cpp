@@ -905,25 +905,25 @@ namespace lyre
     OS << "struct responder : request_processor { using request_processor::request_processor; };\n" ;
     OS << "struct requester : reply_processor { using reply_processor::reply_processor; };\n" ;
     OS << "\n" ;
-    OS << "MessageResponder::MessageResponder(int type) : processor(new responder(type)) {}\n" ;
-    OS << "MessageResponder::~MessageResponder() { delete processor; }\n" ;
+    OS << "MessageResponder::MessageResponder(int type) : Base(new responder(type)) {}\n" ;
+    OS << "MessageResponder::~MessageResponder() { delete Base; }\n" ;
     for (auto P : Protocols) {
       auto Rep = P->getValueAsDef("REP");
-      OS << "int MessageResponder::send(const "<<Rep->getName()<<"&P) { return processor->send(P); }\n" ;
+      OS << "int MessageResponder::send(const "<<Rep->getName()<<"&P) { return Base->send(P); }\n" ;
     }
-    OS << "bool MessageResponder::wait_request() { return processor->wait_process_request(this); }\n" ;
-    OS << "void MessageResponder::bind(const std::initializer_list<std::string> &&a) { processor->bind_many(a.begin(), a.end()); }\n" ;
-    OS << "void MessageResponder::connect(const std::initializer_list<std::string> &&a) { processor->connect_many(a.begin(), a.end()); };\n" ;
+    OS << "bool MessageResponder::wait_request() { return Base->wait_process_request(this); }\n" ;
+    OS << "void MessageResponder::bind(const std::initializer_list<std::string> &&a) { Base->bind_many(a.begin(), a.end()); }\n" ;
+    OS << "void MessageResponder::connect(const std::initializer_list<std::string> &&a) { Base->connect_many(a.begin(), a.end()); };\n" ;
     OS << "\n" ;
-    OS << "MessageRequester::MessageRequester(int type) : processor(new requester(type)) {}\n" ;
-    OS << "MessageRequester::~MessageRequester() { delete processor; }\n" ;
+    OS << "MessageRequester::MessageRequester(int type) : Base(new requester(type)) {}\n" ;
+    OS << "MessageRequester::~MessageRequester() { delete Base; }\n" ;
     for (auto P : Protocols) {
       auto Req = P->getValueAsDef("REQ");
-      OS << "int MessageRequester::send(const "<<Req->getName()<<"&Q) { return processor->send(Q); }\n" ;
+      OS << "int MessageRequester::send(const "<<Req->getName()<<"&Q) { return Base->send(Q); }\n" ;
     }
-    OS << "bool MessageRequester::wait_reply() { return processor->wait_process_reply(this); }\n" ;
-    OS << "void MessageRequester::bind(const std::initializer_list<std::string> &&a) { processor->bind_many(a.begin(), a.end()); }\n" ;
-    OS << "void MessageRequester::connect(const std::initializer_list<std::string> &&a) { processor->connect_many(a.begin(), a.end()); };\n" ;
+    OS << "bool MessageRequester::wait_reply() { return Base->wait_process_reply(this); }\n" ;
+    OS << "void MessageRequester::bind(const std::initializer_list<std::string> &&a) { Base->bind_many(a.begin(), a.end()); }\n" ;
+    OS << "void MessageRequester::connect(const std::initializer_list<std::string> &&a) { Base->connect_many(a.begin(), a.end()); };\n" ;
     if (!Namespace.empty()) OS << "} // end namespace " << Namespace << ";\n" ;
   }
 
@@ -986,7 +986,7 @@ namespace lyre
     }
     OS << "\n" ;
     OS << "private:\n" ;
-    OS << "  struct responder *processor;\n" ;
+    OS << "  struct responder *Base;\n" ;
     OS << "  MessageResponder(const MessageResponder &) = delete;\n" ;
     OS << "  void operator=(const MessageResponder &) = delete;\n" ;
     OS << "};\n" ;
@@ -1017,7 +1017,7 @@ namespace lyre
     }
     OS << "\n" ;
     OS << "private:\n" ;
-    OS << "  struct requester *processor;\n" ;
+    OS << "  struct requester *Base;\n" ;
     OS << "  MessageRequester(const MessageRequester &) = delete;\n" ;
     OS << "  void operator=(const MessageRequester &) = delete;\n" ;
     OS << "};\n" ;
