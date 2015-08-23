@@ -1,12 +1,14 @@
-#include "example.cc"
+#include "example.hh"
 #include <thread>
 #include <chrono>
-#include <zmq.h>
 #include <iostream>
+#include <zmq.h>
 
+using namespace example;
+
+#if 0
 static void test_protocol()
 {
-  /*
   std::thread tP([] {
       protocol proto(ZMQ_REP);
       proto.bind({ "inproc://example-protocol" });
@@ -43,31 +45,31 @@ static void test_protocol()
 
   tQ.join();
   tP.join();
-  */
 }
+#endif
 
 static void test_processors()
 {
   std::thread tP([] {
-      request_processor processor(ZMQ_REP);
+      MessageResponder processor(ZMQ_REP);
       processor.bind({ "inproc://example-processor" });
-      processor.wait_process_request();
+      processor.wait_request();
     });
 
   std::thread tQ([] {
-      reply_processor processor(ZMQ_REQ);
+      MessageRequester processor(ZMQ_REQ);
       processor.connect({ "inproc://example-processor" });
-      processor.send(nothing());
+      processor.send(example::nothing());
     });
 
   tQ.join();
   tP.join();
 }
 
-struct server : request_processor
+struct server : MessageResponder
 {
-  server() : request_processor(ZMQ_REP) {}
-protected:
+  server() : MessageResponder(ZMQ_REP) {}
+
   void on_request(const nothing &Q, nothing &P) override
   {
     std::clog << "request: nothing" << std::endl;
@@ -89,10 +91,10 @@ protected:
   }
 };
 
-struct client : reply_processor
+struct client : MessageRequester
 {
-  client() : reply_processor(ZMQ_REQ) {}
-protected:
+  client() : MessageRequester(ZMQ_REQ) {}
+
   void on_reply(const nothing &m) override
   {
     std::clog << "reply: nothing" << std::endl;
@@ -116,10 +118,10 @@ static void test_processors_2()
   std::thread tP([] {
       server S;
       S.bind({ "inproc://example-processor-2" });
-      S.wait_process_request();
-      S.wait_process_request();
-      S.wait_process_request();
-      S.wait_process_request();
+      S.wait_request();
+      S.wait_request();
+      S.wait_request();
+      S.wait_request();
     });
 
   std::thread tQ([] {
@@ -127,16 +129,16 @@ static void test_processors_2()
       C.connect({ "inproc://example-processor-2" });
 
       C.send(nothing());
-      C.wait_process_reply();
+      C.wait_reply();
 
       C.send(ping{ "example-ping" });
-      C.wait_process_reply();
+      C.wait_reply();
 
       C.send(pong{ "example-pong" });
-      C.wait_process_reply();
+      C.wait_reply();
 
       C.send(hello{ "example-hello" });
-      C.wait_process_reply();
+      C.wait_reply();
     });
 
   tQ.join();
@@ -153,9 +155,9 @@ int main(int argc, char **argv)
 
   server S;
   S.bind({ "tcp://127.0.0.1:18888" });
-  S.wait_process_request();
-  S.wait_process_request();
-  S.wait_process_request();
+  S.wait_request();
+  S.wait_request();
+  S.wait_request();
   
   std::clog << "------------------------=" << std::endl;
   return 0;

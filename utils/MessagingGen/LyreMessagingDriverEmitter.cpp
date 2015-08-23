@@ -584,7 +584,7 @@ static const char * const ReceivingCode = R"***(//"
       return false;
     }
       
-    auto tag = typename codec::tag_t(this->template get<typename codec::tag_value_t>());
+    auto id = typename codec::tag_t(this->template get<typename codec::tag_value_t>());
 )***";//"
 
 using namespace llvm;
@@ -683,7 +683,8 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   }
   if (!HasUserDefinedErrorMessage)
     OS << "  error = " << ErrorID << "\n";
-  OS << "};\n\n" ;
+  OS << "};\n" ;
+  OS << "\n" ;
 
   OS << "using ERROR = struct error;\n\n" ;
   OS << "constexpr std::size_t tag_size = sizeof(tag);\n\n" ;
@@ -757,66 +758,32 @@ void emitProtocols(const std::vector<Record*> &Protocols,
     OS << "    accessor::get(p, m.text);\n" ;
     OS << "  }\n\n" ;
   }
-
-  /*
-  // static void parse (P *p, Context *ctx)
-  OS << "  template < class Message, class Context >\n" ;
-  OS << "  static void parse(P *p, Context *ctx)\n" ;
-  OS << "  {\n" ;
-  OS << "    Message m;\n" ;
-  OS << "    decode(p, m);\n" ;
-  OS << "    p->process_message(ctx, m);\n" ;
-  OS << "  }\n\n" ;
-
-  // static bool parse (P *p, Context *ctx, tag t)
-  OS << "  template < class Context >\n" ;
-  OS << "  static bool parse(P *p, Context *ctx, tag t)\n" ;
-  OS << "  {\n" ;
-  OS << "    switch (t) {\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto S = M->getName();
-    OS << "    case tag::"<<S<<": parse<"<<S<<">(p, ctx); return true; \n";
-  }
-  if (!HasUserDefinedErrorMessage)
-    OS << "    case tag::error: parse<ERROR>(p, ctx); return true; \n";
-  OS << "    }\n" ;
-  OS << "    return false;\n" ;
-  OS << "  }\n" ;
-  */
   OS << "\n" ;
   OS << "private:\n" ;
   OS << "  codec() = delete;\n" ;
   OS << "  ~codec() = delete;\n" ;
   OS << "  void operator=(const codec &) = delete;\n" ;
-  OS << "}; // end struct codec\n\n" ;
+  OS << "}; // end struct codec\n" ;
+  OS << "\n" ;
 
+#if 0
   // The "protocol" definition.
   OS << "struct protocol : base_protocol<protocol, codec>\n" ;
   OS << "{\n" ;
   OS << "  explicit protocol(int type) : base_protocol(type) {}\n" ;
-  OS << "}; // end struct protocol\n\n" ;
+  OS << "}; // end struct protocol\n" ;
+  OS << "\n" ;
+#endif
 
   // The "request_processor" definition.
-  OS << "struct request_processor : base_processor<request_processor, codec>, MessageResponder\n" ;
+  OS << "struct request_processor : base_processor<request_processor, codec>\n" ;
   OS << "{\n" ;
   OS << "  explicit request_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
-  OS << "  virtual void bind(const std::initializer_list<std::string> &&a) override { base_processor::bind_many(a.begin(), a.end()); }\n" ;
-  OS << "  virtual void connect(const std::initializer_list<std::string> &&a) override { base_processor::connect_many(a.begin(), a.end()); };\n" ;
-  OS << "\n" ;
-  for (auto P : Protocols) {
-    auto Rep = P->getValueAsDef("REP");
-    OS << "  virtual int send(const "<<Rep->getName()<<"&P) override {" ;
-    OS << " return base_processor::send(P); }\n" ;
-  }
-  OS << "\n" ;
-  OS << "  virtual bool wait_request() { return wait_process_request(); };\n" ;
-  OS << "\n" ;
-  OS << "  bool wait_process_request()\n" ;
+  OS << "  bool wait_process_request(MessageResponder *H)\n" ;
   OS << "  { " ;
   OS << ReceivingCode ;
-  OS << "    switch (tag) {\n" ;
+  OS << "    switch (id) {\n" ;
   for (auto P : Protocols) {
     auto Req = P->getValueAsDef("REQ");
     auto Rep = P->getValueAsDef("REP");
@@ -825,7 +792,7 @@ void emitProtocols(const std::vector<Record*> &Protocols,
     OS << "      "<<Req->getName()<<" Q;\n" ;
     OS << "      "<<Rep->getName()<<" P;\n" ;
     OS << "      codec::decode(this, Q);\n";
-    OS << "      on_request(Q, P);\n" ;
+    OS << "      H->on_request(Q, P);\n" ;
     OS << "      int rc = base_processor::send(P);\n" ;
     OS << "      return rc == 0;\n" ;
     OS << "    }\n" ;
@@ -833,7 +800,7 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "    default:\n" ;
   OS << "    {\n" ;
   OS << "      ERROR P = make_error(-2, \"bad\");\n" ;
-  OS << "      //on_bad_request(tag);\n" ;
+  OS << "      //on_bad_request(id);\n" ;
   OS << "      int rc = base_processor::send(P);\n" ;
   OS << "      return rc == 0;\n" ;
   OS << "    }\n" ;
@@ -844,18 +811,6 @@ void emitProtocols(const std::vector<Record*> &Protocols,
   OS << "    return false;\n" ;
   OS << "  }\n" ;
   OS << "\n" ;
-  /*
-  OS << "protected:\n" ;
-  for (auto P : Protocols) {
-    auto Req = P->getValueAsDef("REQ");
-    auto Rep = P->getValueAsDef("REP");
-    OS << "  virtual void on_request(const "<<Req->getName()<<" &Req, "
-       << Rep->getName() << " &Rep) {}\n" ;
-  }
-  OS << "\n" ;
-  OS << "  virtual void on_bad_request(tag t) {}\n" ;
-  OS << "\n" ;
-  */
   OS << "private:\n" ;
   OS << "  ERROR make_error(Uint16 n, const char *s) {\n" ;
   if (!HasUserDefinedErrorMessage) {
@@ -866,69 +821,18 @@ void emitProtocols(const std::vector<Record*> &Protocols,
     OS << "    return E;\n" ;
   }
   OS << "  }\n" ;
-  /*
-  OS << "\n" ;
-  OS << "  friend codec;\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto S = M->getName();
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, const "<<S<<" &Q) {\n" ;
-    auto C = 0;
-    for (auto P : Protocols) {
-      auto Req = P->getValueAsDef("REQ");
-      auto Rep = P->getValueAsDef("REP");
-      if (Req != M && Rep != M) continue;
-      if (Req == M) {
-        OS << "    {\n" ;
-        OS << "      "<<Rep->getName()<<" P;\n" ;
-        OS << "      on_request(Q, P);\n" ;
-        OS << "      base_processor::send(P);\n" ;
-        OS << "    }\n" ;
-        C += 1;
-      }
-    }
-    if (C == 0) {
-      OS << "    {\n" ;
-      OS << "      ERROR P = make_error(-1, \"bad\");\n" ;
-      OS << "      on_bad_request();\n" ;
-      OS << "      base_processor::send(P);\n" ;
-      OS << "    }\n" ;
-    }
-    OS << "  }\n" ;
-  }
-  if (!HasUserDefinedErrorMessage) {
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, const ERROR &E) {\n" ;
-    OS << "      ERROR P = make_error(-2, \"bad\");\n" ;
-    OS << "      on_bad_request();\n" ;
-    OS << "      base_processor::send(P);\n" ;
-    OS << "  }\n" ;
-  }
-  */
   OS << "}; // end struct request_processor\n\n" ;
   OS << "\n" ;
 
   // The "reply_processor" definition.
-  OS << "struct reply_processor : base_processor<reply_processor, codec>, MessageRequester\n" ;
+  OS << "struct reply_processor : base_processor<reply_processor, codec>\n" ;
   OS << "{\n" ;
   OS << "  explicit reply_processor(int type) : base_processor(type) {}\n" ;
   OS << "\n" ;
-  OS << "  virtual void bind(const std::initializer_list<std::string> &&a) override { base_processor::bind_many(a.begin(), a.end()); }\n" ;
-  OS << "  virtual void connect(const std::initializer_list<std::string> &&a) override { base_processor::connect_many(a.begin(), a.end()); };\n" ;
-  OS << "\n" ;
-  for (auto P : Protocols) {
-    auto Req = P->getValueAsDef("REQ");
-    OS << "  virtual int send(const "<<Req->getName()<<"&Q) override {" ;
-    OS << " return base_processor::send(Q); }\n" ;
-  }
-  OS << "\n" ;
-  OS << "  virtual bool wait_reply() override { return wait_process_reply(); }\n" ;
-  OS << "\n" ;
-  OS << "  bool wait_process_reply()\n" ;
+  OS << "  bool wait_process_reply(MessageRequester *H)\n" ;
   OS << "  { " ;
   OS << ReceivingCode ;
-  OS << "    switch (tag) {\n" ;
+  OS << "    switch (id) {\n" ;
   for (auto P : Protocols) {
     auto Req = P->getValueAsDef("REQ");
     auto Rep = P->getValueAsDef("REP");
@@ -936,64 +840,19 @@ void emitProtocols(const std::vector<Record*> &Protocols,
     OS << "    {\n" ;
     OS << "      "<<Rep->getName()<<" P;\n" ;
     OS << "      codec::decode(this, P);\n";
-    OS << "      on_reply(P);\n" ;
+    OS << "      H->on_reply(P);\n" ;
     OS << "      return true;\n" ;
     OS << "    }\n" ;
   }
   OS << "    default:\n" ;
-  OS << "      //on_bad_reply(tag);\n" ;
+  OS << "      //H->on_bad_reply(id);\n" ;
   OS << "      break;\n" ;
   OS << "    }\n" ;
   OS << "    return false;\n" ;
   OS << "  }\n" ;
   OS << "\n" ;
-  /*
-  OS << "protected:\n" ;
-  for (auto P : Protocols) {
-    auto Req = P->getValueAsDef("REQ");
-    auto Rep = P->getValueAsDef("REP");
-    OS << "  virtual void on_reply(const "<<Rep->getName()<<" &Rep) {}\n" ;
-  }
-  */
   if (true /*!HasUserDefinedErrorMessage*/) {
     //OS << "  virtual void on_reply(const ERROR &E) {}\n" ;
-  }
-  /*
-  OS << "\n" ;
-  OS << "  virtual void on_bad_reply(tag t) {}\n" ;
-  */
-  /*
-  OS << "\n" ;
-  OS << "private:\n" ;
-  OS << "  friend codec;\n" ;
-  for (std::size_t MI = 0, MS = Messages.size(); MI < MS; ++MI) {
-    auto M = Messages[MI];
-    auto S = M->getName();
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, const "<<S<<" &P) {\n" ;
-    auto C = 0;
-    for (auto P : Protocols) {
-      auto Req = P->getValueAsDef("REQ");
-      auto Rep = P->getValueAsDef("REP");
-      if (Req != M && Rep != M) continue;
-      if (Rep == M) {
-        OS << "    on_reply(P);\n" ;
-        C += 1;
-      }
-    }
-    if (C == 0) {
-      OS << "    on_bad_reply();\n" ;
-    }
-    OS << "  }\n" ;
-  }
-  */
-  if (true /*!HasUserDefinedErrorMessage*/) {
-    /*
-    OS << "  template<class C>" ;
-    OS << " void process_message(C*, const ERROR &E) {\n" ;
-    OS << "    on_reply(E);\n" ;
-    OS << "  }\n" ;
-    */
   }
   OS << "}; // end struct reply_processor\n\n" ;
   OS << "\n" ;
@@ -1036,17 +895,35 @@ namespace lyre
     if (SharedHeader.empty())
       emitMessageStructs(Messages, OS);
 
+    OS << "\n" ;
+
     emitProtocols(Protocols, Messages, OS);
     
     OS << "} // end anonymous namespace\n" ;
     OS << "\n" ;
     if (!Namespace.empty()) OS << "namespace " << Namespace << " {\n" ;
-    OS << "std::unique_ptr<MessageResponder> MessageResponder::create(int type) {\n" ;
-    OS << "  return std::unique_ptr<MessageResponder>(new request_processor(type));\n" ;
-    OS << "}\n" ;
-    OS << "std::unique_ptr<MessageRequester> MessageRequester::create(int type) {\n" ;
-    OS << "  return std::unique_ptr<MessageRequester>(new reply_processor(type));\n" ;
-    OS << "}\n" ;
+    OS << "struct responder : request_processor { using request_processor::request_processor; };\n" ;
+    OS << "struct requester : reply_processor { using reply_processor::reply_processor; };\n" ;
+    OS << "\n" ;
+    OS << "MessageResponder::MessageResponder(int type) : processor(new responder(type)) {}\n" ;
+    OS << "MessageResponder::~MessageResponder() { delete processor; }\n" ;
+    for (auto P : Protocols) {
+      auto Rep = P->getValueAsDef("REP");
+      OS << "int MessageResponder::send(const "<<Rep->getName()<<"&P) { return processor->send(P); }\n" ;
+    }
+    OS << "bool MessageResponder::wait_request() { return processor->wait_process_request(this); }\n" ;
+    OS << "void MessageResponder::bind(const std::initializer_list<std::string> &&a) { processor->bind_many(a.begin(), a.end()); }\n" ;
+    OS << "void MessageResponder::connect(const std::initializer_list<std::string> &&a) { processor->connect_many(a.begin(), a.end()); };\n" ;
+    OS << "\n" ;
+    OS << "MessageRequester::MessageRequester(int type) : processor(new requester(type)) {}\n" ;
+    OS << "MessageRequester::~MessageRequester() { delete processor; }\n" ;
+    for (auto P : Protocols) {
+      auto Req = P->getValueAsDef("REQ");
+      OS << "int MessageRequester::send(const "<<Req->getName()<<"&Q) { return processor->send(Q); }\n" ;
+    }
+    OS << "bool MessageRequester::wait_reply() { return processor->wait_process_reply(this); }\n" ;
+    OS << "void MessageRequester::bind(const std::initializer_list<std::string> &&a) { processor->bind_many(a.begin(), a.end()); }\n" ;
+    OS << "void MessageRequester::connect(const std::initializer_list<std::string> &&a) { processor->connect_many(a.begin(), a.end()); };\n" ;
     if (!Namespace.empty()) OS << "} // end namespace " << Namespace << ";\n" ;
   }
 
@@ -1088,37 +965,48 @@ namespace lyre
 
     OS << "struct MessageResponder : MessagingWorker\n" ;
     OS << "{\n" ;
-    OS << "  static std::unique_ptr<MessageResponder> create(int type);\n" ;
+    OS << "  explicit MessageResponder(int type);\n" ;
+    OS << "  ~MessageResponder();\n" ;
+    OS << "\n" ;
+    OS << "  virtual void bind(const std::initializer_list<std::string> &&a) override;\n" ;
+    OS << "  virtual void connect(const std::initializer_list<std::string> &&a) override;\n" ;
     OS << "\n" ;
     for (auto P : Protocols) {
       auto Rep = P->getValueAsDef("REP");
-      OS << "  virtual int send(const "<<Rep->getName()<<"&P) = 0;\n" ;
+      OS << "  int send(const "<<Rep->getName()<<"&P);\n" ;
     }
     OS << "\n" ;
-    OS << "  virtual bool wait_request() = 0;\n" ;
+    OS << "  bool wait_request();\n" ;
     OS << "\n" ;
-    OS << "protected:\n" ;
     for (auto P : Protocols) {
       auto Req = P->getValueAsDef("REQ");
       auto Rep = P->getValueAsDef("REP");
       OS << "  virtual void on_request(const "<<Req->getName()<<" &Req, "
          << Rep->getName() << " &Rep) {}\n" ;
     }
+    OS << "\n" ;
+    OS << "private:\n" ;
+    OS << "  struct responder *processor;\n" ;
+    OS << "  MessageResponder(const MessageResponder &) = delete;\n" ;
+    OS << "  void operator=(const MessageResponder &) = delete;\n" ;
     OS << "};\n" ;
     OS << "\n" ;
     
     OS << "struct MessageRequester : MessagingWorker\n" ;
     OS << "{\n" ;
-    OS << "  static std::unique_ptr<MessageRequester> create(int type);\n" ;
+    OS << "  explicit MessageRequester(int type);\n" ;
+    OS << "  ~MessageRequester();\n" ;
+    OS << "\n" ;
+    OS << "  virtual void bind(const std::initializer_list<std::string> &&a) override;\n" ;
+    OS << "  virtual void connect(const std::initializer_list<std::string> &&a) override;\n" ;
     OS << "\n" ;
     for (auto P : Protocols) {
       auto Req = P->getValueAsDef("REQ");
-      OS << "  virtual int send(const "<<Req->getName()<<"&Q) = 0;\n" ;
+      OS << "  int send(const "<<Req->getName()<<"&Q);\n" ;
     }
     OS << "\n" ;
-    OS << "  virtual bool wait_reply() = 0;\n" ;
+    OS << "  bool wait_reply();\n" ;
     OS << "\n" ;
-    OS << "protected:\n" ;
     for (auto P : Protocols) {
       auto Req = P->getValueAsDef("REQ");
       auto Rep = P->getValueAsDef("REP");
@@ -1127,6 +1015,11 @@ namespace lyre
     if (true /*!HasUserDefinedErrorMessage*/) {
       OS << "  virtual void on_reply(const struct error &E) {}\n" ;
     }
+    OS << "\n" ;
+    OS << "private:\n" ;
+    OS << "  struct requester *processor;\n" ;
+    OS << "  MessageRequester(const MessageRequester &) = delete;\n" ;
+    OS << "  void operator=(const MessageRequester &) = delete;\n" ;
     OS << "};\n" ;
     OS << "\n" ;
 

@@ -34,7 +34,7 @@ test:
 	@$(LLVMTableGen) -print-records example.td
 
 example: example_main.cpp example.cc
-	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $< -lzmq -lpthread
+	$(CXX) -std=c++1y -I$(BOOST_ROOT) -DBOOST_ERROR_CODE_HEADER_ONLY -o $@ $^ -lzmq -lpthread
 
 com/lyrecode/example.class: example.java messaging.java
 	@mkdir -p classes
