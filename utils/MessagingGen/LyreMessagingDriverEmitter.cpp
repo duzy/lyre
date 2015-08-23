@@ -901,7 +901,7 @@ namespace lyre
     
     OS << "} // end anonymous namespace\n" ;
     OS << "\n" ;
-    if (!Namespace.empty()) OS << "namespace " << Namespace << " {\n" ;
+    if (!Namespace.empty()) OS << "namespace " << Namespace << "\n{\n" ;
     OS << "struct responder : request_processor { using request_processor::request_processor; };\n" ;
     OS << "struct requester : reply_processor { using reply_processor::reply_processor; };\n" ;
     OS << "\n" ;
@@ -913,7 +913,7 @@ namespace lyre
     }
     OS << "bool MessageResponder::wait_request() { return Base->wait_process_request(this); }\n" ;
     OS << "void MessageResponder::bind(const std::initializer_list<std::string> &&a) { Base->bind_many(a.begin(), a.end()); }\n" ;
-    OS << "void MessageResponder::connect(const std::initializer_list<std::string> &&a) { Base->connect_many(a.begin(), a.end()); };\n" ;
+    OS << "void MessageResponder::connect(const std::initializer_list<std::string> &&a) { Base->connect_many(a.begin(), a.end()); }\n" ;
     OS << "\n" ;
     OS << "MessageRequester::MessageRequester(int type) : Base(new requester(type)) {}\n" ;
     OS << "MessageRequester::~MessageRequester() { delete Base; }\n" ;
@@ -923,7 +923,7 @@ namespace lyre
     }
     OS << "bool MessageRequester::wait_reply() { return Base->wait_process_reply(this); }\n" ;
     OS << "void MessageRequester::bind(const std::initializer_list<std::string> &&a) { Base->bind_many(a.begin(), a.end()); }\n" ;
-    OS << "void MessageRequester::connect(const std::initializer_list<std::string> &&a) { Base->connect_many(a.begin(), a.end()); };\n" ;
+    OS << "void MessageRequester::connect(const std::initializer_list<std::string> &&a) { Base->connect_many(a.begin(), a.end()); }\n" ;
     if (!Namespace.empty()) OS << "} // end namespace " << Namespace << ";\n" ;
   }
 
