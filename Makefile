@@ -3,33 +3,18 @@ include utils/build/common.mk
 LYRE_USING_MCJIT := true
 
 ifeq ($(LYRE_USING_MCJIT),true)
-  #LLVMLIBS := core jit mcjit native irreader
-  LLVMLIBS := core mcjit native option
+  #LLVM_LIBS := core jit mcjit native irreader
+  LLVM_LIBS := core mcjit native option
 else
-  LLVMLIBS := interpreter nativecodegen option
+  LLVM_LIBS := interpreter nativecodegen option
 endif
-
-LLVM_INC := $(shell $(LLVM_CONFIG) --includedir)
-LLVM_CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
 
 TableGen := utils/TableGen/TableGen
 
-CXXFLAGS := -Iinclude -Isource -I$(BOOST_ROOT) -g -ggdb \
-  -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) $(LLVM_CXXFLAGS)
+CXXFLAGS += -Iinclude -Isource -I$(BOOST)
+  -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT)
 
-CXXFLAGS := \
-  -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) \
-  $(shell $(LLVM_CONFIG) --cxxflags)
-
-LIBS := \
-  $(shell $(LLVM_CONFIG) --ldflags --libs $(LLVMLIBS)) \
-  -lpthread -ldl -lm -lz
-
-LIBS += -ltinfo
-
-LOADLIBS := 
-
-COMBINE = $(LD) -r -o $@ $^
+CLEAN += lyre liblyre.a
 
 #OBJECTS = \
   $(OBJECTS.lyre) \
@@ -111,9 +96,9 @@ OBJECTS.gc := \
   source/gc/lygc.o \
 
 lyre: source/main.o liblyre.a
-	$(LINK.cc) -o $@ $^ $(LOADLIBS) $(LIBS)
+	$(LINK) -o $@
 
-liblyre.a: $(OBJECTS.lyre) ; $(AR) crs $@ $^
+liblyre.a: $(OBJECTS.lyre) ; $(ARCHIVE)
 
 source/frontend.o: $(OBJECTS.frontend) ; $(COMBINE)
 source/codegen.o: $(OBJECTS.codegen) ; $(COMBINE)
@@ -123,11 +108,11 @@ source/ast.o: $(OBJECTS.ast) ; $(COMBINE)
 source/gc.o: $(OBJECTS.gc) ; $(COMBINE)
 
 source/parse/metast.o: source/parse/metast.cpp
-	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) -std=c++11 -std=$(CXXSTD) -fPIC -c $< -o $@
+	$(CXX) -Isource -DLYRE_USING_MCJIT=$(LYRE_USING_MCJIT) $(CXXSTD) -fPIC -c $< -o $@
 
 $(OBJECTS.spirit): %.o : %.cpp
-#	$(CXX) -Iinclude -Isource -I$(BOOST_ROOT) $(CXXSTD) -fPIC -fno-rtti -DBOOST_SPIRIT_X3_NO_RTTI -c $< -o $@
-	$(CXX) -Iinclude -Isource -I$(BOOST_ROOT) $(CXXSTD) -fPIC -c $< -o $@
+#	$(CXX) -Iinclude -Isource -I$(BOOST) $(CXXSTD) -fPIC -fno-rtti -DBOOST_SPIRIT_X3_NO_RTTI -c $< -o $@
+	$(CXX) -Iinclude -Isource -I$(BOOST) $(CXXSTD) -fPIC -c $< -o $@
 
 include/lyre/base/DiagnosticGroups.inc: include/lyre/base/Diagnostic.td $(TableGen) \
     include/lyre/base/DiagnosticGroups.td \
@@ -154,7 +139,7 @@ include/lyre/ast/StmtNodes.inc: include/lyre/base/StmtNodes.td $(TableGen)
 	$(TableGen) -gen-lyre-stmt-nodes -o=$@ $<
 
 include/lyre/frontend/Options.inc: include/lyre/frontend/Options.td
-	$(LLVMTableGen) -gen-opt-parser-defs -o $@ $<
+	$(LLVM_TBLGEN) -I$(LLVM)/include -gen-opt-parser-defs -o $@ $<
 
 $(TableGen): \
     utils/TableGen/TableGen.cpp \
@@ -164,13 +149,11 @@ $(TableGen): \
     utils/TableGen/Makefile
 	cd $(@D) && $(MAKE) && test $(@F)
 
-%.o: %.cpp
-	$(COMPILE.cc) $< -o $@
+lab: lab.ll ; @$(LLI) lab.ll
 
-%.d: %.cpp
-	$(CXX) -MM -MF $@ -MT $(@:%.d=%.o) $(CXXFLAGS) $<
+.PHONY: lab
 
-ifeq ($(findstring $(MAKECMDGOALS),clean),)
+ifneq ($(IS_MAKE_CLEAN),y)
   source/frontend/Options.d: \
     include/lyre/frontend/Options.inc \
 
@@ -188,13 +171,4 @@ ifeq ($(findstring $(MAKECMDGOALS),clean),)
   source/frontend/CompilerInvocation.d: \
     include/lyre/base/DiagnosticDefs.inc \
 
-  -include $(OBJECTS:%.o=%.d)
-endif
-
-clean: ; @rm -vf lyre liblyre.a $(OBJECTS) $(OBJECTS:%.o=%.d)
-
-test: lyre ; @./lyre test/00.ly
-lab: lab.ll ; @$(LLI) lab.ll
-
-.PHONY: test lab clean
-
+endif # IS_MAKE_CLEAN != y

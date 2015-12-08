@@ -1,0 +1,26 @@
+#!/bin/sh
+# -*- tcl -*- \
+exec tclsh "$0" ${1+"$@"}
+set me [file normalize [info script]]
+set dir [file dirname $me]
+set lyre [file join [file dirname $dir] lyre] ; #{../lyre}
+
+puts "argv: '$::argv' ([llength $::argv])"
+
+proc run {t} {
+    set lyre [open "|$::lyre $t.ly"]
+
+    puts "Running '$t'..."
+
+    close $lyre
+}
+
+proc main {} {
+    if {0 < [llength $::argv]} {
+        foreach a $::argv { run $a }
+    } else {
+        run 00
+    }
+}
+
+main
